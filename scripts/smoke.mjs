@@ -27,7 +27,9 @@ const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PAT
 const context = await browser.newContext({ viewport: { width: 820, height: 1180 }, hasTouch: true, deviceScaleFactor: 1 });
 const page = await context.newPage();
 const errors = [];
-page.on("console", (m) => m.type() === "error" && errors.push(`console: ${m.text()}`));
+// Failed requests to the (deliberately mocked) AI hosts are expected; anything else is a real error.
+const MOCKED_HOSTS = /generativelanguage\.googleapis\.com|api\.groq\.com/;
+page.on("console", (m) => m.type() === "error" && !MOCKED_HOSTS.test(m.location()?.url ?? "") && errors.push(`console: ${m.text()} @ ${m.location()?.url ?? ""}`));
 page.on("pageerror", (e) => errors.push(`pageerror: ${e.message}`));
 page.on("dialog", (d) => d.accept());
 

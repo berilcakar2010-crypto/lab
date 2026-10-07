@@ -4,7 +4,8 @@ import { HINT_LEVELS } from "../../domain/types";
 import { answerMode, evaluateAuto, evaluateSelf, type Answer, type Evaluation } from "../../engines/evaluation";
 import { recordAttempt } from "../../engines/progress";
 import { logEvent } from "../../engines/analytics";
-import { act, useDB } from "../state";
+import { act, aiHost, useDB } from "../state";
+import { generateHints } from "../../ai/tutor";
 import { AnswerInput } from "./AnswerInput";
 import { CodeEditor, GraphPlot, SimulationPanel } from "./Widgets";
 import { DrawingCanvas, type DrawingStats } from "./DrawingCanvas";
@@ -126,12 +127,25 @@ export function QuestionCard({
     act((d) => logEvent(d, "INPUT", { sessionId, milestoneId: q.milestoneId, questionId: q.id }, { action: "retry_requested" }));
   };
 
-  const requestHint = (level: HintLevel) => {
+  const [hintBusy, setHintBusy] = useState(false);
+  const requestHint = async (level: HintLevel) => {
     if (level > prefs.hintCap && !confirm(`This goes past your usual help limit (level ${prefs.hintCap}). Struggling a little longer often helps learning stick. Show it anyway?`)) return;
     if (level === 5 && attempts === 0 && !confirm("You haven't attempted this yet. Reveal the full solution anyway? Answers after seeing the solution won't count toward mastery.")) return;
+    let source = "authored";
+    if (level <= 4 && !q.hints[level - 1]) {
+      // No authored hint at this level: generate the ladder once (AI, guarded; generic offline) and keep it.
+      setHintBusy(true);
+      const res = await generateHints(aiHost, q, sessionId);
+      act((d) => {
+        const target = d.questions[q.id];
+        if (target) target.hints = [...target.hints, ...res.value.slice(target.hints.length)].slice(0, 4);
+      });
+      setHintBusy(false);
+      source = res.fallbackUsed ? "generic" : "ai";
+    }
     setHintLevel(level);
     if (level === 5) setShowSolution(true);
-    act((d) => logEvent(d, "HINT_REQUEST", { sessionId, milestoneId: q.milestoneId, questionId: q.id }, { level, label: HINT_LEVELS[level], attemptsBefore: attempts, source: "authored" }));
+    act((d) => logEvent(d, "HINT_REQUEST", { sessionId, milestoneId: q.milestoneId, questionId: q.id }, { level, label: HINT_LEVELS[level], attemptsBefore: attempts, source }));
   };
 
   const purpose = purposeOverride ?? q.purpose;
@@ -228,7 +242,7 @@ export function QuestionCard({
       )}
 
       {!hideHelp && (
-        <HelpLadder q={q} level={hintLevel} cap={prefs.hintCap} onRequest={requestHint} attempts={attempts} />
+        <HelpLadder q={q} level={hintLevel} cap={prefs.hintCap} onRequest={requestHint} attempts={attempts} busy={hintBusy} />
       )}
       {!hideHelp && <AIHelp question={q} sessionId={sessionId} answerText={effectiveAnswer()?.kind === "text" ? (effectiveAnswer() as { text: string }).text : JSON.stringify(effectiveAnswer() ?? "")} attempts={attempts} lastFeedback={result?.feedback} />}
 
@@ -260,10 +274,11 @@ function FeedbackPanel({ result }: { result: Evaluation & { by: string } }) {
   );
 }
 
-function HelpLadder({ q, level, cap, onRequest, attempts }: { q: Question; level: HintLevel; cap: HintLevel; onRequest: (l: HintLevel) => void; attempts: number }) {
+function HelpLadder({ q, level, cap, onRequest, attempts, busy }: { q: Question; level: HintLevel; cap: HintLevel; onRequest: (l: HintLevel) => void; attempts: number; busy: boolean }) {
   const next = (level + 1) as HintLevel;
   const labels = ["", "Small hint", "Conceptual hint", "Strategic hint", "Partial guidance", "Full solution"];
-  const available = (l: number) => (l <= 4 ? !!q.hints[l - 1] : !!q.solution);
+  // Levels 1–4 are always available (generated on demand when not authored).
+  const available = (l: number) => (l <= 4 ? true : !!q.solution);
   return (
     <div className="stack" style={{ gap: 8 }}>
       {level > 0 && (
@@ -278,8 +293,8 @@ function HelpLadder({ q, level, cap, onRequest, attempts }: { q: Question; level
       )}
       {level < 5 && available(next) && (
         <div className="row">
-          <button type="button" className="btn ghost small" onClick={() => onRequest(next)}>
-            <Icon.bulb /> {labels[next]}{next > cap ? " (beyond your limit)" : ""}
+          <button type="button" className="btn ghost small" disabled={busy} onClick={() => onRequest(next)}>
+            {busy ? <span className="spinner" /> : <Icon.bulb />} {labels[next]}{next > cap ? " (beyond your limit)" : ""}
           </button>
           {next <= 4 && available(5) && level >= 3 && attempts > 0 && (
             <button type="button" className="btn ghost small" onClick={() => onRequest(5)}>Show full solution</button>

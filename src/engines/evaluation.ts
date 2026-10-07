@@ -99,7 +99,7 @@ function evaluateNumber(q: Question, text: string): Evaluation {
       return { correct: false, score: 0.5, feedback: fb("PARTIAL", "Very close — probably rounding or a slightly different constant (e.g. g). Recheck the arithmetic.", ["CARELESS"]) };
     }
   }
-  return { correct: false, score: 0, feedback: fb("INCORRECT", "Not yet. Revisit which principle connects what is given to what is asked.", []) };
+  return { correct: false, score: 0, feedback: fb("INCORRECT", "Revisit which principle connects what is given to what is asked.", []) };
 }
 
 function evaluateExpression(q: Question, text: string): Evaluation {

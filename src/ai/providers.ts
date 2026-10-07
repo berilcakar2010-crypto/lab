@@ -12,6 +12,8 @@ export interface CompletionRequest {
   temperature?: number;
   maxTokens?: number;
   signal?: AbortSignal;
+  /** Optional JPEG/PNG data URLs (e.g. a stylus drawing). Providers without vision ignore them. */
+  images?: string[];
 }
 
 export interface AIProvider {
@@ -40,7 +42,7 @@ export function geminiProvider(apiKey: string | undefined, model: string, fetchI
         signal: req.signal,
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: req.system }] },
-          contents: [{ role: "user", parts: [{ text: req.prompt }] }],
+          contents: [{ role: "user", parts: [{ text: req.prompt }, ...(req.images ?? []).map(toInlineData)] }],
           generationConfig: {
             temperature: req.temperature ?? 0.4,
             maxOutputTokens: req.maxTokens ?? 4096,
@@ -107,6 +109,11 @@ export function makeProvider(prefs: UserPreference, id: AIProviderId = prefs.aiP
     default:
       return localProvider;
   }
+}
+
+function toInlineData(dataUrl: string) {
+  const m = dataUrl.match(/^data:([^;]+);base64,(.*)$/);
+  return m ? { inline_data: { mime_type: m[1], data: m[2] } } : { text: "" };
 }
 
 async function safeText(res: Response) {

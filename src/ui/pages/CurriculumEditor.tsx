@@ -10,6 +10,7 @@ import { dependsOn } from "../../engines/graph";
 import { replaceTopicMilestones, sanitizeQuestion, type MilestoneSpec } from "../../engines/curriculumSpec";
 import { grantMastery, revokeMastery, skipMilestone, unskipMilestone } from "../../engines/progress";
 import { generateQuestionsAI, generateTopicMilestonesAI, splitMilestoneAI } from "../../ai/curriculumAI";
+import { calibrateDifficultyAI, difficultySignal } from "../../ai/tutor";
 import { addQuestion } from "../../engines/curriculum";
 import { aiHost, navigate, store, toast, useAsync, useDB } from "../state";
 import { editCurriculum } from "../editing";
@@ -235,6 +236,7 @@ export function MilestoneSheet({ milestone: m, onClose }: { milestone: Milestone
         </div>
         <label className="row nowrap"><input type="checkbox" checked={form.optional} onChange={(e) => set("optional", e.target.checked)} style={{ width: 20, height: 20 }} /> Optional (a side branch; not required for the course goal)</label>
         <button className="btn primary" onClick={save}>Save changes</button>
+        <DifficultyHint milestoneId={m.id} onApply={(d) => setForm({ ...form, difficulty: d })} />
 
         <hr className="sep" />
         <h3>Prerequisites</h3>
@@ -283,6 +285,23 @@ export function MilestoneSheet({ milestone: m, onClose }: { milestone: Milestone
         </div>
       </div>
     </Sheet>
+  );
+}
+
+/** Difficulty Calibrator: a suggestion from observed attempts; applying it is the user's choice. */
+function DifficultyHint({ milestoneId, onApply }: { milestoneId: ID; onApply: (d: number) => void }) {
+  const db = useDB();
+  const [sig, setSig] = useState(() => difficultySignal(db, milestoneId));
+  const { busy, run } = useAsync();
+  if (sig.sample < 4) return <p className="tiny muted">Difficulty calibration: {sig.rationale}</p>;
+  return (
+    <div className="banner info small row between">
+      <span>{sig.suggested ? `Observed performance suggests difficulty ${sig.suggested}/5. ` : "Rated difficulty matches observed performance. "}{sig.rationale}</span>
+      <div className="row nowrap">
+        {db.preferences.aiProvider !== "local" && <button className="btn small" disabled={busy} onClick={() => run(async () => setSig((await calibrateDifficultyAI(aiHost, store.state, milestoneId)).value))}>Ask AI</button>}
+        {sig.suggested && <button className="btn small" onClick={() => onApply(sig.suggested!)}>Use {sig.suggested}</button>}
+      </div>
+    </div>
   );
 }
 

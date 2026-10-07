@@ -7,6 +7,7 @@ import { NextOptions } from "../components/NextOptions";
 import { CurriculumEditor } from "./CurriculumEditor";
 import { CalibrationSheet } from "./CalibrationSheet";
 import { ProgressionMap } from "../components/ProgressionMap";
+import { AdvisorPanel } from "../components/AdvisorPanel";
 
 type Tab = "next" | "map" | "edit";
 
@@ -75,6 +76,7 @@ export function CoursePage({ courseId }: { courseId: ID }) {
             </div>
           )}
           <NextOptions courseId={courseId} onChoose={open} />
+          <AdvisorPanel courseId={courseId} />
           <button className="btn ghost small" style={{ alignSelf: "flex-start" }} onClick={() => setCalibrate(true)}>Recalibrate my starting point</button>
         </div>
       )}

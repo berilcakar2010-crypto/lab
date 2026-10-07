@@ -76,6 +76,8 @@ export function SettingsPage() {
         <p className="tiny muted">Keys are stored only in this browser and sent only to the provider you choose.</p>
       </section>
 
+      <AILog />
+
       <section className="card stack">
         <h2>Help and struggle</h2>
         <div className="field">
@@ -103,5 +105,27 @@ export function SettingsPage() {
         </div>
       </section>
     </div>
+  );
+}
+
+function AILog() {
+  const db = useDB();
+  const list = Object.values(db.aiInteractions).sort((a, b) => b.createdAt - a.createdAt);
+  if (!list.length) return null;
+  const failed = list.filter((x) => !x.ok).length;
+  return (
+    <section className="card stack">
+      <h2>AI activity</h2>
+      <p className="small text-2">{list.length} AI requests · {failed} fell back to offline behaviour. Roles share one provider interface.</p>
+      <div className="list">
+        {list.slice(0, 8).map((x) => (
+          <div key={x.id} className="list-item small">
+            <span className="chip">{x.role.toLowerCase().replace(/_/g, " ")}</span>
+            <span className="grow truncate">{x.summary}</span>
+            <span className={x.ok ? "muted" : ""} style={x.ok ? undefined : { color: "var(--review)" }}>{x.ok ? `${x.provider} · ${(x.latencyMs / 1000).toFixed(1)}s` : `fallback${x.error ? ` (${x.error.slice(0, 40)})` : ""}`}</span>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }

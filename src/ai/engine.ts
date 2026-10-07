@@ -26,6 +26,7 @@ export interface AIRunOptions<T> {
   temperature?: number;
   maxTokens?: number;
   timeoutMs?: number;
+  images?: string[];
   /** Parse + validate the raw text; throw to reject. */
   parse: (text: string) => T;
   /** Deterministic result used when AI is unavailable or fails. */
@@ -62,6 +63,7 @@ export async function runAI<T>(host: AIHost, opts: AIRunOptions<T>): Promise<AIR
           temperature: opts.temperature,
           maxTokens: opts.maxTokens,
           signal: ctrl.signal,
+          images: opts.images,
         });
         value = opts.parse(text);
         ok = true;
