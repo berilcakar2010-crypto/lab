@@ -230,3 +230,15 @@ button, input, textarea, select { font: inherit; color: inherit; }
 }
 .reduce-motion *, .reduce-motion *::before, .reduce-motion *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
 @keyframes draw-ring { to { stroke-dashoffset: 0; } }
+
+/* Progression map */
+.map-node:focus-visible > g:nth-of-type(1) { stroke: var(--text); }
+.map-node > g, .map-burst, .map-halo { transform-box: fill-box; transform-origin: center; }
+.map-halo { animation: halo 2.8s ease-in-out infinite; }
+.map-burst { animation: burst 1.1s var(--ease) 0.2s both; }
+.map-pop { animation: pop 0.7s var(--ease) 0.15s both; }
+.map-fill { animation: settle 0.9s var(--ease) both; }
+@keyframes halo { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+@keyframes burst { from { opacity: 0.9; transform: scale(1); } to { opacity: 0; transform: scale(2.6); } }
+@keyframes pop { from { transform: scale(0.4); opacity: 0.2; } 70% { transform: scale(1.12); } to { transform: scale(1); opacity: 1; } }
+@keyframes settle { from { transform: scale(0.85); } to { transform: scale(1); } }

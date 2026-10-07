@@ -113,6 +113,8 @@ export default async function flows({ page, step, shot, click, BASE }) {
     await page.getByRole("button", { name: /Mechanics/ }).first().click();
     await page.getByRole("tab", { name: "Map" }).click();
     await page.getByRole("button", { name: /Construct a free-body diagram/ }).first().click();
+    await shot("11-map-sheet");
+    await click("Look inside");
     await page.getByText("This builds on milestones you haven't completed yet:").waitFor();
     await click("Open anyway");
     await page.getByText("After this, you can").waitFor();
