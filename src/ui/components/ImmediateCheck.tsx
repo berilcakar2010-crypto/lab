@@ -3,6 +3,7 @@ import type { ID } from "../../domain/types";
 import { completeRetentionCheck } from "../../engines/progress";
 import { act, store, useDB } from "../state";
 import { QuestionCard } from "./QuestionCard";
+import { L } from "../../i18n";
 
 /**
  * Immediate understanding check right after mastery — no hints, a fresh
@@ -24,8 +25,8 @@ export function ImmediateCheck({ milestoneId, sessionId }: { milestoneId: ID; se
     return (
       <div className={`banner ${check.correct ? "ok" : "warn"} small`}>
         {check.correct
-          ? "Anında kontrol geçti: yardımsız tekrar yapabildin."
-          : "Anında kontrol tutmadı. Adım tekrar için işaretlendi — yeniden karşına çıkacak; kalıcılık böyle oluşur."}
+          ? L("Immediate check passed: you could do it again without help.", "Anında kontrol geçti: yardımsız tekrar yapabildin.")
+          : L("The immediate check didn't go through. The milestone is marked for review — it'll come back, which is how things stick.", "Anında kontrol tutmadı. Adım tekrar için işaretlendi — yeniden karşına çıkacak; kalıcılık böyle oluşur.")}
       </div>
     );
   }
@@ -33,11 +34,11 @@ export function ImmediateCheck({ milestoneId, sessionId }: { milestoneId: ID; se
     return (
       <div className="card row between">
         <div className="stack" style={{ gap: 2 }}>
-          <strong>Hızlı kontrol</strong>
-          <span className="small text-2">Yeni bir soru, ipucu yok — aklında kalmış mı diye.</span>
+          <strong>{L("Quick check", "Hızlı kontrol")}</strong>
+          <span className="small text-2">{L("One new question, no hints — to see whether it stuck.", "Yeni bir soru, ipucu yok — aklında kalmış mı diye.")}</span>
         </div>
         <div className="row nowrap">
-          <button className="btn primary small" onClick={() => setStarted(true)}>Şimdi kontrol et</button>
+          <button className="btn primary small" onClick={() => setStarted(true)}>{L("Check now", "Şimdi kontrol et")}</button>
         </div>
       </div>
     );

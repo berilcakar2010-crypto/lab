@@ -4,6 +4,7 @@
  * dependency order. Changing the graph changes every path automatically.
  */
 import { depths, topoSort } from "../engines/graph";
+import { L } from "../i18n";
 import { ancestors, prereqMap } from "./graph";
 import type { KnowledgeGraph } from "./schema";
 
@@ -11,6 +12,8 @@ export interface LearningPath {
   id: string;
   title: string;
   description: string;
+  titleEn: string;
+  descriptionEn: string;
   targets: string[];
   /** Extra objects worth doing on this path although no target needs them. */
   extras: string[];
@@ -20,6 +23,8 @@ export const LEARNING_PATHS: LearningPath[] = [
   {
     id: "yol.fizik-olimpiyati",
     title: "Fizik Olimpiyatı",
+    titleEn: "Physics Olympiad",
+    descriptionEn: "Olympiad-level theory and experiment, from mechanics to electromagnetism and from thermodynamics to optics.",
     description: "Mekanikten elektromanyetizmaya, termodinamikten optiğe olimpiyat düzeyinde kuramsal ve deneysel hazırlık.",
     targets: ["phys.olymp.boss", "comp.phys.theory-practice", "comp.phys.experimental", "comp.boss.mock"],
     extras: ["phys.mech.lagrangian", "phys.modern.relativity", "phys.optics.wave", "comp.meta.deliberate-practice"],
@@ -27,6 +32,8 @@ export const LEARNING_PATHS: LearningPath[] = [
   {
     id: "yol.hesaplamali-norobilim",
     title: "Hesaplamalı Nörobilim",
+    titleEn: "Computational Neuroscience",
+    descriptionEn: "From membrane physics to the Hodgkin–Huxley model, from neural coding to network dynamics — together with maths, physics and programming.",
     description: "Membran fiziğinden Hodgkin–Huxley modeline, nöral kodlamadan ağ dinamiklerine; matematik, fizik ve programlamayla birlikte.",
     targets: ["neuro.boss", "neuro.proj.hh-simulation", "neuro.comp.bayesian-brain"],
     extras: ["neuro.comp.attractors", "neuro.comp.reinforcement", "neuro.comp.ann-bridge", "neuro.cog.learning-memory"],
@@ -34,6 +41,8 @@ export const LEARNING_PATHS: LearningPath[] = [
   {
     id: "yol.arastirma",
     title: "Araştırma",
+    titleEn: "Research",
+    descriptionEn: "From asking a question to publishing: experimental design, literature, data analysis, writing and presenting.",
     description: "Soru sormaktan yayına: deney tasarımı, literatür, veri analizi, yazım ve sunum.",
     targets: ["res.project.mini", "res.peer-review", "res.write.presentation", "en.c1.sci-reading"],
     extras: ["res.method.causal", "res.project.modeling", "en.c1.academic-writing", "comp.research.science-fair"],
@@ -68,3 +77,6 @@ export function pathStages(g: KnowledgeGraph, path: LearningPath): PathStage[] {
   }
   return [...stages.entries()].sort((a, b) => a[0] - b[0]).map(([depth, list]) => ({ depth, ids: list }));
 }
+
+export const pathTitle = (p: LearningPath) => L(p.titleEn, p.title);
+export const pathDescription = (p: LearningPath) => L(p.descriptionEn, p.description);

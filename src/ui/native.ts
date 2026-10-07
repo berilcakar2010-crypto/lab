@@ -3,6 +3,7 @@
  * browser, so the web build keeps working unchanged.
  */
 import { Capacitor } from "@capacitor/core";
+import { L } from "../i18n";
 
 export const isNative = () => Capacitor.isNativePlatform();
 
@@ -42,5 +43,5 @@ export async function saveTextFile(name: string, text: string, mime: string) {
   }
   const [{ Filesystem, Directory, Encoding }, { Share }] = await Promise.all([import("@capacitor/filesystem"), import("@capacitor/share")]);
   const res = await Filesystem.writeFile({ path: name, data: text, directory: Directory.Cache, encoding: Encoding.UTF8 });
-  await Share.share({ title: name, files: [res.uri], dialogTitle: "Dosyayı kaydet veya paylaş" });
+  await Share.share({ title: name, files: [res.uri], dialogTitle: L("Save or share the file", "Dosyayı kaydet veya paylaş") });
 }

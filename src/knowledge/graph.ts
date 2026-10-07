@@ -7,21 +7,24 @@ import { BASE_OBJECTS } from "./content";
 import { MAPPINGS } from "./mappings";
 import { RESOURCES } from "./resources";
 import {
-  CURRICULUM_NAME, CURRICULUM_VERSION, type KnowledgeGraph, type LearningObject, type Mapping, type Resource,
+  CURRICULUM_NAME, CURRICULUM_NAME_EN, CURRICULUM_VERSION, type KnowledgeGraph, type LearningObject, type Mapping, type Resource,
 } from "./schema";
 import type { PrereqMap } from "../engines/graph";
+import { getLang, type Lang } from "../i18n";
+import { localizeObject } from "./localize";
 
 export function assembleGraph(
   base: LearningObject[] = BASE_OBJECTS,
   overlay: KnowledgeState["overlay"] | undefined = undefined,
   mappings: Mapping[] = MAPPINGS,
   resources: Resource[] = RESOURCES,
+  lang: Lang = "tr",
 ): KnowledgeGraph {
   const objects: Record<string, LearningObject> = {};
   const order: string[] = [];
   for (const o of base) {
     if (objects[o.id]) continue; // duplicates are reported by the validator from the raw list
-    objects[o.id] = { ...o, unlocks: [], schoolMappings: [], apMappings: [], recommendedResources: [] };
+    objects[o.id] = { ...localizeObject(o, lang), unlocks: [], schoolMappings: [], apMappings: [], recommendedResources: [] };
     order.push(o.id);
   }
   for (const o of Object.values(overlay?.objects ?? {})) {
@@ -47,7 +50,7 @@ export function assembleGraph(
     for (const lo of r.loIds) objects[lo]?.recommendedResources.push(r.id);
   }
   return {
-    name: CURRICULUM_NAME,
+    name: lang === "en" ? CURRICULUM_NAME_EN : CURRICULUM_NAME,
     version: overlay?.version || CURRICULUM_VERSION,
     objects,
     order,
@@ -56,17 +59,24 @@ export function assembleGraph(
   };
 }
 
-let cache: { key: KnowledgeState["overlay"] | undefined; graph: KnowledgeGraph } | null = null;
+const cache = new Map<Lang, { key: KnowledgeState["overlay"] | undefined; graph: KnowledgeGraph }>();
 
-/** The graph for the current learner; cached until the overlay object changes. */
-export function getGraph(knowledge?: KnowledgeState): KnowledgeGraph {
+/**
+ * The graph for the current learner in the current language (Turkish is the
+ * authored base). Cached per language until the overlay object changes.
+ */
+export function getGraph(knowledge?: KnowledgeState, lang: Lang = getLang()): KnowledgeGraph {
   const key = knowledge?.overlay;
   const empty = !key || !Object.keys(key.objects).length;
-  if (cache && (cache.key === key || (empty && !cache.key))) return cache.graph;
-  const graph = assembleGraph(BASE_OBJECTS, empty ? undefined : key);
-  cache = { key: empty ? undefined : key, graph };
+  const hit = cache.get(lang);
+  if (hit && (hit.key === key || (empty && !hit.key))) return hit.graph;
+  const graph = assembleGraph(BASE_OBJECTS, empty ? undefined : key, MAPPINGS, RESOURCES, lang);
+  cache.set(lang, { key: empty ? undefined : key, graph });
   return graph;
 }
+
+/** The authored (Turkish) graph — what the validator and planner check. */
+export const getBaseGraph = (knowledge?: KnowledgeState) => getGraph(knowledge, "tr");
 
 export const isActive = (o: LearningObject) => o.status === "AKTIF" || o.status === "TASLAK";
 

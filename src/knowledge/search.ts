@@ -4,9 +4,9 @@
  * is returned so the builder can show readiness instead of starting from zero.
  */
 import { LEARNING_PATHS, type LearningPath } from "./paths";
-import { DOMAIN_LABEL, type KnowledgeGraph } from "./schema";
+import { DOMAIN_LABEL, DOMAIN_LABEL_EN, type KnowledgeGraph } from "./schema";
 
-const STOP = new Set(["ve", "ile", "için", "bir", "öğrenmek", "istiyorum", "çalışmak", "ders", "dersi", "giriş", "temel", "temelleri", "the", "and", "of", "to", "learn"]);
+const STOP = new Set(["ve", "ile", "için", "bir", "öğrenmek", "istiyorum", "çalışmak", "ders", "dersi", "giriş", "temel", "temelleri", "the", "and", "of", "to", "learn", "want", "study", "about", "how", "intro", "introduction", "basics", "course"]);
 
 const tokens = (s: string) =>
   s.toLocaleLowerCase("tr").replace(/[^\p{L}\p{N}\s-]+/gu, " ").split(/[\s-]+/).filter((t) => t.length > 2 && !STOP.has(t));
@@ -31,14 +31,14 @@ export function matchRequest(g: KnowledgeGraph, text: string, limit = 6): GraphM
     return q.filter((t) => h.some((x) => near(t, x))).length / q.length;
   };
   const path = LEARNING_PATHS
-    .map((p) => ({ p, s: score(p.title) }))
+    .map((p) => ({ p, s: Math.max(score(p.title), score(p.titleEn)) }))
     .filter((x) => x.s >= 0.99)
     .sort((a, b) => b.s - a.s)[0]?.p;
   const scored = g.order
     .map((id) => {
       const o = g.objects[id];
       const title = score(o.title);
-      const ctx = score(`${o.unit} ${o.field} ${DOMAIN_LABEL[o.domain]} ${o.tags.join(" ")}`);
+      const ctx = score(`${o.unit} ${o.field} ${DOMAIN_LABEL[o.domain]} ${DOMAIN_LABEL_EN[o.domain]} ${o.tags.join(" ")}`);
       return { id, s: title * 2 + ctx + (o.boss ? 0.2 : 0) };
     })
     .filter((x) => x.s >= 1)

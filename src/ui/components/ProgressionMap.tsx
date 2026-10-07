@@ -5,6 +5,7 @@ import { layoutMap } from "../../engines/mapLayout";
 import { recommendNext, topPicks } from "../../engines/progression";
 import { useDB } from "../state";
 import { Difficulty, KIND_LABEL, KindChip, STATUS_LABEL, Sheet, StatusChip, TYPE_LABEL, minutes } from "./common";
+import { L } from "../../i18n";
 
 const SEEN_KEY = (courseId: ID) => `lab.map.seen.${courseId}`;
 
@@ -70,28 +71,28 @@ export function ProgressionMap({ courseId, onOpen }: { courseId: ID; onOpen: (id
   const units = courseUnits(db, courseId);
   const counts = ms.reduce<Record<string, number>>((acc, m) => ((acc[m.status] = (acc[m.status] ?? 0) + 1), acc), {});
 
-  if (!ms.length) return <div className="card"><p className="text-2">Bu derste henüz adım yok. Müfredat sekmesinden ekleyebilirsin.</p></div>;
+  if (!ms.length) return <div className="card"><p className="text-2">{L("This course has no milestones yet. Add some in the Curriculum tab.", "Bu derste henüz adım yok. Müfredat sekmesinden ekleyebilirsin.")}</p></div>;
 
   const sel = selected ? byId.get(selected) : undefined;
   return (
     <div className="stack">
       <div className="row small text-2" style={{ gap: 12 }}>
-        <Legend color="var(--mastered)" fill label={`Ustalaşılan ${(counts.MASTERED ?? 0) + (counts.NEEDS_REVIEW ?? 0)}`} />
-        <Legend color="var(--accent)" label={`Açık ${(counts.AVAILABLE ?? 0) + (counts.ATTEMPTED ?? 0) + (counts.ACTIVE ?? 0) + (counts.OPTIONAL ?? 0) + (counts.BOSS ?? 0)}`} />
-        <Legend color="var(--review)" label={`Tekrar ${counts.NEEDS_REVIEW ?? 0}`} />
-        <Legend color="var(--locked)" label={`Kilitli ${counts.LOCKED ?? 0}`} />
-        {counts.SKIPPED ? <Legend color="var(--muted)" dashed label={`Atlanan ${counts.SKIPPED}`} /> : null}
+        <Legend color="var(--mastered)" fill label={`${L("Mastered", "Ustalaşılan")} ${(counts.MASTERED ?? 0) + (counts.NEEDS_REVIEW ?? 0)}`} />
+        <Legend color="var(--accent)" label={`${L("Open", "Açık")} ${(counts.AVAILABLE ?? 0) + (counts.ATTEMPTED ?? 0) + (counts.ACTIVE ?? 0) + (counts.OPTIONAL ?? 0) + (counts.BOSS ?? 0)}`} />
+        <Legend color="var(--review)" label={`${L("Review", "Tekrar")} ${counts.NEEDS_REVIEW ?? 0}`} />
+        <Legend color="var(--locked)" label={`${L("Locked", "Kilitli")} ${counts.LOCKED ?? 0}`} />
+        {counts.SKIPPED ? <Legend color="var(--muted)" dashed label={`${L("Skipped", "Atlanan")} ${counts.SKIPPED}`} /> : null}
       </div>
       {units.length > 1 && (
         <div className="row" style={{ gap: 6 }}>
-          <button className="btn small" aria-pressed={filterUnit === "all"} onClick={() => setFilterUnit("all")} style={filterUnit === "all" ? { borderColor: "var(--accent)" } : undefined}>Tüm ders</button>
+          <button className="btn small" aria-pressed={filterUnit === "all"} onClick={() => setFilterUnit("all")} style={filterUnit === "all" ? { borderColor: "var(--accent)" } : undefined}>{L("Whole course", "Tüm ders")}</button>
           {units.map((u) => (
             <button key={u.id} className="btn small" aria-pressed={filterUnit === u.id} onClick={() => setFilterUnit(u.id)} style={filterUnit === u.id ? { borderColor: "var(--accent)" } : undefined}>{u.title}</button>
           ))}
         </div>
       )}
       <div ref={wrapRef} className="card" style={{ padding: 0, overflowX: "auto", overflowY: "hidden", touchAction: "pan-x pan-y" }}>
-        <svg width={layout.width} height={layout.height} viewBox={`0 0 ${layout.width} ${layout.height}`} role="group" aria-label="İlerleme haritası" style={{ display: "block" }}>
+        <svg width={layout.width} height={layout.height} viewBox={`0 0 ${layout.width} ${layout.height}`} role="group" aria-label={L("Progression map", "İlerleme haritası")} style={{ display: "block" }}>
           <defs>
             <radialGradient id="halo"><stop offset="0%" stopColor="#e28a9a" stopOpacity="0.35" /><stop offset="100%" stopColor="#e28a9a" stopOpacity="0" /></radialGradient>
           </defs>
@@ -117,7 +118,7 @@ export function ProgressionMap({ courseId, onOpen }: { courseId: ID; onOpen: (id
           })}
         </svg>
       </div>
-      {recs.length > 0 && <p className="tiny muted">Parlayan düğümler önerilen sonraki adımlar. Nedenini görmek ve açmak için herhangi bir adıma — kilitliler dahil — dokun.</p>}
+      {recs.length > 0 && <p className="tiny muted">{L("Glowing nodes are recommended next steps. Tap any milestone — including locked ones — to see why and to open it.", "Parlayan düğümler önerilen sonraki adımlar. Nedenini görmek ve açmak için herhangi bir adıma — kilitliler dahil — dokun.")}</p>}
 
       {sel && (
         <Sheet title={sel.title} onClose={() => setSelected(null)}>
@@ -134,11 +135,11 @@ export function ProgressionMap({ courseId, onOpen }: { courseId: ID; onOpen: (id
               <ul className="small text-2" style={{ margin: 0, paddingLeft: 18 }}>{recs.find((r) => r.milestoneId === sel.id)!.reasons.map((r, i) => <li key={i}>{r}</li>)}</ul>
             )}
             {sel.prerequisites.length > 0 && (
-              <div className="small text-2">Üzerine kurulu: {sel.prerequisites.map((p) => byId.get(p)?.title + (byId.get(p)?.masteredAt ? " ✓" : "")).join(" · ")}</div>
+              <div className="small text-2">{L("Builds on: ", "Üzerine kurulu: ")}{sel.prerequisites.map((p) => byId.get(p)?.title + (byId.get(p)?.masteredAt ? " ✓" : "")).join(" · ")}</div>
             )}
-            {sel.nextMilestones.length > 0 && <div className="small text-2">Şuraya götürür: {sel.nextMilestones.map((p) => byId.get(p)?.title).join(" · ")}</div>}
+            {sel.nextMilestones.length > 0 && <div className="small text-2">{L("Leads to: ", "Şuraya götürür: ")}{sel.nextMilestones.map((p) => byId.get(p)?.title).join(" · ")}</div>}
             <button className="btn primary" onClick={() => onOpen(sel.id)}>
-              {sel.status === "LOCKED" ? "İçine bak" : sel.masteredAt ? "Yeniden çalış" : sel.status === "ATTEMPTED" ? "Devam et" : "Aç"}
+              {sel.status === "LOCKED" ? L("Look inside", "İçine bak") : sel.masteredAt ? L("Practise again", "Yeniden çalış") : sel.status === "ATTEMPTED" ? L("Continue", "Devam et") : L("Open", "Aç")}
             </button>
           </div>
         </Sheet>
@@ -185,7 +186,7 @@ function MapNodeView({ m, x, y, rec, changed, prev, isStart, onSelect, maxLabel 
     : review ? <rect x={-r} y={-r * 0.8} width={r * 2} height={r * 1.6} rx="6" />
     : <circle r={r} />;
   return (
-    <g transform={`translate(${x},${y})`} role="button" tabIndex={0} aria-label={`${m.title}, ${STATUS_LABEL[m.status]}${rec ? `, öneri: ${KIND_LABEL[rec]}` : ""}`}
+    <g transform={`translate(${x},${y})`} role="button" tabIndex={0} aria-label={`${m.title}, ${STATUS_LABEL[m.status]}${rec ? `, ${L("recommended", "öneri")}: ${KIND_LABEL[rec]}` : ""}`}
       onClick={onSelect} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onSelect()} style={{ cursor: "pointer", outline: "none" }} className="map-node">
       <rect x={-50} y={-28} width={100} height={84} fill="transparent" />
       {rec && <circle r={r + 16} fill="url(#halo)" className="map-halo" />}
@@ -199,7 +200,7 @@ function MapNodeView({ m, x, y, rec, changed, prev, isStart, onSelect, maxLabel 
       {m.status === "NEEDS_REVIEW" && <text y="5" textAnchor="middle" fontSize="14" fill="#e0b46a" fontWeight="700">↻</text>}
       {m.status === "ACTIVE" && <circle r="5" fill="#150a0d" />}
       {m.status === "ATTEMPTED" && <path d={`M0 ${-r} A${r} ${r} 0 0 1 ${r} 0`} fill="none" stroke="#e28a9a" strokeWidth="4" />}
-      {isStart && <text y={-r - 8} textAnchor="middle" fontSize="10" letterSpacing="1.5" fill="#e28a9a" fontWeight="700">BURADAN BAŞLA</text>}
+      {isStart && <text y={-r - 8} textAnchor="middle" fontSize="10" letterSpacing="1.5" fill="#e28a9a" fontWeight="700">{L("START HERE", "BURADAN BAŞLA")}</text>}
       {label.map((line, i) => (
         <text key={i} y={r + 16 + i * 14} textAnchor="middle" fontSize="12" fill={c.text} style={{ fontFamily: "var(--sans)" }}>{line}</text>
       ))}

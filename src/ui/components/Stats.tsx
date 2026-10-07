@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import type { Rate } from "../../engines/statistics";
+import { L } from "../../i18n";
 
-export const pct = (x: number) => `%${Math.round(x * 100)}`;
+export const pct = (x: number) => L(`${Math.round(x * 100)}%`, `%${Math.round(x * 100)}`);
 
 /** Headline number, or an explicit insufficient-data state instead of a fake value. */
 export function StatTile({ label, value, note, needed }: { label: string; value: ReactNode | null; note?: ReactNode; needed?: string }) {
@@ -9,7 +10,7 @@ export function StatTile({ label, value, note, needed }: { label: string; value:
     <div className="card stack" style={{ gap: 4, padding: 14 }}>
       <span className="eyebrow">{label}</span>
       {value === null ? (
-        <span className="small muted" style={{ minHeight: 34, display: "flex", alignItems: "center" }}>Yeterli veri yok{needed ? ` (${needed})` : ""}</span>
+        <span className="small muted" style={{ minHeight: 34, display: "flex", alignItems: "center" }}>{L("Not enough data", "Yeterli veri yok")}{needed ? ` (${needed})` : ""}</span>
       ) : (
         <span className="serif" style={{ fontSize: 28, lineHeight: 1.2 }}>{value}</span>
       )}
@@ -20,8 +21,8 @@ export function StatTile({ label, value, note, needed }: { label: string; value:
 
 export function RateTile({ label, r, note }: { label: string; r: Rate; note?: string }) {
   return (
-    <StatTile label={label} value={r.value === null ? null : pct(r.value)} needed={`${r.n}/${Math.max(r.n + 1, 5)} gözlem`}
-      note={r.value === null ? note : <>{r.k}/{r.n} · olası aralık {pct(r.low!)}–{pct(r.high!)}{note ? ` · ${note}` : ""}</>} />
+    <StatTile label={label} value={r.value === null ? null : pct(r.value)} needed={L(`${r.n} of ${Math.max(r.n + 1, 5)} needed`, `${r.n}/${Math.max(r.n + 1, 5)} gözlem`)}
+      note={r.value === null ? note : <>{r.k}/{r.n} · {L("likely", "olası aralık")} {pct(r.low!)}–{pct(r.high!)}{note ? ` · ${note}` : ""}</>} />
   );
 }
 
@@ -31,11 +32,11 @@ export function RateTile({ label, r, note }: { label: string; r: Rate; note?: st
  */
 export function RateBars({ rows, empty }: { rows: { label: string; r: Rate }[]; empty?: string }) {
   const usable = rows.filter((x) => x.r.n > 0);
-  if (!usable.length) return <p className="small muted">{empty ?? "Henüz veri yok."}</p>;
+  if (!usable.length) return <p className="small muted">{empty ?? L("No data yet.", "Henüz veri yok.")}</p>;
   return (
     <div className="stack" style={{ gap: 8 }} role="table">
       {usable.map(({ label, r }) => (
-        <div key={label} className="row nowrap" style={{ gap: 10 }} role="row" title={`${label}: ${r.k}/${r.n}${r.value !== null ? ` (${pct(r.value)}, %95 aralık ${pct(r.low!)}–${pct(r.high!)})` : " — yeterli veri yok"}`}>
+        <div key={label} className="row nowrap" style={{ gap: 10 }} role="row" title={L(`${label}: ${r.k} of ${r.n}${r.value !== null ? ` (${pct(r.value)}, 95% interval ${pct(r.low!)}–${pct(r.high!)})` : " — not enough data"}`, `${label}: ${r.k}/${r.n}${r.value !== null ? ` (${pct(r.value)}, %95 aralık ${pct(r.low!)}–${pct(r.high!)})` : " — yeterli veri yok"}`)}>
           <span className="small text-2 truncate" style={{ width: "34%", minWidth: 110 }} role="cell">{label}</span>
           <div style={{ flex: 1, height: 14, position: "relative", background: "var(--raised-2)", borderRadius: 4 }} role="cell">
             {r.value !== null && (

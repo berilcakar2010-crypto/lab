@@ -9,6 +9,7 @@
  */
 import type { GraphUpdateRecord, LabDB } from "../domain/types";
 import { newId } from "../data/ids";
+import { L, lazyLabels } from "../i18n";
 import { assembleGraph } from "./graph";
 import { BASE_OBJECTS } from "./content";
 import { ID_LEDGER, RETIRED_IDS } from "./registry";
@@ -31,12 +32,13 @@ export interface GraphUpdate {
 }
 
 export type ChangeKind = "EKLE" | "DEGISTIR" | "KULLANIM_DISI" | "REDDEDILDI";
-export const CHANGE_LABEL: Record<ChangeKind, string> = {
+const CHANGE_LABEL_TR: Record<ChangeKind, string> = {
   EKLE: "Yeni nesne",
   DEGISTIR: "Değişiklik",
   KULLANIM_DISI: "Kullanım dışı",
   REDDEDILDI: "Reddedildi",
 };
+export const CHANGE_LABEL = lazyLabels<ChangeKind>({ EKLE: "New object", DEGISTIR: "Change", KULLANIM_DISI: "Retired", REDDEDILDI: "Rejected" }, CHANGE_LABEL_TR);
 
 export interface Change {
   kind: ChangeKind;
@@ -122,12 +124,12 @@ function completeNew(p: Partial<LearningObject> & { id: string }, version: strin
 
 /** Rejects field values outside the schema; returns a reason or null. */
 function invalidField(o: Partial<LearningObject>): string | null {
-  if (o.domain && !(DOMAINS as readonly string[]).includes(o.domain)) return `bilinmeyen alan "${o.domain}"`;
-  if (o.milestoneType && !(LO_MILESTONE_TYPES as readonly string[]).includes(o.milestoneType)) return `bilinmeyen tür "${o.milestoneType}"`;
-  if (o.estimatedScope && !(SCOPES as readonly string[]).includes(o.estimatedScope)) return `bilinmeyen kapsam "${o.estimatedScope}"`;
-  if (o.difficulty !== undefined && !(Number.isInteger(o.difficulty) && o.difficulty >= 1 && o.difficulty <= 5)) return "zorluk 1–5 arasında olmalı";
-  if (o.prerequisites?.some((p) => !p?.id || !(PREREQ_STRENGTHS as readonly string[]).includes(p.strength))) return "geçersiz önkoşul";
-  if (o.evidenceTypes?.some((e) => !(EVIDENCE_TYPES as readonly string[]).includes(e))) return "bilinmeyen kanıt türü";
+  if (o.domain && !(DOMAINS as readonly string[]).includes(o.domain)) return L(`unknown domain "${o.domain}"`, `bilinmeyen alan "${o.domain}"`);
+  if (o.milestoneType && !(LO_MILESTONE_TYPES as readonly string[]).includes(o.milestoneType)) return L(`unknown type "${o.milestoneType}"`, `bilinmeyen tür "${o.milestoneType}"`);
+  if (o.estimatedScope && !(SCOPES as readonly string[]).includes(o.estimatedScope)) return L(`unknown scope "${o.estimatedScope}"`, `bilinmeyen kapsam "${o.estimatedScope}"`);
+  if (o.difficulty !== undefined && !(Number.isInteger(o.difficulty) && o.difficulty >= 1 && o.difficulty <= 5)) return L("difficulty must be 1–5", "zorluk 1–5 arasında olmalı");
+  if (o.prerequisites?.some((p) => !p?.id || !(PREREQ_STRENGTHS as readonly string[]).includes(p.strength))) return L("invalid prerequisite", "geçersiz önkoşul");
+  if (o.evidenceTypes?.some((e) => !(EVIDENCE_TYPES as readonly string[]).includes(e))) return L("unknown evidence type", "bilinmeyen kanıt türü");
   return null;
 }
 
@@ -150,36 +152,36 @@ export function diffUpdate(g: KnowledgeGraph, update: GraphUpdate, db?: LabDB): 
   const everIssued = new Set([...ID_LEDGER, ...knownIds(db), ...RETIRED_IDS.map((r) => r.id)]);
   const reject = (id: string, detail: string) => changes.push({ kind: "REDDEDILDI", id, title: g.objects[id]?.title ?? id, detail, affectedMilestones: 0 });
 
-  if (!toVersion) reject("—", "Güncellemenin bir sürüm numarası olmalı (ör. 2.1.0).");
-  else if (compareVersions(toVersion, g.version) <= 0) reject("—", `Sürüm ${toVersion}, mevcut ${g.version} sürümünden büyük olmalı.`);
+  if (!toVersion) reject("—", L("The update needs a version number (e.g. 2.2.0).", "Güncellemenin bir sürüm numarası olmalı (ör. 2.2.0)."));
+  else if (compareVersions(toVersion, g.version) <= 0) reject("—", L(`Version ${toVersion} must be greater than the current ${g.version}.`, `Sürüm ${toVersion}, mevcut ${g.version} sürümünden büyük olmalı.`));
 
   for (const raw of update?.objects ?? []) {
     const id = String(raw?.id ?? "").trim();
-    if (!id || !/^[a-z0-9][a-z0-9.-]*$/.test(id)) { reject(id || "?", "Geçersiz ID: küçük harf, rakam, nokta ve tire kullanılmalı."); continue; }
+    if (!id || !/^[a-z0-9][a-z0-9.-]*$/.test(id)) { reject(id || "?", L("Invalid id: use lower-case letters, digits, dots and hyphens.", "Geçersiz ID: küçük harf, rakam, nokta ve tire kullanılmalı.")); continue; }
     const bad = invalidField(raw);
-    if (bad) { reject(id, `Geçersiz alan: ${bad}.`); continue; }
+    if (bad) { reject(id, L(`Invalid field: ${bad}.`, `Geçersiz alan: ${bad}.`)); continue; }
     const existing = g.objects[id];
     if (!existing) {
-      if (everIssued.has(id)) { reject(id, "Bu ID daha önce verilmiş; ID'ler yeniden kullanılamaz. Yeni bir ID seç."); continue; }
+      if (everIssued.has(id)) { reject(id, L("This id was issued before; ids can never be reused. Choose a new id.", "Bu ID daha önce verilmiş; ID'ler yeniden kullanılamaz. Yeni bir ID seç.")); continue; }
       overlay[id] = completeNew(raw, toVersion);
-      changes.push({ kind: "EKLE", id, title: overlay[id].title, detail: `${overlay[id].domain} alanına yeni nesne.`, affectedMilestones: 0 });
+      changes.push({ kind: "EKLE", id, title: overlay[id].title, detail: L(`New object in ${overlay[id].domain}.`, `${overlay[id].domain} alanına yeni nesne.`), affectedMilestones: 0 });
       continue;
     }
-    if (existing.status === "KULLANIM_DISI" || existing.status === "YERINE_GECILDI") { reject(id, "Kullanım dışı bir nesne değiştirilemez; yerine geçen nesneyi güncelle."); continue; }
+    if (existing.status === "KULLANIM_DISI" || existing.status === "YERINE_GECILDI") { reject(id, L("A retired object cannot be changed; update its successor instead.", "Kullanım dışı bir nesne değiştirilemez; yerine geçen nesneyi güncelle.")); continue; }
     const fields = Object.keys(raw).filter((k) => !IMMUTABLE.has(k) && JSON.stringify((raw as Record<string, unknown>)[k]) !== JSON.stringify((existing as unknown as Record<string, unknown>)[k]));
     if (!fields.length) continue;
     const next = { ...existing, ...raw, id, stableId: existing.stableId, version: toVersion } as LearningObject;
     if (fields.includes("evidenceTypes") && !raw.masteryCriteria) next.masteryCriteria = generateMasteryCriteria(next.evidenceTypes);
     overlay[id] = next;
-    changes.push({ kind: "DEGISTIR", id, title: next.title, detail: `Değişen alanlar: ${fields.join(", ")}.`, fields, affectedMilestones: linkedCount(db, id) });
+    changes.push({ kind: "DEGISTIR", id, title: next.title, detail: L(`Changed fields: ${fields.join(", ")}.`, `Değişen alanlar: ${fields.join(", ")}.`), fields, affectedMilestones: linkedCount(db, id) });
   }
 
   for (const r of update?.retire ?? []) {
     const o = g.objects[r?.id];
-    if (!o) { reject(r?.id ?? "?", "Kullanım dışı bırakılacak nesne bulunamadı."); continue; }
+    if (!o) { reject(r?.id ?? "?", L("The object to retire was not found.", "Kullanım dışı bırakılacak nesne bulunamadı.")); continue; }
     const successors = (r.supersededBy ?? []).filter(Boolean);
     const missing = successors.filter((s) => !g.objects[s] && !overlay[s]);
-    if (missing.length) { reject(o.id, `Yerine geçecek nesneler bulunamadı: ${missing.join(", ")}.`); continue; }
+    if (missing.length) { reject(o.id, L(`Successor objects not found: ${missing.join(", ")}.`, `Yerine geçecek nesneler bulunamadı: ${missing.join(", ")}.`)); continue; }
     overlay[o.id] = {
       ...(overlay[o.id] ?? o),
       status: successors.length ? "YERINE_GECILDI" : "KULLANIM_DISI",
@@ -191,8 +193,8 @@ export function diffUpdate(g: KnowledgeGraph, update: GraphUpdate, db?: LabDB): 
     changes.push({
       kind: "KULLANIM_DISI", id: o.id, title: o.title,
       detail: successors.length
-        ? `Yerine geçenler: ${successors.join(", ")}.${n ? ` ${n} adımın ilerlemesi yeni nesnelere de bağlanacak; eski bağlantı silinmez.` : ""}`
-        : `Yerine geçen yok; nesne geçmiş olarak kalır.${r.reason ? ` Gerekçe: ${r.reason}` : ""}`,
+        ? L(`Replaced by: ${successors.join(", ")}.${n ? ` Progress on ${n} steps will also be linked to the new objects; the old link is kept.` : ""}`, `Yerine geçenler: ${successors.join(", ")}.${n ? ` ${n} adımın ilerlemesi yeni nesnelere de bağlanacak; eski bağlantı silinmez.` : ""}`)
+        : L(`No successor; the object stays as history.${r.reason ? ` Reason: ${r.reason}` : ""}`, `Yerine geçen yok; nesne geçmiş olarak kalır.${r.reason ? ` Gerekçe: ${r.reason}` : ""}`),
       affectedMilestones: n,
     });
   }
@@ -208,13 +210,13 @@ export function diffUpdate(g: KnowledgeGraph, update: GraphUpdate, db?: LabDB): 
       overlay[oid] = { ...o, prerequisites: prerequisites.filter((p) => !seen.has(p.id) && seen.add(p.id)), version: toVersion };
       changes.push({
         kind: "DEGISTIR", id: oid, title: o.title, fields: ["prerequisites"],
-        detail: `Önkoşul ${r.id} yerine ${r.supersededBy.join(", ")} (otomatik; kullanımdan kalkan nesneye dayanıyordu).`,
+        detail: L(`Prerequisite ${r.id} replaced by ${r.supersededBy.join(", ")} (automatic; it depended on the retired object).`, `Önkoşul ${r.id} yerine ${r.supersededBy.join(", ")} (otomatik; kullanımdan kalkan nesneye dayanıyordu).`),
         affectedMilestones: linkedCount(db, oid),
       });
     }
   }
 
-  for (const id of update?.remove ?? []) reject(id, "Silme yapılmaz. Nesneyi 'retire' ile kullanım dışı bırak ve yerine geçenleri belirt; ilerleme böylece korunur.");
+  for (const id of update?.remove ?? []) reject(id, L("Nothing is deleted. Retire the object with 'retire' and name its successors, so progress is kept.", "Silme yapılmaz. Nesneyi 'retire' ile kullanım dışı bırak ve yerine geçenleri belirt; ilerleme böylece korunur."));
 
   const nextVersion = toVersion || g.version;
   const before = validateGraph(g, { ledger: false });
@@ -229,7 +231,7 @@ export function diffUpdate(g: KnowledgeGraph, update: GraphUpdate, db?: LabDB): 
   return {
     fromVersion: g.version,
     toVersion: nextVersion,
-    summary: update?.summary?.trim() || `${changes.filter((c) => c.kind !== "REDDEDILDI").length} değişiklik`,
+    summary: update?.summary?.trim() || L(`${changes.filter((c) => c.kind !== "REDDEDILDI").length} changes`, `${changes.filter((c) => c.kind !== "REDDEDILDI").length} değişiklik`),
     changes,
     newErrors,
     newWarnings,
@@ -241,7 +243,7 @@ export function diffUpdate(g: KnowledgeGraph, update: GraphUpdate, db?: LabDB): 
 
 /** Applies a validated plan. Throws if the plan is not ok. Call inside store.transact. */
 export function applyPlan(db: LabDB, plan: UpdatePlan, now = Date.now()): GraphUpdateRecord {
-  if (!plan.ok) throw new Error("Bu güncelleme planı uygulanamaz: önce hataları düzelt.");
+  if (!plan.ok) throw new Error(L("This update plan cannot be applied: fix the errors first.", "Bu güncelleme planı uygulanamaz: önce hataları düzelt."));
   let relinked = 0;
   for (const r of plan.retired) {
     if (!r.supersededBy.length) continue;
@@ -253,7 +255,7 @@ export function applyPlan(db: LabDB, plan: UpdatePlan, now = Date.now()): GraphU
     const claim = db.knowledge.selfAttested[r.id];
     if (claim) {
       for (const s of r.supersededBy) {
-        db.knowledge.selfAttested[s] ??= { at: claim.at, note: `${r.id} için verilen beyandan aktarıldı` };
+        db.knowledge.selfAttested[s] ??= { at: claim.at, note: L(`carried over from your claim for ${r.id}`, `${r.id} için verilen beyandan aktarıldı`) };
       }
     }
     if (db.knowledge.goals.includes(r.id)) {
@@ -281,9 +283,9 @@ export function parseUpdate(text: string): GraphUpdate {
   try {
     data = JSON.parse(text);
   } catch {
-    throw new Error("Güncelleme geçerli bir JSON değil.");
+    throw new Error(L("The update is not valid JSON.", "Güncelleme geçerli bir JSON değil."));
   }
-  if (!data || typeof data !== "object" || Array.isArray(data)) throw new Error("Güncelleme bir JSON nesnesi olmalı: { version, objects, retire }.");
+  if (!data || typeof data !== "object" || Array.isArray(data)) throw new Error(L("The update must be a JSON object: { version, objects, retire }.", "Güncelleme bir JSON nesnesi olmalı: { version, objects, retire }."));
   return data as GraphUpdate;
 }
 

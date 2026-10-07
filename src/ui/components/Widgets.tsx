@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import type { GraphSpec, SimulationSpec } from "../../domain/types";
 import { evaluate, parse } from "../../engines/expr";
+import { L } from "../../i18n";
 
 /** Plot y = f(x) as SVG with axes, gridlines and a pointer read-out. */
 export function GraphPlot({ spec }: { spec: GraphSpec }) {
@@ -20,7 +21,7 @@ export function GraphPlot({ spec }: { spec: GraphSpec }) {
     }
   }, [spec.expression, spec.xMin, spec.xMax]);
   const [hover, setHover] = useState<[number, number] | null>(null);
-  if (!data.length) return <div className="banner warn small">Bu grafik çizilemedi.</div>;
+  if (!data.length) return <div className="banner warn small">{L("This graph could not be drawn.", "Bu grafik çizilemedi.")}</div>;
   let yMin = Math.min(...data.map((d) => d[1])), yMax = Math.max(...data.map((d) => d[1]));
   if (yMin > 0) yMin = 0;
   if (yMax < 0) yMax = 0;
@@ -44,7 +45,7 @@ export function GraphPlot({ spec }: { spec: GraphSpec }) {
   };
   return (
     <figure style={{ margin: 0 }}>
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={`${spec.expression} grafiği`} onPointerMove={onMove} onPointerLeave={() => setHover(null)}
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={L(`Graph of ${spec.expression}`, `${spec.expression} grafiği`)} onPointerMove={onMove} onPointerLeave={() => setHover(null)}
         style={{ background: "#180c10", borderRadius: 12, border: "1px solid var(--border)", touchAction: "pan-y" }}>
         {ticks(spec.xMin, spec.xMax).map((t) => (
           <g key={`x${t}`}><line x1={sx(t)} x2={sx(t)} y1={P} y2={H - P} stroke="#2e1a20" /><text x={sx(t)} y={H - P + 16} fill="#a08a84" fontSize="11" textAnchor="middle">{t}</text></g>
@@ -86,7 +87,7 @@ export function SimulationPanel({ spec, onInteract }: { spec: SimulationSpec; on
   }, [spec, vals]);
   return (
     <div className="card raised stack" style={{ gap: 12 }}>
-      <span className="eyebrow">Simülasyon</span>
+      <span className="eyebrow">{L("Simulation", "Simülasyon")}</span>
       {spec.variables.map((v) => (
         <label key={v.name} className="stack" style={{ gap: 4 }}>
           <span className="row between small"><span>{v.label}</span><span className="mono">{vals[v.name]}</span></span>
@@ -106,9 +107,9 @@ export function SimulationPanel({ spec, onInteract }: { spec: SimulationSpec; on
 export function CodeEditor({ value, onChange, disabled }: { value: string; onChange: (v: string) => void; disabled?: boolean }) {
   return (
     <textarea
-      className="textarea mono" spellCheck={false} autoCapitalize="off" autoCorrect="off" disabled={disabled} aria-label="Kod cevabı"
+      className="textarea mono" spellCheck={false} autoCapitalize="off" autoCorrect="off" disabled={disabled} aria-label={L("Code answer", "Kod cevabı")}
       style={{ minHeight: 220, fontSize: 14, tabSize: 2, background: "#180c10" }}
-      value={value} placeholder="// kodunu buraya yaz"
+      value={value} placeholder={L("// write your code here", "// kodunu buraya yaz")}
       onChange={(e) => onChange(e.target.value)}
       onKeyDown={(e) => {
         if (e.key === "Tab") {

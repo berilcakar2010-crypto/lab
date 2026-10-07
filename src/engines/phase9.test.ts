@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { createEmptyDB } from "../data/db";
+import { setLang } from "../i18n";
 import type { LabDB, Question } from "../domain/types";
 import { importCurriculum, type CurriculumSpec } from "./curriculumSpec";
 import { courseMilestones, milestoneQuestions } from "./curriculum";
@@ -34,7 +35,7 @@ describe("Phase 9 — retention", () => {
   it("runs immediate, delayed and transfer checks, expands intervals and supports review recovery", () => {
     const db = createEmptyDB();
     const { courseId } = importCurriculum(db, structuredClone(mechanicsPack), { source: { kind: "SEED", text: "" }, generatedBy: "seed" });
-    const vec = courseMilestones(db, courseId).find((m) => m.title.startsWith("Bir vektörü bileşenlerine"))!;
+    const vec = courseMilestones(db, courseId).find((m) => m.sourceKey === "mech:vec1")!;
     const s = ensureSession(db, courseId);
     openMilestone(db, s.id, vec.id);
     const mastery = milestoneQuestions(db, vec.id).filter((q) => q.purpose === "MASTERY");
@@ -87,7 +88,13 @@ describe("Phase 9 — personal experiments", () => {
   it("allows one running experiment, alternates arms and exposes conditions", () => {
     const db = createEmptyDB();
     const exp = startExperiment(db, "MILESTONE_SIZE", 3);
-    expect(() => startExperiment(db, "STYLUS")).toThrow(/Başka bir deney/);
+    expect(() => startExperiment(db, "STYLUS")).toThrow(/Another experiment/);
+    setLang("tr");
+    try {
+      expect(() => startExperiment(db, "STYLUS")).toThrow(/Başka bir deney/);
+    } finally {
+      setLang("en");
+    }
     const arms: string[] = [];
     for (let i = 0; i < 6; i++) {
       const s = ensureSession(db, undefined, tick(3_600_000));
@@ -127,7 +134,7 @@ describe("Phase 9 — personal experiments", () => {
     runSession(() => false, 4);
     const early = compareExperiment(db, exp.id);
     expect(early.enoughSessions).toBe(false);
-    expect(early.verdict).toMatch(/henüz erken/);
+    expect(early.verdict).toMatch(/Too early/);
     expect(early.findings.every((f) => f.leader === null)).toBe(true);
 
     runSession((i) => i % 5 === 0, 16);
@@ -135,8 +142,16 @@ describe("Phase 9 — personal experiments", () => {
     expect(c.enoughSessions).toBe(true);
     const cont = c.findings.find((f) => f.metric === "continuation")!;
     expect(cont.leader).toBe(exp.arms[0].label);
-    expect(c.verdict).toMatch(/daha iyi görünüyor/);
-    expect(c.verdict).toMatch(/kesin ispat değil/);
+    expect(c.verdict).toMatch(/appears better/);
+    expect(c.verdict).toMatch(/not proof/);
+    setLang("tr");
+    try {
+      const tr = compareExperiment(db, exp.id);
+      expect(tr.verdict).toMatch(/daha iyi görünüyor/);
+      expect(tr.verdict).toMatch(/kesin ispat değil/);
+    } finally {
+      setLang("en");
+    }
   });
 
   it("does not assign when experiments are disabled", () => {

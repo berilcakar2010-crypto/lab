@@ -6,6 +6,7 @@
  */
 import type { Experiment, ExperimentArm, ExperimentVariable, ID, LabDB, Session } from "../domain/types";
 import { newId } from "../data/ids";
+import { L, getLang, lazyLabels, type Lang } from "../i18n";
 import { rate, visitRows, engagementIndex, type Rate, type VisitRow } from "./statistics";
 import { zTwoProportions } from "./focusLab";
 
@@ -26,46 +27,59 @@ export interface ExperimentTemplate {
   arms: { label: string; condition: Conditions }[];
 }
 
-export const EXPERIMENT_TEMPLATES: ExperimentTemplate[] = [
+const templates = (): ExperimentTemplate[] => [
   {
-    variable: "MILESTONE_SIZE", title: "Uzun görevler mi, mikro adımlar mı?",
-    hypothesis: "Küçük, somut adımlar beni büyük görevlerden daha uzun süre çalışmaya devam ettirir.",
-    arms: [{ label: "Mikro adımlar", condition: { preferScope: "MICRO" } }, { label: "Uzun görevler", condition: { preferScope: "LONG" } }],
+    variable: "MILESTONE_SIZE", title: L("Long tasks vs micro-milestones", "Uzun görevler mi, mikro adımlar mı?"),
+    hypothesis: L("Small, concrete milestones keep me going longer than large ones.", "Küçük, somut adımlar beni büyük görevlerden daha uzun süre çalışmaya devam ettirir."),
+    arms: [{ label: L("Micro-milestones", "Mikro adımlar"), condition: { preferScope: "MICRO" } }, { label: L("Longer tasks", "Uzun görevler"), condition: { preferScope: "LONG" } }],
   },
   {
-    variable: "STYLUS", title: "Mikro adımlar + kalemle çalışma alanı",
-    hypothesis: "Kalemle elle çalışmak sebat etmeme ve anlamama yardım eder.",
-    arms: [{ label: "Çalışma alanı açık (kalem)", condition: { workspaceOpen: true, preferScope: "MICRO" } }, { label: "Sadece yazarak", condition: { workspaceOpen: false, preferScope: "MICRO" } }],
+    variable: "STYLUS", title: L("Micro-milestones + stylus workspace", "Mikro adımlar + kalemle çalışma alanı"),
+    hypothesis: L("Working by hand with the stylus helps me persist and understand.", "Kalemle elle çalışmak sebat etmeme ve anlamama yardım eder."),
+    arms: [{ label: L("Workspace open (stylus)", "Çalışma alanı açık (kalem)"), condition: { workspaceOpen: true, preferScope: "MICRO" } }, { label: L("Typing only", "Sadece yazarak"), condition: { workspaceOpen: false, preferScope: "MICRO" } }],
   },
   {
-    variable: "IMMEDIATE_FEEDBACK", title: "Mikro adımlar + ayrıntılı anında geri bildirim",
-    hypothesis: "Ayrıntılı ve anında geri bildirim daha çok yeniden denememi ve daha çok öğrenmemi sağlar.",
-    arms: [{ label: "Ayrıntılı geri bildirim", condition: { feedbackDetail: "full", preferScope: "MICRO" } }, { label: "Sadece doğru / henüz değil", condition: { feedbackDetail: "minimal", preferScope: "MICRO" } }],
+    variable: "IMMEDIATE_FEEDBACK", title: L("Micro-milestones + detailed immediate feedback", "Mikro adımlar + ayrıntılı anında geri bildirim"),
+    hypothesis: L("Detailed, immediate feedback makes me retry more and learn more.", "Ayrıntılı ve anında geri bildirim daha çok yeniden denememi ve daha çok öğrenmemi sağlar."),
+    arms: [{ label: L("Detailed feedback", "Ayrıntılı geri bildirim"), condition: { feedbackDetail: "full", preferScope: "MICRO" } }, { label: L("Correct / not yet only", "Sadece doğru / henüz değil"), condition: { feedbackDetail: "minimal", preferScope: "MICRO" } }],
   },
   {
-    variable: "NEXT_CHOICE", title: "Mikro adımlar + sıradakini kendim seçmek",
-    hypothesis: "Sıradaki adımı kendim seçmek, bana atanmasından daha bağlı tutar.",
-    arms: [{ label: "Ben seçerim", condition: { choiceMode: "choose" } }, { label: "Tek öneri (değiştirilebilir)", condition: { choiceMode: "assigned" } }],
+    variable: "NEXT_CHOICE", title: L("Micro-milestones + choosing what's next", "Mikro adımlar + sıradakini kendim seçmek"),
+    hypothesis: L("Choosing my next milestone keeps me more engaged than being assigned one.", "Sıradaki adımı kendim seçmek, bana atanmasından daha bağlı tutar."),
+    arms: [{ label: L("I choose", "Ben seçerim"), condition: { choiceMode: "choose" } }, { label: L("One suggestion (override allowed)", "Tek öneri (değiştirilebilir)"), condition: { choiceMode: "assigned" } }],
   },
   {
-    variable: "DIFFICULTY", title: "Yüksek mi, orta zorluk mu?",
-    hypothesis: "Biraz daha zorlanmak, öğrenmeye zarar vermeden bağlılığımı artırır.",
-    arms: [{ label: "Zorlayıcı (+1 zorluk)", condition: { difficultyOffset: 1 } }, { label: "Orta", condition: { difficultyOffset: 0 } }],
+    variable: "DIFFICULTY", title: L("Higher vs moderate difficulty", "Yüksek mi, orta zorluk mu?"),
+    hypothesis: L("A bit more challenge keeps me engaged without hurting learning.", "Biraz daha zorlanmak, öğrenmeye zarar vermeden bağlılığımı artırır."),
+    arms: [{ label: L("Stretch (+1 difficulty)", "Zorlayıcı (+1 zorluk)"), condition: { difficultyOffset: 1 } }, { label: L("Moderate", "Orta"), condition: { difficultyOffset: 0 } }],
   },
   {
-    variable: "AI_ASSISTANCE", title: "Daha çok mu, daha az mı YZ desteği?",
-    hypothesis: "Oturumlar zor gelse de daha az yardım daha iyi kalıcılık sağlar.",
-    arms: [{ label: "Daha çok yardım (kısmi yönlendirmeye kadar, rehber açık)", condition: { hintCap: 4, guide: true } }, { label: "Daha az yardım (küçük ipuçları, rehber kapalı)", condition: { hintCap: 1, guide: false } }],
+    variable: "AI_ASSISTANCE", title: L("More vs less AI assistance", "Daha çok mu, daha az mı YZ desteği?"),
+    hypothesis: L("Less help leads to better retention, even if sessions feel harder.", "Oturumlar zor gelse de daha az yardım daha iyi kalıcılık sağlar."),
+    arms: [{ label: L("More help (up to partial guidance, guide on)", "Daha çok yardım (kısmi yönlendirmeye kadar, rehber açık)"), condition: { hintCap: 4, guide: true } }, { label: L("Less help (small hints, guide off)", "Daha az yardım (küçük ipuçları, rehber kapalı)"), condition: { hintCap: 1, guide: false } }],
   },
 ];
+
+const templateCache = new Map<Lang, ExperimentTemplate[]>();
+/** The experiment catalogue in the current language (an array view, so `.map`/`.find` keep working). */
+export const EXPERIMENT_TEMPLATES: ExperimentTemplate[] = new Proxy([] as ExperimentTemplate[], {
+  get: (_t, k) => {
+    const lang = getLang();
+    let list = templateCache.get(lang);
+    if (!list) templateCache.set(lang, (list = templates()));
+    const v = Reflect.get(list, k);
+    return typeof v === "function" ? v.bind(list) : v;
+  },
+  has: (_t, k) => k in templates(),
+});
 
 export const runningExperiment = (db: LabDB): Experiment | undefined =>
   Object.values(db.experiments).find((e) => e.status === "RUNNING");
 
 export function startExperiment(db: LabDB, variable: ExperimentVariable, minSessionsPerArm = 6): Experiment {
-  if (runningExperiment(db)) throw new Error("Başka bir deney sürüyor. Koşullar karışmasın diye önce onu duraklat ya da bitir.");
+  if (runningExperiment(db)) throw new Error(L("Another experiment is running. Pause or conclude it first, so conditions don't mix.", "Başka bir deney sürüyor. Koşullar karışmasın diye önce onu duraklat ya da bitir."));
   const t = EXPERIMENT_TEMPLATES.find((x) => x.variable === variable);
-  if (!t) throw new Error("Bilinmeyen deney");
+  if (!t) throw new Error(L("Unknown experiment", "Bilinmeyen deney"));
   const exp: Experiment = {
     id: newId("exp"),
     title: t.title,
@@ -83,7 +97,7 @@ export function startExperiment(db: LabDB, variable: ExperimentVariable, minSess
 export function setExperimentStatus(db: LabDB, id: ID, status: Experiment["status"], note?: string) {
   const e = db.experiments[id];
   if (!e) return;
-  if (status === "RUNNING" && runningExperiment(db) && runningExperiment(db)!.id !== id) throw new Error("Başka bir deney sürüyor.");
+  if (status === "RUNNING" && runningExperiment(db) && runningExperiment(db)!.id !== id) throw new Error(L("Another experiment is running.", "Başka bir deney sürüyor."));
   e.status = status;
   if (status === "CONCLUDED") {
     e.concludedAt = Date.now();
@@ -131,15 +145,10 @@ export function sessionConditions(db: LabDB, sessionId?: ID): Conditions & { exp
 
 export type Metric = "engagement" | "completion" | "persistence" | "continuation" | "performance" | "retention" | "transfer";
 
-export const METRIC_LABEL: Record<Metric, string> = {
-  engagement: "Bağlılık endeksi",
-  completion: "Tamamlama",
-  persistence: "Hatadan sonra sebat",
-  continuation: "Devam etme",
-  performance: "İlk denemede doğruluk",
-  retention: "Gecikmeli kalıcılık",
-  transfer: "Transfer",
-};
+export const METRIC_LABEL = lazyLabels<Metric>(
+  { engagement: "Engagement index", completion: "Completion", persistence: "Persistence after failure", continuation: "Continuation", performance: "First-try accuracy", retention: "Delayed retention", transfer: "Transfer" },
+  { engagement: "Bağlılık endeksi", completion: "Tamamlama", persistence: "Hatadan sonra sebat", continuation: "Devam etme", performance: "İlk denemede doğruluk", retention: "Gecikmeli kalıcılık", transfer: "Transfer" },
+);
 
 export interface ArmSummary {
   arm: ExperimentArm;
@@ -190,29 +199,29 @@ export function compareExperiment(db: LabDB, expId: ID): Comparison {
     const [a, b] = arms;
     const ra = a.rates[metric], rb = b.rates[metric];
     if (!enoughSessions || ra.value === null || rb.value === null) {
-      findings.push({ metric, leader: null, text: "Henüz yeterli veri yok" });
+      findings.push({ metric, leader: null, text: L("Not enough data yet", "Henüz yeterli veri yok") });
       continue;
     }
     const z = zTwoProportions(ra, rb);
     if (Math.abs(z) >= 1.96 && Math.abs(ra.value - rb.value) >= 0.15) {
       const lead = z > 0 ? a : b;
-      findings.push({ metric, leader: lead.arm.label, text: `"${lead.arm.label}" ile daha yüksek (%${Math.round(ra.value * 100)} ve %${Math.round(rb.value * 100)})` });
+      findings.push({ metric, leader: lead.arm.label, text: L(`Higher with "${lead.arm.label}" (${Math.round(ra.value * 100)}% vs ${Math.round(rb.value * 100)}%)`, `"${lead.arm.label}" ile daha yüksek (%${Math.round(ra.value * 100)} ve %${Math.round(rb.value * 100)})`) });
     } else {
-      findings.push({ metric, leader: null, text: `Güvenilir bir fark yok (%${Math.round(ra.value * 100)} ve %${Math.round(rb.value * 100)})` });
+      findings.push({ metric, leader: null, text: L(`No reliable difference (${Math.round(ra.value * 100)}% vs ${Math.round(rb.value * 100)}%)`, `Güvenilir bir fark yok (%${Math.round(ra.value * 100)} ve %${Math.round(rb.value * 100)})`) });
     }
   }
   const leads = findings.filter((f) => f.leader);
   let verdict: string;
   if (!enoughSessions) {
-    const need = arms.map((a) => `"${a.arm.label}" ile ${Math.max(0, exp.minSessionsPerArm - a.sessions)} oturum daha`).join(", ");
-    verdict = `Karşılaştırmak için henüz erken. Devam: ${need}.`;
+    const need = arms.map((a) => L(`${Math.max(0, exp.minSessionsPerArm - a.sessions)} more with "${a.arm.label}"`, `"${a.arm.label}" ile ${Math.max(0, exp.minSessionsPerArm - a.sessions)} oturum daha`)).join(", ");
+    verdict = L(`Too early to compare. Keep going: ${need}.`, `Karşılaştırmak için henüz erken. Devam: ${need}.`);
   } else if (!leads.length) {
-    verdict = "Şimdilik güvenilir bir fark yok. İki koşul da sende benzer işliyor gibi — ya da etki henüz görülemeyecek kadar küçük.";
+    verdict = L("No reliable difference so far. Both conditions seem to work similarly for you — or the effect is too small to see yet.", "Şimdilik güvenilir bir fark yok. İki koşul da sende benzer işliyor gibi — ya da etki henüz görülemeyecek kadar küçük.");
   } else {
     const byArm = new Map<string, string[]>();
     for (const f of leads) (byArm.get(f.leader!) ?? byArm.set(f.leader!, []).get(f.leader!)!).push(METRIC_LABEL[f.metric].toLowerCase());
-    verdict = [...byArm.entries()].map(([arm, ms]) => `"${arm}" şu açılardan daha iyi görünüyor: ${ms.join(", ")}`).join("; ") +
-      ". Bu kendi oturumlarından gelen bir kanıt, kesin ispat değil — oturumlar arasında başka şeyler de değişti.";
+    verdict = [...byArm.entries()].map(([arm, ms]) => L(`"${arm}" appears better for ${ms.join(", ")}`, `"${arm}" şu açılardan daha iyi görünüyor: ${ms.join(", ")}`)).join("; ") +
+      L(". This is evidence from your own sessions, not proof — other things changed between sessions too.", ". Bu kendi oturumlarından gelen bir kanıt, kesin ispat değil — oturumlar arasında başka şeyler de değişti.");
   }
   return { arms, enoughSessions, findings, verdict };
 }

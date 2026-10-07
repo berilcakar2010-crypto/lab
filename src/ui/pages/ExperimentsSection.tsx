@@ -4,6 +4,7 @@ import { EXPERIMENT_TEMPLATES, METRIC_LABEL, compareExperiment, runningExperimen
 import { act, safely, useDB } from "../state";
 import { Sheet } from "../components/common";
 import { pct } from "../components/Stats";
+import { L } from "../../i18n";
 
 /** Personal experiments: alternate conditions across sessions and compare, cautiously. */
 export function ExperimentsSection() {
@@ -15,23 +16,23 @@ export function ExperimentsSection() {
   return (
     <section className="stack">
       <div className="row between">
-        <h2>Kişisel deneyler</h2>
-        {!running && <button className="btn" onClick={() => setPicking(true)}>Yeni deney</button>}
+        <h2>{L("Personal experiments", "Kişisel deneyler")}</h2>
+        {!running && <button className="btn" onClick={() => setPicking(true)}>{L("New experiment", "Yeni deney")}</button>}
       </div>
-      {!db.preferences.experimentsEnabled && <div className="banner warn small">Deneyler Ayarlar'da kapalı; oturumlar koşullara atanmayacak.</div>}
+      {!db.preferences.experimentsEnabled && <div className="banner warn small">{L("Experiments are switched off in Settings, so sessions won't be assigned to conditions.", "Deneyler Ayarlar'da kapalı; oturumlar koşullara atanmayacak.")}</div>}
       {running ? <ExperimentCard id={running.id} /> : !others.length && (
-        <div className="card small text-2">Bir öğrenme stratejisini kendi üzerinde dene: Lab iki koşulu oturumlar arasında sırayla uygular (örneğin mikro adımlar ve uzun görevler) ve bağlılık, tamamlama, performans, kalıcılık, transfer ve sebatı karşılaştırır. Aynı anda yalnızca bir deney yürür.</div>
+        <div className="card small text-2">{L("Test a learning strategy on yourself: Lab alternates two conditions across sessions (for example micro-milestones vs longer tasks) and compares engagement, completion, performance, retention, transfer and persistence. Only one experiment runs at a time.", "Bir öğrenme stratejisini kendi üzerinde dene: Lab iki koşulu oturumlar arasında sırayla uygular (örneğin mikro adımlar ve uzun görevler) ve bağlılık, tamamlama, performans, kalıcılık, transfer ve sebatı karşılaştırır. Aynı anda yalnızca bir deney yürür.")}</div>
       )}
       {others.map((e) => <ExperimentCard key={e.id} id={e.id} />)}
       {picking && (
-        <Sheet title="Bir deney seç" onClose={() => setPicking(false)}>
+        <Sheet title={L("Choose an experiment", "Bir deney seç")} onClose={() => setPicking(false)}>
           <div className="stack">
             {EXPERIMENT_TEMPLATES.map((t) => (
               <button key={t.variable} className="card clickable stack" style={{ textAlign: "left", color: "inherit", font: "inherit", gap: 4 }}
-                onClick={() => { safely(() => act((d) => startExperiment(d, t.variable as ExperimentVariable)), "Deney başladı. Sonraki oturumların iki koşul arasında sırayla değişecek."); setPicking(false); }}>
+                onClick={() => { safely(() => act((d) => startExperiment(d, t.variable as ExperimentVariable)), L("Experiment started. Your next sessions alternate between the two conditions.", "Deney başladı. Sonraki oturumların iki koşul arasında sırayla değişecek.")); setPicking(false); }}>
                 <strong>{t.title}</strong>
                 <span className="small text-2">{t.hypothesis}</span>
-                <span className="tiny muted">{t.arms.map((a) => a.label).join("  ↔  ")}</span>
+                <span className="tiny muted">{t.arms.map((a) => a.label).join(L("  vs  ", "  ↔  "))}</span>
               </button>
             ))}
           </div>
@@ -48,27 +49,27 @@ function ExperimentCard({ id }: { id: string }) {
   return (
     <div className={`card stack ${exp.status === "RUNNING" ? "accent" : ""}`}>
       <div className="row between">
-        <span className="eyebrow">{exp.status === "RUNNING" ? "Sürüyor" : exp.status === "PAUSED" ? "Duraklatıldı" : "Tamamlandı"}</span>
+        <span className="eyebrow">{exp.status === "RUNNING" ? L("Running", "Sürüyor") : exp.status === "PAUSED" ? L("Paused", "Duraklatıldı") : L("Concluded", "Tamamlandı")}</span>
         <div className="row nowrap">
-          {exp.status === "RUNNING" && <button className="btn small" onClick={() => act((d) => setExperimentStatus(d, id, "PAUSED"))}>Duraklat</button>}
-          {exp.status === "PAUSED" && <button className="btn small" onClick={() => safely(() => act((d) => setExperimentStatus(d, id, "RUNNING")))}>Sürdür</button>}
-          {exp.status !== "CONCLUDED" && <button className="btn small" onClick={() => { if (confirm("Bu deney bitirilsin mi? Verileri saklanır.")) act((d) => setExperimentStatus(d, id, "CONCLUDED", c.verdict)); }}>Bitir</button>}
+          {exp.status === "RUNNING" && <button className="btn small" onClick={() => act((d) => setExperimentStatus(d, id, "PAUSED"))}>{L("Pause", "Duraklat")}</button>}
+          {exp.status === "PAUSED" && <button className="btn small" onClick={() => safely(() => act((d) => setExperimentStatus(d, id, "RUNNING")))}>{L("Resume", "Sürdür")}</button>}
+          {exp.status !== "CONCLUDED" && <button className="btn small" onClick={() => { if (confirm(L("Conclude this experiment? Its data is kept.", "Bu deney bitirilsin mi? Verileri saklanır."))) act((d) => setExperimentStatus(d, id, "CONCLUDED", c.verdict)); }}>{L("Conclude", "Bitir")}</button>}
         </div>
       </div>
       <h3>{exp.title}</h3>
-      <p className="small text-2">Hipotez: {exp.hypothesis}</p>
+      <p className="small text-2">{L("Hypothesis", "Hipotez")}: {exp.hypothesis}</p>
       <div className="grid-2">
         {c.arms.map((a) => (
           <div key={a.arm.id} className="card raised stack" style={{ gap: 4 }}>
             <strong className="small">{a.arm.label}</strong>
-            <span className="tiny muted">{a.sessions} / {exp.minSessionsPerArm} oturum · {a.visits} adım ziyareti</span>
+            <span className="tiny muted">{L(`${a.sessions} / ${exp.minSessionsPerArm} sessions · ${a.visits} milestone visits`, `${a.sessions} / ${exp.minSessionsPerArm} oturum · ${a.visits} adım ziyareti`)}</span>
             <div className="bar"><span style={{ width: `${Math.min(1, a.sessions / exp.minSessionsPerArm) * 100}%` }} /></div>
           </div>
         ))}
       </div>
       <div className="stack" style={{ gap: 4 }} role="table">
         <div className="row small muted nowrap" role="row" style={{ gap: 8 }}>
-          <span className="grow">Ölçüt</span>
+          <span className="grow">{L("Metric", "Ölçüt")}</span>
           {c.arms.map((a) => <span key={a.arm.id} style={{ width: 84, textAlign: "right" }} className="truncate">{a.arm.label.split(" ")[0]}</span>)}
         </div>
         {(["engagement", "completion", "persistence", "continuation", "performance", "retention", "transfer"] as const).map((m) => {

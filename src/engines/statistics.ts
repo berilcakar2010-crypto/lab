@@ -6,6 +6,7 @@
  * from learning — enjoying something is not evidence of learning it.
  */
 import type { AnalyticsEvent, ID, LabDB, MilestoneType } from "../domain/types";
+import { L, lazyLabels } from "../i18n";
 import { computeSessionTimes, reconstructSession, type MilestoneVisit } from "./analytics";
 
 export const MIN_N = 5;
@@ -151,41 +152,41 @@ export type GroupKey =
   | "subject" | "topic" | "milestoneType" | "interaction" | "difficulty" | "duration" | "inputMethod" | "stylus"
   | "feedback" | "challenge" | "novelty" | "timeOfDay" | "assistance";
 
-export const GROUP_LABEL: Record<GroupKey, string> = {
-  subject: "Alan", topic: "Konu", milestoneType: "Adım türü", interaction: "Etkileşim türü", difficulty: "Zorluk",
-  duration: "Adım uzunluğu", inputMethod: "Giriş yöntemi", stylus: "Kalem", feedback: "Geri bildirim biçimi", challenge: "Zorlayıcılık",
-  novelty: "Yenilik", timeOfDay: "Günün saati", assistance: "YZ / ipucu desteği",
-};
+export const GROUP_LABEL = lazyLabels<GroupKey>(
+  { subject: "Subject", topic: "Topic", milestoneType: "Milestone type", interaction: "Interaction type", difficulty: "Difficulty", duration: "Milestone length", inputMethod: "Input method", stylus: "Stylus", feedback: "Feedback timing", challenge: "Challenge level", novelty: "Novelty", timeOfDay: "Time of day", assistance: "AI / hint assistance" },
+  { subject: "Alan", topic: "Konu", milestoneType: "Adım türü", interaction: "Etkileşim türü", difficulty: "Zorluk", duration: "Adım uzunluğu", inputMethod: "Giriş yöntemi", stylus: "Kalem", feedback: "Geri bildirim biçimi", challenge: "Zorlayıcılık", novelty: "Yenilik", timeOfDay: "Günün saati", assistance: "YZ / ipucu desteği" },
+);
 
 export function groupOf(db: LabDB, r: VisitRow, key: GroupKey): string | null {
   switch (key) {
-    case "subject": return r.subjectId ? db.subjects[r.subjectId]?.name ?? "(silindi)" : null;
-    case "topic": return r.topicId ? db.topics[r.topicId]?.title ?? "(silindi)" : null;
+    case "subject": return r.subjectId ? db.subjects[r.subjectId]?.name ?? L("(deleted)", "(silindi)") : null;
+    case "topic": return r.topicId ? db.topics[r.topicId]?.title ?? L("(deleted)", "(silindi)") : null;
     case "milestoneType": return r.milestoneType ? TYPE_TR[r.milestoneType] ?? r.milestoneType : null;
     case "interaction": return r.interaction ? INTERACTION_TR[r.interaction] ?? r.interaction.toLowerCase().replace(/_/g, " ") : null;
-    case "difficulty": return r.difficulty === undefined ? null : r.difficulty <= 2 ? "kolay (1–2)" : r.difficulty === 3 ? "orta (3)" : "zor (4–5)";
-    case "duration": return r.estimatedDuration === undefined ? null : r.estimatedDuration <= 15 ? "kısa (≤15 dk)" : r.estimatedDuration <= 30 ? "orta (16–30 dk)" : "uzun (>30 dk)";
+    case "difficulty": return r.difficulty === undefined ? null : r.difficulty <= 2 ? L("easy (1–2)", "kolay (1–2)") : r.difficulty === 3 ? L("moderate (3)", "orta (3)") : L("hard (4–5)", "zor (4–5)");
+    case "duration": return r.estimatedDuration === undefined ? null : r.estimatedDuration <= 15 ? L("short (≤15 min)", "kısa (≤15 dk)") : r.estimatedDuration <= 30 ? L("medium (16–30 min)", "orta (16–30 dk)") : L("long (>30 min)", "uzun (>30 dk)");
     case "inputMethod": return r.inputMethods.length ? INPUT_TR[r.inputMethods.includes("pen") ? "pen" : r.inputMethods[0]] ?? r.inputMethods[0] : null;
-    case "stylus": return r.attempts ? (r.usedStylus ? "kalemle" : "kalemsiz") : null;
-    case "feedback": return r.attempts ? (r.immediateFeedback ? "anında (otomatik)" : "öz/YZ değerlendirmesi") : null;
-    case "challenge": return r.milestoneType === "BOSS" || r.milestoneType === "CHALLENGE" ? "meydan okuma / final" : r.milestoneType ? "normal" : null;
-    case "novelty": return r.novelTopic ? "oturumda yeni konu" : "önceki konuyla aynı";
-    case "timeOfDay": return r.hourOfDay < 6 ? "gece" : r.hourOfDay < 12 ? "sabah" : r.hourOfDay < 18 ? "öğleden sonra" : "akşam";
-    case "assistance": return r.maxHintLevel === 0 && r.aiInteractions === 0 ? "yardımsız" : r.maxHintLevel >= 4 ? "yoğun yardım (4–5)" : "hafif yardım (1–3, rehber)";
+    case "stylus": return r.attempts ? (r.usedStylus ? L("with stylus", "kalemle") : L("without stylus", "kalemsiz")) : null;
+    case "feedback": return r.attempts ? (r.immediateFeedback ? L("immediate (auto-checked)", "anında (otomatik)") : L("self/AI-assessed", "öz/YZ değerlendirmesi")) : null;
+    case "challenge": return r.milestoneType === "BOSS" || r.milestoneType === "CHALLENGE" ? L("challenge / boss", "meydan okuma / final") : r.milestoneType ? L("regular", "normal") : null;
+    case "novelty": return r.novelTopic ? L("new topic in session", "oturumda yeni konu") : L("same topic as before", "önceki konuyla aynı");
+    case "timeOfDay": return r.hourOfDay < 6 ? L("night", "gece") : r.hourOfDay < 12 ? L("morning", "sabah") : r.hourOfDay < 18 ? L("afternoon", "öğleden sonra") : L("evening", "akşam");
+    case "assistance": return r.maxHintLevel === 0 && r.aiInteractions === 0 ? L("no help", "yardımsız") : r.maxHintLevel >= 4 ? L("heavy help (4–5)", "yoğun yardım (4–5)") : L("light help (1–3, AI guide)", "hafif yardım (1–3, rehber)");
   }
 }
 
-const TYPE_TR: Record<string, string> = {
-  CONCEPT: "kavram", PRACTICE: "alıştırma", APPLICATION: "uygulama", DERIVATION: "türetme", PROOF: "ispat", PROBLEM_SOLVING: "problem çözme",
-  EXPERIMENT: "deney", PROJECT: "proje", REVIEW: "tekrar", CHALLENGE: "meydan okuma", BOSS: "final",
-};
-export const INTERACTION_TR: Record<string, string> = {
-  MULTIPLE_CHOICE: "çoktan seçmeli", FREE_RESPONSE: "açık uçlu", EQUATION: "denklem", NUMERIC: "sayısal", DERIVATION: "türetme", PROOF: "ispat",
-  EXPLANATION: "açıklama", PREDICTION: "tahmin", DIAGRAM: "diyagram", DRAWING: "çizim", GRAPH_INTERPRETATION: "grafik yorumu", ORDERING: "sıralama",
-  CODE: "kod", SIMULATION: "simülasyon", PROBLEM_SOLVING: "problem çözme", CLASSIFICATION: "sınıflandırma", COMPARISON: "karşılaştırma",
-  CONCEPT_EXPLANATION: "kavram açıklama",
-};
-const INPUT_TR: Record<string, string> = { pen: "kalem", touch: "dokunma", mouse: "fare", keyboard: "klavye", unknown: "bilinmiyor" };
+const TYPE_TR = lazyLabels<string>(
+  { CONCEPT: "concept", PRACTICE: "practice", APPLICATION: "application", DERIVATION: "derivation", PROOF: "proof", PROBLEM_SOLVING: "problem solving", EXPERIMENT: "experiment", PROJECT: "project", REVIEW: "review", CHALLENGE: "challenge", BOSS: "boss" },
+  { CONCEPT: "kavram", PRACTICE: "alıştırma", APPLICATION: "uygulama", DERIVATION: "türetme", PROOF: "ispat", PROBLEM_SOLVING: "problem çözme", EXPERIMENT: "deney", PROJECT: "proje", REVIEW: "tekrar", CHALLENGE: "meydan okuma", BOSS: "final" },
+);
+export const INTERACTION_TR = lazyLabels<string>(
+  { MULTIPLE_CHOICE: "multiple choice", FREE_RESPONSE: "free response", EQUATION: "equation", NUMERIC: "numeric", DERIVATION: "derivation", PROOF: "proof", EXPLANATION: "explanation", PREDICTION: "prediction", DIAGRAM: "diagram", DRAWING: "drawing", GRAPH_INTERPRETATION: "graph interpretation", ORDERING: "ordering", CODE: "code", SIMULATION: "simulation", PROBLEM_SOLVING: "problem solving", CLASSIFICATION: "classification", COMPARISON: "comparison", CONCEPT_EXPLANATION: "concept explanation" },
+  { MULTIPLE_CHOICE: "çoktan seçmeli", FREE_RESPONSE: "açık uçlu", EQUATION: "denklem", NUMERIC: "sayısal", DERIVATION: "türetme", PROOF: "ispat", EXPLANATION: "açıklama", PREDICTION: "tahmin", DIAGRAM: "diyagram", DRAWING: "çizim", GRAPH_INTERPRETATION: "grafik yorumu", ORDERING: "sıralama", CODE: "kod", SIMULATION: "simülasyon", PROBLEM_SOLVING: "problem çözme", CLASSIFICATION: "sınıflandırma", COMPARISON: "karşılaştırma", CONCEPT_EXPLANATION: "kavram açıklama" },
+);
+const INPUT_TR = lazyLabels<string>(
+  { pen: "pen", touch: "touch", mouse: "mouse", keyboard: "keyboard", unknown: "unknown" },
+  { pen: "kalem", touch: "dokunma", mouse: "fare", keyboard: "klavye", unknown: "bilinmiyor" },
+);
 
 export interface GroupStat {
   group: string;

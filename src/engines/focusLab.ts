@@ -4,16 +4,15 @@
  * stays silent (with an explicit "insufficient data") when samples are small.
  */
 import type { LabDB } from "../domain/types";
+import { L, lazyLabels } from "../i18n";
 import { GROUP_LABEL, groupOf, rate, visitRows, type GroupKey, type Rate, type VisitRow } from "./statistics";
 
 export type Outcome = "continuation" | "completion" | "persistence" | "firstTry";
 
-export const OUTCOME_LABEL: Record<Outcome, string> = {
-  continuation: "başka bir adıma devam etme",
-  completion: "adımları tamamlama (yarıda bırakmaya karşı)",
-  persistence: "hatadan sonra yeniden deneme",
-  firstTry: "ilk denemede doğruluk",
-};
+export const OUTCOME_LABEL = lazyLabels<Outcome>(
+  { continuation: "continuing to another milestone", completion: "completing milestones (vs. abandoning)", persistence: "retrying after a mistake", firstTry: "first-try accuracy" },
+  { continuation: "başka bir adıma devam etme", completion: "adımları tamamlama (yarıda bırakmaya karşı)", persistence: "hatadan sonra yeniden deneme", firstTry: "ilk denemede doğruluk" },
+);
 
 export const FOCUS_FACTORS: GroupKey[] = ["duration", "difficulty", "stylus", "interaction", "feedback", "challenge", "novelty", "subject", "timeOfDay", "assistance"];
 
@@ -69,6 +68,7 @@ export function zTwoProportions(a: Rate, b: Rate): number {
   return se === 0 ? 0 : (p1 - p2) / se;
 }
 
+const pct = (x: number) => `${Math.round(x * 100)}%`;
 
 export function analyseFactor(db: LabDB, rows: VisitRow[], factor: GroupKey, outcome: Outcome): { status: FactorStatus; pattern: Pattern | null } {
   const groups = new Map<string, VisitRow[]>();
@@ -88,10 +88,11 @@ export function analyseFactor(db: LabDB, rows: VisitRow[], factor: GroupKey, out
   const z = zTwoProportions(high.rate, low.rate);
   if (diff < 0.15 || z < 1.28) return { status: { factor, outcome, groups: rated, status: "no-difference" }, pattern: null };
   const strength: Strength = z >= 1.96 ? "associated" : "preliminary";
-  const sentence = `${strength === "associated" ? "" : "Ön bulgu: "}${GROUP_LABEL[factor]} "${high.group}" olduğunda, "${low.group}" durumuna göre daha fazla ${OUTCOME_LABEL[outcome]} ${strength === "associated" ? "ile ilişkili görünüyor" : "ile ilişkili olabilir"} (%${Math.round(high.rate.value! * 100)} ve %${Math.round(low.rate.value! * 100)}; n = ${high.rate.n} ve ${low.rate.n}).`;
+  const sentence = L(`${strength === "associated" ? "" : "Preliminary pattern: "}${cap(GROUP_LABEL[factor].toLowerCase())} "${high.group}" ${strength === "associated" ? "appears associated with" : "may be associated with"} more ${OUTCOME_LABEL[outcome]} than "${low.group}" (${pct(high.rate.value!)} vs ${pct(low.rate.value!)}; n = ${high.rate.n} vs ${low.rate.n}).`, `${strength === "associated" ? "" : "Ön bulgu: "}${GROUP_LABEL[factor]} "${high.group}" olduğunda, "${low.group}" durumuna göre daha fazla ${OUTCOME_LABEL[outcome]} ${strength === "associated" ? "ile ilişkili görünüyor" : "ile ilişkili olabilir"} (%${Math.round(high.rate.value! * 100)} ve %${Math.round(low.rate.value! * 100)}; n = ${high.rate.n} ve ${low.rate.n}).`);
   return { status: { factor, outcome, groups: rated, status: "pattern" }, pattern: { factor, outcome, high, low, diff, z, strength, sentence } };
 }
 
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 export interface FocusReport {
   visits: number;
@@ -119,10 +120,10 @@ export function focusReport(db: LabDB): FocusReport {
     patterns,
     statuses,
     hypothesis: [
-      hyp("Küçük adımlar → devam etme", "duration", "continuation"),
-      hyp("Anında geri bildirim → hatadan sonra yeniden deneme", "feedback", "persistence"),
-      hyp("Kalemle çalışma → tamamlama", "stylus", "completion"),
-      hyp("Zorlayıcılık → devam etme", "challenge", "continuation"),
+      hyp(L("Small milestones → continuing", "Küçük adımlar → devam etme"), "duration", "continuation"),
+      hyp(L("Immediate feedback → retrying after mistakes", "Anında geri bildirim → hatadan sonra yeniden deneme"), "feedback", "persistence"),
+      hyp(L("Stylus interaction → completing", "Kalemle çalışma → tamamlama"), "stylus", "completion"),
+      hyp(L("Challenge level → continuing", "Zorlayıcılık → devam etme"), "challenge", "continuation"),
     ],
   };
 }

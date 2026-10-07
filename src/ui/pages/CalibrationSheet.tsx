@@ -7,6 +7,7 @@ import { act, toast, useDB } from "../state";
 import { AnswerInput } from "../components/AnswerInput";
 import { Sheet } from "../components/common";
 import { MathText } from "../components/MathText";
+import { L, pick } from "../../i18n";
 
 type Step = "rate" | "diagnose" | "result";
 
@@ -42,20 +43,20 @@ export function CalibrationSheet({ courseId, onClose }: { courseId: ID; onClose:
   const apply = () => {
     if (!result) return;
     act((d) => applyCalibration(d, courseId, result, skipKnown));
-    toast(result.startHereId ? "Başlangıç noktası belirlendi. İstediğin zaman farklı seçebilirsin." : "Ayarlama kaydedildi.");
+    toast(result.startHereId ? L("Starting point set. You can always choose differently.", "Başlangıç noktası belirlendi. İstediğin zaman farklı seçebilirsin.") : L("Calibration saved.", "Ayarlama kaydedildi."));
     onClose();
   };
 
   return (
-    <Sheet title="Başlangıç noktanı bul" onClose={onClose}>
+    <Sheet title={L("Find your starting point", "Başlangıç noktanı bul")} onClose={onClose}>
       {step === "rate" && (
         <div className="stack">
-          <p className="text-2">Her bölüm sana ne kadar tanıdık? Bu yalnızca öneriyi şekillendirir — hiçbir şey kilitlenmez ya da ustalaşılmış sayılmaz.</p>
+          <p className="text-2">{L("How familiar is each part? This only shapes the recommendation — nothing is locked or marked as mastered.", "Her bölüm sana ne kadar tanıdık? Bu yalnızca öneriyi şekillendirir — hiçbir şey kilitlenmez ya da ustalaşılmış sayılmaz.")}</p>
           {units.map((u) => (
             <div key={u.id} className="card raised stack" style={{ gap: 8 }}>
               <strong>{u.title}</strong>
               <div className="row" style={{ gap: 6 }}>
-                {(["Yeni", "Biraz biliyorum", "Eminim"] as const).map((label, i) => (
+                {pick(["New to me", "Some exposure", "Confident"], ["Yeni", "Biraz biliyorum", "Eminim"]).map((label, i) => (
                   <button key={label} className="btn small" onClick={() => setRatings({ ...ratings, [u.id]: i as 0 | 1 | 2 })}
                     style={{ borderColor: ratings[u.id] === i ? "var(--accent)" : undefined, background: ratings[u.id] === i ? "var(--accent-soft)" : undefined }}>{label}</button>
                 ))}
@@ -63,35 +64,35 @@ export function CalibrationSheet({ courseId, onClose }: { courseId: ID; onClose:
             </div>
           ))}
           <div className="row">
-            <button className="btn" onClick={() => finish({})}>Soruları atla</button>
+            <button className="btn" onClick={() => finish({})}>{L("Skip the questions", "Soruları atla")}</button>
             <button className="btn primary grow" onClick={() => (plan.length ? setStep("diagnose") : finish({}))}>
-              {plan.length ? `${plan.length} kısa tanılama sorusunu cevapla` : "Öneriyi gör"}
+              {plan.length ? L(`Answer ${plan.length} quick diagnostic questions`, `${plan.length} kısa tanılama sorusunu cevapla`) : L("See recommendation", "Öneriyi gör")}
             </button>
           </div>
         </div>
       )}
       {step === "diagnose" && plan[index] && (
         <div className="stack">
-          <div className="row between"><span className="eyebrow">Tanılama {index + 1} / {plan.length}</span><span className="small muted">{db.milestones[plan[index].milestoneId]?.title}</span></div>
+          <div className="row between"><span className="eyebrow">{L("Diagnostic", "Tanılama")} {index + 1} / {plan.length}</span><span className="small muted">{db.milestones[plan[index].milestoneId]?.title}</span></div>
           <MathText className="serif" style={{ fontSize: "1.1rem" }} text={db.questions[plan[index].questionId].prompt} />
           <AnswerInput question={db.questions[plan[index].questionId]} value={answer} onChange={setAnswer} onSubmit={() => answer && submitDiag()} />
           <div className="row">
-            <button className="btn" onClick={() => submitDiag(true)}>Henüz bilmiyorum</button>
-            <button className="btn primary grow" disabled={!answer} onClick={() => submitDiag()}>Sonraki</button>
+            <button className="btn" onClick={() => submitDiag(true)}>{L("I don't know yet", "Henüz bilmiyorum")}</button>
+            <button className="btn primary grow" disabled={!answer} onClick={() => submitDiag()}>{L("Next", "Sonraki")}</button>
           </div>
-          <p className="tiny muted">Burada bilerek geri bildirim yok — bu sadece nereden başlayacağını tahmin eder.</p>
+          <p className="tiny muted">{L("No feedback here on purpose — this only estimates where to begin.", "Burada bilerek geri bildirim yok — bu sadece nereden başlayacağını tahmin eder.")}</p>
         </div>
       )}
       {step === "result" && result && (
         <div className="stack">
           {result.startHereId ? (
             <div className="card accent stack" style={{ gap: 6 }}>
-              <span className="eyebrow">Buradan başla</span>
+              <span className="eyebrow">{L("Start here", "Buradan başla")}</span>
               <h3>{db.milestones[result.startHereId]?.title}</h3>
               <p className="small text-2">{db.milestones[result.startHereId]?.learningObjective}</p>
             </div>
           ) : (
-            <div className="banner ok">Her şey tanıdık görünüyor.</div>
+            <div className="banner ok">{L("Everything appears familiar.", "Her şey tanıdık görünüyor.")}</div>
           )}
           <ul className="small text-2" style={{ margin: 0, paddingLeft: 18 }}>
             {result.rationale.map((r, i) => <li key={i}>{r}</li>)}
@@ -99,12 +100,15 @@ export function CalibrationSheet({ courseId, onClose }: { courseId: ID; onClose:
           {result.likelyKnown.length > 0 && (
             <label className="row nowrap card raised" style={{ cursor: "pointer" }}>
               <input type="checkbox" checked={skipKnown} onChange={(e) => setSkipKnown(e.target.checked)} style={{ width: 20, height: 20 }} />
-              <span className="small">Tanıdık görünen {result.likelyKnown.length} adımı atla. Haritada <em>atlandı</em> olarak kalırlar — ustalaşılmış değil — ve istediğin zaman geri dönebilirsin.</span>
+              <span className="small">{pick(
+                <>Skip the {result.likelyKnown.length} milestones that look familiar. They stay in the map as <em>skipped</em> — not mastered — and you can return to them anytime.</>,
+                <>Tanıdık görünen {result.likelyKnown.length} adımı atla. Haritada <em>atlandı</em> olarak kalırlar — ustalaşılmış değil — ve istediğin zaman geri dönebilirsin.</>,
+              )}</span>
             </label>
           )}
           <div className="row">
-            <button className="btn" onClick={onClose}>Şimdi değil</button>
-            <button className="btn primary grow" onClick={apply}>Bu başlangıç noktasını kullan</button>
+            <button className="btn" onClick={onClose}>{L("Not now", "Şimdi değil")}</button>
+            <button className="btn primary grow" onClick={apply}>{L("Use this starting point", "Bu başlangıç noktasını kullan")}</button>
           </div>
         </div>
       )}

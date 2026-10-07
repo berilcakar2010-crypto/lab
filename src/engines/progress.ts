@@ -9,6 +9,7 @@ import type {
   RetentionKind, Session, SessionEndReason,
 } from "../domain/types";
 import { newId } from "../data/ids";
+import { L } from "../i18n";
 import { courseMilestones, milestoneQuestions } from "./curriculum";
 import { computeSessionTimes, logEvent, sessionEvents } from "./analytics";
 
@@ -119,9 +120,9 @@ export function endSession(db: LabDB, sessionId: ID, reason: SessionEndReason, a
 /** Opening a milestone makes it the course's single ACTIVE milestone. */
 export function openMilestone(db: LabDB, sessionId: ID, milestoneId: ID, opts: { override?: boolean } = {}) {
   const m = db.milestones[milestoneId];
-  if (!m) throw new Error("Bilinmeyen adım");
+  if (!m) throw new Error(L("Unknown milestone", "Bilinmeyen adım"));
   if (m.status === "LOCKED") {
-    if (!opts.override) throw new Error("Bu adım kilitli; yine de devam etmek için kilidi elle aç");
+    if (!opts.override) throw new Error(L("Milestone is locked; open with override to proceed anyway", "Bu adım kilitli; yine de devam etmek için kilidi elle aç"));
     m.manuallyUnlocked = true;
   }
   if (m.skippedAt) m.skippedAt = undefined;

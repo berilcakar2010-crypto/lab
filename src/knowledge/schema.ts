@@ -220,6 +220,7 @@ export interface Mapping {
   source?: string;
   checkedAt?: string;
   note?: string;
+  noteEn?: string;
 }
 
 export const RESOURCE_KINDS = ["KITAP", "DERS", "VIDEO", "SITE", "ARAC", "MAKALE", "VERI"] as const;

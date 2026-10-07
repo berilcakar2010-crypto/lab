@@ -12,6 +12,7 @@ import {
   addConcept, addMilestone, addQuestion, addTopic, addUnit, clamp, createCourse, createSubject, DEFAULT_INTERACTION,
   defaultMastery, syncNextMilestones, courseMilestones,
 } from "./curriculum";
+import { L } from "../i18n";
 import { breakCycles, type PrereqMap } from "./graph";
 import { recomputeStatuses } from "./progress";
 import { PACK_LO, packPrefix } from "../knowledge/packLinks";
@@ -53,6 +54,8 @@ export interface MilestoneSpec {
   questions?: QuestionSpec[];
   /** Canonical knowledge-graph objects this milestone practises. */
   lo?: string[];
+  /** Stable key for re-localisation (set by the graph generator: "lo:<id>#<n>"). */
+  sourceKey?: string;
 }
 
 export interface TopicSpec {
@@ -131,7 +134,7 @@ export function sanitizeQuestion(
     base.correctChoice = q.correctChoice;
     if (!choiceKinds.includes(kind) && !q.numeric && !q.classification) kind = "MULTIPLE_CHOICE";
   } else if (kind === "MULTIPLE_CHOICE") {
-    repairs.push(`"${prompt.slice(0, 40)}…" sorusunun şıkları geçersizdi; açık uçluya çevrildi`);
+    repairs.push(L(`Question "${prompt.slice(0, 40)}…" had invalid choices; converted to free response`, `"${prompt.slice(0, 40)}…" sorusunun şıkları geçersizdi; açık uçluya çevrildi`));
     kind = "FREE_RESPONSE";
   }
   if (q.numeric && Number.isFinite(Number(q.numeric.value))) {
@@ -142,7 +145,7 @@ export function sanitizeQuestion(
     };
     if (!base.choices && !NUMERIC_CAPABLE.has(kind)) kind = "NUMERIC";
   } else if (kind === "NUMERIC") {
-    repairs.push(`"${prompt.slice(0, 40)}…" sayısal sorusunun cevabı yoktu; açık uçluya çevrildi`);
+    repairs.push(L(`Numeric question "${prompt.slice(0, 40)}…" had no numeric answer; converted to free response`, `"${prompt.slice(0, 40)}…" sayısal sorusunun cevabı yoktu; açık uçluya çevrildi`));
     kind = "FREE_RESPONSE";
   }
   const exprs = strs(q.acceptedExpressions);
@@ -177,7 +180,7 @@ export function sanitizeQuestion(
   base.kind = kind;
   // Open responses need something to evaluate against.
   if (!base.rubric.length && !base.choices && !base.numeric && !base.acceptedExpressions && !base.orderItems && !base.classification) {
-    base.rubric = base.solution ? [base.solution.slice(0, 200)] : ["Ana fikri doğru ifade ediyor ve gerekçelendiriyor."];
+    base.rubric = base.solution ? [base.solution.slice(0, 200)] : [L("States the key idea correctly and justifies it.", "Ana fikri doğru ifade ediyor ve gerekçelendiriyor.")];
   }
   return base;
 }
@@ -188,11 +191,11 @@ export function importCurriculum(
   meta: { source: CurriculumSource; generatedBy: string; subjectName?: string },
 ): ImportReport {
   const repairs: string[] = [];
-  if (!spec || !Array.isArray(spec.units) || !spec.units.length) throw new Error("Müfredatta hiç ünite yok");
-  const subject = createSubject(db, { name: str(meta.subjectName) || str(spec.subject) || str(spec.title) || "Genel" });
+  if (!spec || !Array.isArray(spec.units) || !spec.units.length) throw new Error(L("The curriculum has no units", "Müfredatta hiç ünite yok"));
+  const subject = createSubject(db, { name: str(meta.subjectName) || str(spec.subject) || str(spec.title) || L("General", "Genel") });
   const { course } = createCourse(db, {
     subjectId: subject.id,
-    title: str(spec.title) || "Adsız ders",
+    title: str(spec.title) || L("Untitled course", "Adsız ders"),
     description: str(spec.description),
     goal: str(spec.goal) || str(spec.title),
     source: meta.source,
@@ -200,16 +203,17 @@ export function importCurriculum(
   });
 
   const pack = packPrefix(spec);
+  if (pack) course.origin = { kind: "pack", pack };
   const keyToId = new Map<string, ID>();
   const pendingPrereqs: { id: ID; keys: string[] }[] = [];
   let questionCount = 0;
 
   spec.units.forEach((u, ui) => {
     if (!u || !Array.isArray(u.topics)) return;
-    const unit = addUnit(db, course.id, str(u.title) || `Ünite ${ui + 1}`, str(u.summary));
+    const unit = addUnit(db, course.id, str(u.title) || L(`Unit ${ui + 1}`, `Ünite ${ui + 1}`), str(u.summary));
     u.topics.forEach((t, ti) => {
       if (!t || !Array.isArray(t.milestones) || !t.milestones.length) return;
-      const topic = addTopic(db, unit.id, str(t.title) || `Konu ${ti + 1}`);
+      const topic = addTopic(db, unit.id, str(t.title) || L(`Topic ${ti + 1}`, `Konu ${ti + 1}`));
       const conceptIds = new Map<string, ID>();
       for (const c of t.concepts ?? []) {
         if (!str(c?.title)) continue;
@@ -217,7 +221,7 @@ export function importCurriculum(
       }
       for (const ms of t.milestones) {
         if (!str(ms?.title)) {
-          repairs.push("Başlıksız bir adım çıkarıldı");
+          repairs.push(L("Dropped a milestone without a title", "Başlıksız bir adım çıkarıldı"));
           continue;
         }
         const type = asType(ms.type);
@@ -247,7 +251,8 @@ export function importCurriculum(
         const lo = strs(ms.lo).length ? strs(ms.lo) : packKey ? PACK_LO[packKey] ?? [] : [];
         if (lo.length) m.learningObjectIds = [...new Set(lo)];
         if (packKey) m.sourceKey = packKey;
-        if (keyToId.has(key)) repairs.push(`Tekrarlanan adım anahtarı "${key}"`);
+        else if (str(ms.sourceKey)) m.sourceKey = str(ms.sourceKey);
+        if (keyToId.has(key)) repairs.push(L(`Duplicate milestone key "${key}"`, `Tekrarlanan adım anahtarı "${key}"`));
         keyToId.set(key, m.id);
         pendingPrereqs.push({ id: m.id, keys: strs(ms.prerequisites) });
         for (const q of ms.questions ?? []) {
@@ -267,23 +272,23 @@ export function importCurriculum(
     const ids: ID[] = [];
     for (const k of keys) {
       const target = keyToId.get(k);
-      if (!target) repairs.push(`Bilinmeyen ön koşul "${k}" yok sayıldı`);
+      if (!target) repairs.push(L(`Unknown prerequisite "${k}" ignored`, `Bilinmeyen ön koşul "${k}" yok sayıldı`));
       else if (target !== id && !ids.includes(target)) ids.push(target);
     }
     pm.set(id, ids);
   }
   for (const [node, pre] of breakCycles(pm)) {
-    repairs.push(`Döngü kaldırıldı: "${db.milestones[node].title}" artık "${db.milestones[pre].title}" adımına bağlı değil`);
+    repairs.push(L(`Removed loop: "${db.milestones[node].title}" no longer requires "${db.milestones[pre].title}"`, `Döngü kaldırıldı: "${db.milestones[node].title}" artık "${db.milestones[pre].title}" adımına bağlı değil`));
   }
   for (const [id, ps] of pm) db.milestones[id].prerequisites = ps;
   syncNextMilestones(db, course.id);
 
   const ms = courseMilestones(db, course.id);
-  if (!ms.length) throw new Error("Müfredatta kullanılabilir adım yok");
+  if (!ms.length) throw new Error(L("The curriculum contains no usable milestones", "Müfredatta kullanılabilir adım yok"));
   if (!ms.some((m) => m.prerequisites.length === 0)) {
     ms[0].prerequisites = [];
     syncNextMilestones(db, course.id);
-    repairs.push(`Başlangıç noktası yoktu; "${ms[0].title}" artık başlangıç adımı`);
+    repairs.push(L(`No starting point existed; "${ms[0].title}" is now a starting milestone`, `Başlangıç noktası yoktu; "${ms[0].title}" artık başlangıç adımı`));
   }
   recomputeStatuses(db, course.id);
   return { courseId: course.id, milestoneCount: ms.length, questionCount, repairs };
@@ -325,7 +330,7 @@ export function milestoneToSpec(db: LabDB, m: Milestone): MilestoneSpec {
  */
 export function replaceTopicMilestones(db: LabDB, topicId: ID, specs: MilestoneSpec[], generatedBy: string): { created: ID[]; repairs: string[] } {
   const topic = db.topics[topicId];
-  if (!topic) throw new Error("Bilinmeyen konu");
+  if (!topic) throw new Error(L("Unknown topic", "Bilinmeyen konu"));
   const repairs: string[] = [];
   const all = courseMilestones(db, topic.courseId);
   const old = all.filter((m) => m.topicId === topicId && !m.masteredAt);
@@ -366,13 +371,13 @@ export function replaceTopicMilestones(db: LabDB, topicId: ID, specs: MilestoneS
       if (clean) addQuestion(db, clean);
     }
   }
-  if (!created.length) throw new Error("Kullanılabilir adım üretilemedi");
+  if (!created.length) throw new Error(L("No usable milestones were generated", "Kullanılabilir adım üretilemedi"));
   for (const { id, keys } of pending) {
     const internal = keys.map((k) => keyToId.get(k)).filter((x): x is ID => !!x && x !== id);
     db.milestones[id].prerequisites = internal.length ? [...new Set(internal)] : [...external].filter((e) => db.milestones[e]);
   }
   const pm: PrereqMap = new Map(courseMilestones(db, topic.courseId).map((m) => [m.id, [...m.prerequisites]]));
-  for (const [node, pre] of breakCycles(pm)) repairs.push(`"${db.milestones[node].title}" ile "${db.milestones[pre].title}" arasındaki döngü kaldırıldı`);
+  for (const [node, pre] of breakCycles(pm)) repairs.push(L(`Removed loop between "${db.milestones[node].title}" and "${db.milestones[pre].title}"`, `"${db.milestones[node].title}" ile "${db.milestones[pre].title}" arasındaki döngü kaldırıldı`));
   for (const [id, ps] of pm) db.milestones[id].prerequisites = ps;
   const createdIds = new Set(created.map((m) => m.id));
   const leaves = created.filter((m) => !created.some((o) => o.prerequisites.includes(m.id)));

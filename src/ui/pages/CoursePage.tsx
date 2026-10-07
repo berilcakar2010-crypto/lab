@@ -8,6 +8,7 @@ import { CurriculumEditor } from "./CurriculumEditor";
 import { CalibrationSheet } from "./CalibrationSheet";
 import { ProgressionMap } from "../components/ProgressionMap";
 import { AdvisorPanel } from "../components/AdvisorPanel";
+import { L } from "../../i18n";
 
 type Tab = "next" | "map" | "edit";
 
@@ -36,7 +37,7 @@ export function CoursePage({ courseId }: { courseId: ID }) {
     if (query.get("calibrate") === "1") navigate(`/course/${courseId}`);
   }, []); // run once: strip the one-shot query flag
 
-  if (!course) return <Empty title="Ders bulunamadı"><button className="btn" onClick={() => navigate("/")}>Ana sayfa</button></Empty>;
+  if (!course) return <Empty title={L("Course not found", "Ders bulunamadı")}><button className="btn" onClick={() => navigate("/")}>{L("Home", "Ana sayfa")}</button></Empty>;
   const p = courseProgress(db, courseId);
   const start = course.startHereMilestoneId ? db.milestones[course.startHereMilestoneId] : undefined;
   const open = (id: ID) => navigate(`/session/${id}`);
@@ -44,17 +45,17 @@ export function CoursePage({ courseId }: { courseId: ID }) {
   return (
     <div className="stack-lg rise">
       <header className="stack" style={{ gap: 8 }}>
-        <button className="btn ghost small" style={{ alignSelf: "flex-start" }} onClick={() => navigate("/")}><Icon.back /> Ana sayfa</button>
+        <button className="btn ghost small" style={{ alignSelf: "flex-start" }} onClick={() => navigate("/")}><Icon.back /> {L("Home", "Ana sayfa")}</button>
         <span className="eyebrow">{db.subjects[course.subjectId]?.name}</span>
         <h1>{course.title}</h1>
         <p className="text-2">{course.goal}</p>
         <div className="stack" style={{ gap: 6, marginTop: 6 }}>
           <Bar value={p.requiredTotal ? p.requiredMastered / p.requiredTotal : 0} mastered />
           <div className="row small muted" style={{ gap: 14 }}>
-            <span><strong style={{ color: "var(--text)" }}>{p.requiredMastered}</strong> / {p.requiredTotal} temel adımda ustalaşıldı</span>
-            {p.total > p.requiredTotal && <span>{p.total - p.requiredTotal} isteğe bağlı</span>}
-            {p.review > 0 && <span style={{ color: "var(--review)" }}>{p.review} tekrar bekliyor</span>}
-            {p.skipped > 0 && <span>{p.skipped} atlandı</span>}
+            <span><strong style={{ color: "var(--text)" }}>{p.requiredMastered}</strong> / {p.requiredTotal} {L("core milestones mastered", "temel adımda ustalaşıldı")}</span>
+            {p.total > p.requiredTotal && <span>{p.total - p.requiredTotal} {L("optional", "isteğe bağlı")}</span>}
+            {p.review > 0 && <span style={{ color: "var(--review)" }}>{p.review} {L("need review", "tekrar bekliyor")}</span>}
+            {p.skipped > 0 && <span>{p.skipped} {L("skipped", "atlandı")}</span>}
           </div>
         </div>
       </header>
@@ -62,7 +63,7 @@ export function CoursePage({ courseId }: { courseId: ID }) {
       <div className="tabs" role="tablist">
         {(["next", "map", "edit"] as Tab[]).map((t) => (
           <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? "on" : ""} onClick={() => setTab(t)}>
-            {t === "next" ? "Sırada ne var" : t === "map" ? "Harita" : "Müfredat"}
+            {t === "next" ? L("What's next", "Sırada ne var") : t === "map" ? L("Map", "Harita") : L("Curriculum", "Müfredat")}
           </button>
         ))}
       </div>
@@ -71,13 +72,13 @@ export function CoursePage({ courseId }: { courseId: ID }) {
         <div className="stack">
           {start && start.status !== "MASTERED" && !courseMilestones(db, courseId).some((m) => m.masteredAt) && (
             <div className="banner info row between">
-              <span>Buradan başla: <strong>{start.title}</strong></span>
-              <button className="btn small" onClick={() => open(start.id)}>Aç</button>
+              <span>{L("Start here: ", "Buradan başla: ")}<strong>{start.title}</strong></span>
+              <button className="btn small" onClick={() => open(start.id)}>{L("Open", "Aç")}</button>
             </div>
           )}
           <NextOptions courseId={courseId} onChoose={open} />
           <AdvisorPanel courseId={courseId} />
-          <button className="btn ghost small" style={{ alignSelf: "flex-start" }} onClick={() => setCalibrate(true)}>Başlangıç noktamı yeniden belirle</button>
+          <button className="btn ghost small" style={{ alignSelf: "flex-start" }} onClick={() => setCalibrate(true)}>{L("Recalibrate my starting point", "Başlangıç noktamı yeniden belirle")}</button>
         </div>
       )}
       {tab === "map" && <ProgressionMap courseId={courseId} onOpen={open} />}

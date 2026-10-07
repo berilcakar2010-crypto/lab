@@ -16,6 +16,7 @@ import { NextOptions } from "../components/NextOptions";
 import { courseProgress } from "./CoursePage";
 import { useActivityTracker } from "../activity";
 import { ImmediateCheck } from "../components/ImmediateCheck";
+import { L } from "../../i18n";
 
 /**
  * The learning session: one milestone in focus. Objective → attempt →
@@ -49,7 +50,7 @@ export function SessionPage({ milestoneId }: { milestoneId: ID }) {
     };
   }, [milestoneId]); // re-run only when the milestone changes
 
-  if (!m) return <Empty title="Bu adım artık yok"><button className="btn" onClick={() => navigate("/")}>Ana sayfa</button></Empty>;
+  if (!m) return <Empty title={L("This milestone no longer exists", "Bu adım artık yok")}><button className="btn" onClick={() => navigate("/")}>{L("Home", "Ana sayfa")}</button></Empty>;
   const course = db.courses[m.courseId];
 
   const exit = () => navigate(`/course/${m.courseId}`);
@@ -69,9 +70,9 @@ export function SessionPage({ milestoneId }: { milestoneId: ID }) {
       <div className="stack-lg rise">
         <TopBar title={course?.title ?? ""} onBack={exit} onEnd={finishSession} />
         <div className="card stack">
-          <span className="row" style={{ gap: 8 }}><Icon.lock /><span className="eyebrow">Kilitli</span></span>
+          <span className="row" style={{ gap: 8 }}><Icon.lock /><span className="eyebrow">{L("Locked", "Kilitli")}</span></span>
           <h1>{m.title}</h1>
-          <p className="text-2">Bu adım, henüz tamamlamadığın adımlar üzerine kurulu:</p>
+          <p className="text-2">{L("This builds on milestones you haven't completed yet:", "Bu adım, henüz tamamlamadığın adımlar üzerine kurulu:")}</p>
           <div className="list">
             {missing.map((p) => (
               <button key={p.id} className="list-item" style={{ background: "none", border: 0, color: "inherit", textAlign: "left" }} onClick={() => navigate(`/session/${p.id}`)}>
@@ -80,8 +81,8 @@ export function SessionPage({ milestoneId }: { milestoneId: ID }) {
             ))}
           </div>
           <div className="row">
-            <button className="btn primary grow" onClick={() => missing[0] && navigate(`/session/${missing[0].id}`)}>Ön koşula git</button>
-            <button className="btn" onClick={() => { act((d) => openMilestone(d, sessionId, milestoneId, { override: true })); setGate("open"); }}>Yine de aç</button>
+            <button className="btn primary grow" onClick={() => missing[0] && navigate(`/session/${missing[0].id}`)}>{L("Go to the prerequisite", "Ön koşula git")}</button>
+            <button className="btn" onClick={() => { act((d) => openMilestone(d, sessionId, milestoneId, { override: true })); setGate("open"); }}>{L("Open anyway", "Yine de aç")}</button>
           </div>
         </div>
       </div>
@@ -109,13 +110,13 @@ export function SessionPage({ milestoneId }: { milestoneId: ID }) {
     <div className="stack-lg rise">
       <TopBar title={course?.title ?? ""} onBack={exit} onEnd={finishSession} />
       {sessionConditions(db, sessionId).armLabel && (
-        <div className="tiny muted">Deney sürüyor · bu oturum: {sessionConditions(db, sessionId).armLabel}</div>
+        <div className="tiny muted">{L("Experiment running · this session: ", "Deney sürüyor · bu oturum: ")}{sessionConditions(db, sessionId).armLabel}</div>
       )}
       <ObjectiveHeader milestoneId={milestoneId} />
       <ContextPanel milestoneId={milestoneId} />
       <WorkArea milestoneId={milestoneId} sessionId={sessionId} onComplete={toComplete} />
       <div className="row">
-        <button className="btn ghost small" onClick={() => { act((d) => skipMilestone(d, milestoneId, sessionId)); toast("Atlandı. Daha sonrası için haritada duruyor."); exit(); }}>Bu adımı atla</button>
+        <button className="btn ghost small" onClick={() => { act((d) => skipMilestone(d, milestoneId, sessionId)); toast(L("Skipped. It stays on the map for later.", "Atlandı. Daha sonrası için haritada duruyor.")); exit(); }}>{L("Skip this milestone", "Bu adımı atla")}</button>
       </div>
     </div>
   );
@@ -154,11 +155,11 @@ function WorkArea({ milestoneId, sessionId, onComplete }: { milestoneId: ID; ses
       {state.mastered && (
         <div className="card stack">
           <div className={`banner ${m.status === "NEEDS_REVIEW" ? "warn" : "ok"}`}>
-            {m.status === "NEEDS_REVIEW" ? "Bir kalıcılık kontrolü bunun unutulmaya başladığını gösteriyor. Aşağıdaki tek bir doğru cevap ustalığı geri getirir." : "Bu adımda ustalaştın."}
+            {m.status === "NEEDS_REVIEW" ? L("A retention check suggests this has faded. One correct answer below restores it.", "Bir kalıcılık kontrolü bunun unutulmaya başladığını gösteriyor. Aşağıdaki tek bir doğru cevap ustalığı geri getirir.") : L("You have mastered this milestone.", "Bu adımda ustalaştın.")}
           </div>
           <div className="row">
-            {!q && !practising && <button className="btn" onClick={() => { setPractising(true); advance(); }}>Yeniden çalış</button>}
-            <button className="btn primary" onClick={onComplete}>Sırada ne var?</button>
+            {!q && !practising && <button className="btn" onClick={() => { setPractising(true); advance(); }}>{L("Practise again", "Yeniden çalış")}</button>}
+            <button className="btn primary" onClick={onComplete}>{L("What's next?", "Sırada ne var?")}</button>
           </div>
         </div>
       )}
@@ -177,7 +178,7 @@ function TopBar({ title, onBack, onEnd }: { title: string; onBack: () => void; o
   return (
     <div className="row between nowrap">
       <button className="btn ghost small" onClick={onBack}><Icon.back /> <span className="truncate" style={{ maxWidth: 200 }}>{title}</span></button>
-      <button className="btn small" onClick={onEnd}>Oturumu bitir</button>
+      <button className="btn small" onClick={onEnd}>{L("End session", "Oturumu bitir")}</button>
     </div>
   );
 }
@@ -195,12 +196,12 @@ function ObjectiveHeader({ milestoneId }: { milestoneId: ID }) {
       </div>
       <h1>{m.title}</h1>
       <div className="card accent stack" style={{ gap: 6 }}>
-        <span className="eyebrow">Bunun sonunda şunu yapabileceksin</span>
+        <span className="eyebrow">{L("After this, you can", "Bunun sonunda şunu yapabileceksin")}</span>
         <p className="serif" style={{ fontSize: "1.08rem" }}>{m.learningObjective}</p>
         <div className="row between small text-2" style={{ marginTop: 4 }}>
-          <span>Ustalık ölçütü: {m.masteryCriteria.description}</span>
+          <span>{L("Mastery: ", "Ustalık ölçütü: ")}{m.masteryCriteria.description}</span>
         </div>
-        <div className="row nowrap" style={{ gap: 6 }} aria-label={`${progress.required} ustalık cevabından ${progress.achieved} tanesi`}>
+        <div className="row nowrap" style={{ gap: 6 }} aria-label={L(`${progress.achieved} of ${progress.required} mastery answers`, `${progress.required} ustalık cevabından ${progress.achieved} tanesi`)}>
           {Array.from({ length: progress.required }).map((_, i) => (
             <span key={i} style={{ flex: 1, height: 6, borderRadius: 99, background: i < progress.achieved ? "var(--mastered)" : "var(--raised-2)", transition: "background .5s" }} />
           ))}
@@ -209,7 +210,7 @@ function ObjectiveHeader({ milestoneId }: { milestoneId: ID }) {
       </div>
       {!!m.learningObjectIds?.length && (
         <div className="row tiny muted" style={{ gap: 6 }}>
-          <span>Bilgi grafiğinde:</span>
+          <span>{L("In the knowledge graph:", "Bilgi grafiğinde:")}</span>
           {m.learningObjectIds.map((id) => {
             const o = getGraph(db.knowledge).objects[id];
             return o ? <a key={id} href={`#/graph?lo=${encodeURIComponent(id)}`} style={{ color: "var(--accent)" }}>{o.title}</a> : null;
@@ -230,14 +231,14 @@ function ContextPanel({ milestoneId }: { milestoneId: ID }) {
   return (
     <div className="card" style={{ padding: 0 }}>
       <button className="row between" style={{ width: "100%", padding: 14, background: "none", border: 0, color: "inherit", cursor: "pointer" }} onClick={() => setOpen(!open)} aria-expanded={open}>
-        <span className="small text-2">Bağlam · {db.units[m.unitId]?.title} › {db.topics[m.topicId]?.title}</span>
+        <span className="small text-2">{L("Context", "Bağlam")} · {db.units[m.unitId]?.title} › {db.topics[m.topicId]?.title}</span>
         {open ? <Icon.up /> : <Icon.down />}
       </button>
       {open && (
         <div className="stack small" style={{ padding: "0 14px 14px", gap: 8 }}>
           {m.description && <p className="text-2">{m.description}</p>}
           {concepts.map((c) => <p key={c.id}><strong>{c.title}</strong> <span className="text-2">— {c.description}</span></p>)}
-          {prereqs.length > 0 && <div className="text-2">Üzerine kurulu: {prereqs.map((p) => `${p.title}${p.masteredAt ? " ✓" : ""}`).join(" · ")}</div>}
+          {prereqs.length > 0 && <div className="text-2">{L("Builds on: ", "Üzerine kurulu: ")}{prereqs.map((p) => `${p.title}${p.masteredAt ? " ✓" : ""}`).join(" · ")}</div>}
         </div>
       )}
     </div>
@@ -257,16 +258,16 @@ function NoQuestions({ milestoneId, sessionId, onMastered, exhausted }: { milest
         if (clean) addQuestion(d, clean);
       }
     });
-    toast(res.fallbackUsed ? "Ölçüt temelli sorular eklendi (çevrimdışı)." : "Sorular oluşturuldu.");
+    toast(res.fallbackUsed ? L("Added rubric-based prompts (offline).", "Ölçüt temelli sorular eklendi (çevrimdışı).") : L("Questions generated.", "Sorular oluşturuldu."));
   });
   return (
     <div className="card stack">
-      <p className="text-2">{exhausted ? "Her soruyu cevapladın, ama ustalık için tam çözüme bakmadan verilmiş cevaplar gerekiyor." : "Bu adımda henüz soru yok."}</p>
+      <p className="text-2">{exhausted ? L("You've answered every question, but mastery needs answers given without the full solution.", "Her soruyu cevapladın, ama ustalık için tam çözüme bakmadan verilmiş cevaplar gerekiyor.") : L("This milestone has no questions yet.", "Bu adımda henüz soru yok.")}</p>
       <div className="row">
-        <button className="btn primary" onClick={generate} disabled={busy}>{busy ? <span className="spinner" /> : <Icon.spark />} {exhausted ? "Yeni sorular" : "Sorular"} oluştur</button>
-        <button className="btn" onClick={() => { act((d) => grantMastery(d, milestoneId, [], false, true, sessionId)); onMastered(); }}>Bunu yapabiliyorum — ustalaşıldı say</button>
+        <button className="btn primary" onClick={generate} disabled={busy}>{busy ? <span className="spinner" /> : <Icon.spark />} {exhausted ? L("Generate fresh questions", "Yeni sorular oluştur") : L("Generate questions", "Sorular oluştur")}</button>
+        <button className="btn" onClick={() => { act((d) => grantMastery(d, milestoneId, [], false, true, sessionId)); onMastered(); }}>{L("I can do this — mark mastered", "Bunu yapabiliyorum — ustalaşıldı say")}</button>
       </div>
-      <p className="tiny muted">Kendi beyanınla ustalık bu şekilde kaydedilir; soru varsa yine kalıcılık kontrolleri yapılır.</p>
+      <p className="tiny muted">{L("Self-attested mastery is recorded as such and still gets retention checks when questions exist.", "Kendi beyanınla ustalık bu şekilde kaydedilir; soru varsa yine kalıcılık kontrolleri yapılır.")}</p>
       {milestoneQuestions(db, milestoneId).length === 0 && null}
     </div>
   );
@@ -289,14 +290,14 @@ function CompletionView({ milestoneId, sessionId, before, onChoose, onFinish, on
   return (
     <div className="stack-lg">
       <div className="row between nowrap">
-        <button className="btn ghost small" onClick={onBack}><Icon.back /> Ders</button>
-        <button className="btn small" onClick={onFinish}>Oturumu bitir</button>
+        <button className="btn ghost small" onClick={onBack}><Icon.back /> {L("Course", "Ders")}</button>
+        <button className="btn small" onClick={onFinish}>{L("Finish session", "Oturumu bitir")}</button>
       </div>
       <div className="card stack rise" style={{ alignItems: "center", textAlign: "center", padding: "28px 16px", gap: 10 }}>
         <MasteryMark />
-        <span className="eyebrow" style={{ color: "var(--mastered)" }}>Ustalaştın</span>
+        <span className="eyebrow" style={{ color: "var(--mastered)" }}>{L("Mastered", "Ustalaştın")}</span>
         <h1>{m.title}</h1>
-        <p className="text-2" style={{ maxWidth: 520 }}>Artık yapabildiğin: {m.learningObjective}</p>
+        <p className="text-2" style={{ maxWidth: 520 }}>{L("You can now: ", "Artık yapabildiğin: ")}{m.learningObjective}</p>
       </div>
       <ImmediateCheck milestoneId={milestoneId} sessionId={sessionId} />
       <div className="card stack" style={{ gap: 8 }}>
@@ -304,13 +305,13 @@ function CompletionView({ milestoneId, sessionId, before, onChoose, onFinish, on
         <Bar value={shown} mastered />
         {unlocked.length > 0 && (
           <div className="stack" style={{ gap: 4, marginTop: 6 }}>
-            <span className="eyebrow">Kilidi açıldı</span>
+            <span className="eyebrow">{L("Unlocked", "Kilidi açıldı")}</span>
             {unlocked.map((u, i) => <div key={u.id} className="row small rise" style={{ animationDelay: `${300 + i * 120}ms` }}><span style={{ color: "var(--accent)" }}>◆</span> {u.title}</div>)}
           </div>
         )}
       </div>
       <section className="stack">
-        <h2>Sırada ne var?</h2>
+        <h2>{L("What's next?", "Sırada ne var?")}</h2>
         <NextOptions courseId={m.courseId} justCompletedId={milestoneId} sessionId={sessionId} onChoose={onChoose} compact />
       </section>
     </div>

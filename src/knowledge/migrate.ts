@@ -30,8 +30,8 @@ export function linkPackMilestones(db: LabDB, now = Date.now()): MigrationResult
     id,
     at: now,
     note: linked
-      ? `${linked} mevcut adım bilgi grafiğine bağlandı; ilerleme, ustalık ve deneme kayıtları olduğu gibi korundu.`
-      : "Bağlanacak eski paket adımı bulunmadı.",
+      ? `${linked} mevcut adım bilgi grafiğine bağlandı; ilerleme, ustalık ve deneme kayıtları olduğu gibi korundu. | ${linked} existing steps were linked to the knowledge graph; progress, mastery and attempts are unchanged.`
+      : "Bağlanacak eski paket adımı bulunmadı. | No older pack steps needed linking.",
   });
   return { id, linked, ran: true };
 }

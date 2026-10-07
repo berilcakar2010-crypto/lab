@@ -185,9 +185,15 @@ export interface Course {
   startHereMilestoneId?: ID;
   /** The single milestone currently in focus for this course. */
   activeMilestoneId?: ID;
+  /** Where built-in content came from, so it can be re-localised when the language changes. */
+  origin?: CourseOrigin;
   archived: boolean;
   createdAt: Millis;
 }
+
+export type CourseOrigin =
+  | { kind: "pack"; pack: string }
+  | { kind: "graph"; loIds: string[]; title?: string };
 
 export interface Unit {
   id: ID;

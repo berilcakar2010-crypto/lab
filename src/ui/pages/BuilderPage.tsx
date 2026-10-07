@@ -10,8 +10,9 @@ import { getGraph } from "../../knowledge/graph";
 import { matchRequest } from "../../knowledge/search";
 import { personalGraph, readiness } from "../../knowledge/state";
 import { setPath, studyObjects, toggleGoal } from "../../knowledge/actions";
+import { L, lower, pick } from "../../i18n";
 
-const EXAMPLES = ["TÜBİTAK Fizik Olimpiyatı Mekanik", "Kalkülüs 1", "Kuramsal Sinirbilim"];
+const examples = () => pick(["Physics Olympiad Mechanics", "Calculus 1", "Computational Neuroscience"], ["TÜBİTAK Fizik Olimpiyatı Mekanik", "Kalkülüs 1", "Kuramsal Sinirbilim"]);
 
 interface Draft {
   spec: CurriculumSpec;
@@ -36,10 +37,10 @@ export function BuilderPage() {
   const build = () =>
     run(async () => {
       if (!request.trim() && !syllabus.trim()) {
-        toast("Önce dersi tarif et ya da bir müfredat yapıştır.", "error");
+        toast(L("Describe the course or paste a syllabus first.", "Önce dersi tarif et ya da bir müfredat yapıştır."), "error");
         return;
       }
-      const res = await buildCurriculumAI(aiHost, { request: request.trim() || "Dersim", syllabus });
+      const res = await buildCurriculumAI(aiHost, { request: request.trim() || L("My course", "Dersim"), syllabus });
       setDraft({ ...res.value, provider: res.provider, fallbackUsed: res.fallbackUsed, error: res.error, request, syllabus });
     });
 
@@ -59,7 +60,7 @@ export function BuilderPage() {
         },
         (d) => assertValidCourse(d, courseId),
       );
-      if (report.repairs.length) toast(`${report.repairs.length} otomatik düzeltmeyle içe aktarıldı.`);
+      if (report.repairs.length) toast(L(`Imported with ${report.repairs.length} automatic repair(s).`, `${report.repairs.length} otomatik düzeltmeyle içe aktarıldı.`));
       navigate(`/course/${report.courseId}?calibrate=1`);
     } catch (e) {
       toast(e instanceof Error ? e.message : String(e), "error");
@@ -68,7 +69,7 @@ export function BuilderPage() {
 
   const onFile = async (file: File) => {
     if (!/\.(txt|md|markdown|csv|tex)$/i.test(file.name) && !file.type.startsWith("text/")) {
-      toast("Düz metin dosyası yükle (.txt, .md). PDF için içindekiler bölümünü kopyalayıp yapıştır.", "error");
+      toast(L("Upload a plain-text file (.txt, .md). For PDFs, copy the table of contents and paste it.", "Düz metin dosyası yükle (.txt, .md). PDF için içindekiler bölümünü kopyalayıp yapıştır."), "error");
       return;
     }
     const text = await file.text();
@@ -82,32 +83,32 @@ export function BuilderPage() {
   return (
     <div className="stack-lg rise">
       <header className="stack" style={{ gap: 6 }}>
-        <button className="btn ghost small" style={{ alignSelf: "flex-start" }} onClick={() => history.back()}><Icon.back /> Geri</button>
-        <h1>Yeni ders</h1>
-        <p className="text-2">Bir hedef yaz ya da müfredat yapıştır. Lab bunu anlamlı adımlardan oluşan bir haritaya dönüştürür — sonra onu sen şekillendirirsin.</p>
+        <button className="btn ghost small" style={{ alignSelf: "flex-start" }} onClick={() => history.back()}><Icon.back /> {L("Back", "Geri")}</button>
+        <h1>{L("New course", "Yeni ders")}</h1>
+        <p className="text-2">{L("Name a goal or paste a syllabus. Lab turns it into a graph of meaningful milestones — then you shape it.", "Bir hedef yaz ya da müfredat yapıştır. Lab bunu anlamlı adımlardan oluşan bir haritaya dönüştürür — sonra onu sen şekillendirirsin.")}</p>
       </header>
 
       <div className="card stack">
         <div className="field">
-          <label htmlFor="req">Neyde ustalaşmak istiyorsun?</label>
-          <input id="req" className="input" placeholder="örn. Kalkülüs 1 ya da Fizik Olimpiyatı Mekanik" value={request} onChange={(e) => setRequest(e.target.value)} />
+          <label htmlFor="req">{L("What do you want to master?", "Neyde ustalaşmak istiyorsun?")}</label>
+          <input id="req" className="input" placeholder={L("e.g. Calculus 1, or Physics Olympiad Mechanics", "örn. Kalkülüs 1 ya da Fizik Olimpiyatı Mekanik")} value={request} onChange={(e) => setRequest(e.target.value)} />
         </div>
         <div className="row" style={{ gap: 6 }}>
-          {EXAMPLES.map((ex) => (
+          {examples().map((ex) => (
             <button key={ex} className="btn small ghost" onClick={() => setRequest(ex)} style={{ border: "1px solid var(--border)" }}>{ex}</button>
           ))}
         </div>
         {showSyllabus ? (
           <div className="field">
-            <label htmlFor="syl">Müfredat, içindekiler, sınav kapsamı ya da konu listesi</label>
+            <label htmlFor="syl">{L("Syllabus, table of contents, exam specification or topic list", "Müfredat, içindekiler, sınav kapsamı ya da konu listesi")}</label>
             <textarea id="syl" className="textarea" style={{ minHeight: 200 }} value={syllabus} onChange={(e) => setSyllabus(e.target.value)}
-              placeholder={"Ünite 1: Kinematik\n- Yer değiştirme ve hız\n- İvme\nÜnite 2: Dinamik\n- Newton yasaları"} />
+              placeholder={L("Unit 1: Kinematics\n- Displacement and velocity\n- Acceleration\nUnit 2: Dynamics\n- Newton's laws", "Ünite 1: Kinematik\n- Yer değiştirme ve hız\n- İvme\nÜnite 2: Dinamik\n- Newton yasaları")} />
           </div>
         ) : (
           <div className="row">
-            <button className="btn small" onClick={() => setShowSyllabus(true)}>Müfredat yapıştır</button>
+            <button className="btn small" onClick={() => setShowSyllabus(true)}>{L("Paste a syllabus", "Müfredat yapıştır")}</button>
             <label className="btn small" style={{ cursor: "pointer" }}>
-              Metin dosyası yükle
+              {L("Upload text file", "Metin dosyası yükle")}
               <input type="file" accept=".txt,.md,.markdown,.csv,.tex,text/*" hidden onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])} />
             </label>
           </div>
@@ -115,11 +116,11 @@ export function BuilderPage() {
         <GraphCheck request={request} />
         <div className={`banner ${providerReady ? "info" : "warn"}`}>
           {providerReady
-            ? `YZ sağlayıcısı: ${provider === "gemini" ? "Gemini" : "Groq"}. Başarısız olursa Lab çevrimdışı oluşturucuya geçer.`
-            : "Çevrimdışı oluşturucu: mekanik ve kalkülüs için hazır paketler var; diğer konular düzenlenebilir bir iskelete dönüşür. İçeriğe duyarlı müfredat için Ayarlar'dan Gemini ya da Groq anahtarı ekle."}
+            ? L(`AI provider: ${provider === "gemini" ? "Gemini" : "Groq"}. If it fails, Lab falls back to the offline builder.`, `YZ sağlayıcısı: ${provider === "gemini" ? "Gemini" : "Groq"}. Başarısız olursa Lab çevrimdışı oluşturucuya geçer.`)
+            : L("Offline builder: built-in packs for mechanics and calculus; other subjects become an editable scaffold. Add a Gemini or Groq key in Settings for content-aware curricula.", "Çevrimdışı oluşturucu: mekanik ve kalkülüs için hazır paketler var; diğer konular düzenlenebilir bir iskelete dönüşür. İçeriğe duyarlı müfredat için Ayarlar'dan Gemini ya da Groq anahtarı ekle.")}
         </div>
         <button className="btn primary block" onClick={build} disabled={busy}>
-          {busy ? <><span className="spinner" /> Bilgi haritası yapılandırılıyor…</> : <>Müfredatı oluştur</>}
+          {busy ? <><span className="spinner" /> {L("Structuring the knowledge graph…", "Bilgi haritası yapılandırılıyor…")}</> : <>{L("Build curriculum", "Müfredatı oluştur")}</>}
         </button>
       </div>
     </div>
@@ -134,15 +135,15 @@ function DraftPreview({ draft, onAccept, onBack, onRegenerate, busy }: { draft: 
   return (
     <div className="stack-lg rise">
       <header className="stack" style={{ gap: 6 }}>
-        <span className="eyebrow">Taslak müfredat</span>
+        <span className="eyebrow">{L("Draft curriculum", "Taslak müfredat")}</span>
         <h1>{spec.title}</h1>
         <p className="text-2">{spec.goal}</p>
       </header>
-      {draft.fallbackUsed && draft.error && <div className="banner warn">YZ sağlayıcısı başarısız oldu ({draft.error}). Bu taslak çevrimdışı oluşturucudan geliyor.</div>}
+      {draft.fallbackUsed && draft.error && <div className="banner warn">{L(`The AI provider failed (${draft.error}). This draft comes from the offline builder.`, `YZ sağlayıcısı başarısız oldu (${draft.error}). Bu taslak çevrimdışı oluşturucudan geliyor.`)}</div>}
       <div className="banner info">{draft.note}</div>
       <div className="grid-2">
-        <div className="card"><div className="eyebrow">Adımlar</div><div className="serif" style={{ fontSize: 28 }}>{all.length}</div><div className="small muted">≈ {minutes(total)} odaklı çalışma; adımlar bilerek farklı büyüklükte</div></div>
-        <div className="card"><div className="eyebrow">Yapı</div><div className="small text-2" style={{ marginTop: 6 }}>{Object.entries(types).map(([t, n]) => `${n} ${TYPE_LABEL[t as keyof typeof TYPE_LABEL]?.toLocaleLowerCase("tr") ?? t}`).join(" · ")}</div></div>
+        <div className="card"><div className="eyebrow">{L("Milestones", "Adımlar")}</div><div className="serif" style={{ fontSize: 28 }}>{all.length}</div><div className="small muted">≈ {minutes(total)} {L("of focused work, unevenly sized by design", "odaklı çalışma; adımlar bilerek farklı büyüklükte")}</div></div>
+        <div className="card"><div className="eyebrow">{L("Shape", "Yapı")}</div><div className="small text-2" style={{ marginTop: 6 }}>{Object.entries(types).map(([t, n]) => `${n} ${TYPE_LABEL[t as keyof typeof TYPE_LABEL] !== undefined ? lower(TYPE_LABEL[t as keyof typeof TYPE_LABEL]) : t}`).join(" · ")}</div></div>
       </div>
       <div className="stack">
         {spec.units.map((u, i) => (
@@ -155,7 +156,7 @@ function DraftPreview({ draft, onAccept, onBack, onRegenerate, busy }: { draft: 
                 {t.milestones.map((m, k) => (
                   <div key={k} className="row nowrap small" style={{ gap: 8 }}>
                     <span className="chip" style={{ minWidth: 0 }}>{TYPE_LABEL[(m.type ?? "PRACTICE").toUpperCase() as keyof typeof TYPE_LABEL] ?? m.type}</span>
-                    <span className="grow">{m.title}{m.optional ? <span className="muted"> · isteğe bağlı</span> : null}</span>
+                    <span className="grow">{m.title}{m.optional ? <span className="muted"> · {L("optional", "isteğe bağlı")}</span> : null}</span>
                   </div>
                 ))}
               </div>
@@ -164,9 +165,9 @@ function DraftPreview({ draft, onAccept, onBack, onRegenerate, busy }: { draft: 
         ))}
       </div>
       <div className="row" style={{ position: "sticky", bottom: "calc(var(--nav-h) + 12px)" }}>
-        <button className="btn" onClick={onBack} disabled={busy}>Geri</button>
-        <button className="btn" onClick={onRegenerate} disabled={busy}>{busy ? <span className="spinner" /> : "Yeniden oluştur"}</button>
-        <button className="btn primary grow" onClick={onAccept} disabled={busy}>Kabul et ve başlangıç noktamı bul</button>
+        <button className="btn" onClick={onBack} disabled={busy}>{L("Back", "Geri")}</button>
+        <button className="btn" onClick={onRegenerate} disabled={busy}>{busy ? <span className="spinner" /> : L("Regenerate", "Yeniden oluştur")}</button>
+        <button className="btn primary grow" onClick={onAccept} disabled={busy}>{L("Accept and find my starting point", "Kabul et ve başlangıç noktamı bul")}</button>
       </div>
     </div>
   );
@@ -197,25 +198,25 @@ function GraphCheck({ request }: { request: string }) {
   };
   return (
     <div className="card stack graph-check" style={{ gap: 8 }}>
-      <span className="eyebrow">Bilgi grafiğinde zaten var</span>
+      <span className="eyebrow">{L("Already in the knowledge graph", "Bilgi grafiğinde zaten var")}</span>
       {match.path ? (
-        <p className="small text-2"><strong>{match.path.title}</strong> öğrenme yolu bu isteği karşılıyor. Ayrı bir ders kurmak yerine aynı grafiği bu yoldan görebilirsin.</p>
+        <p className="small text-2">{L("The learning path ", "")}<strong>{match.path.title}</strong>{L(" covers this request. Instead of building a separate course, you can see the same graph through this path.", " öğrenme yolu bu isteği karşılıyor. Ayrı bir ders kurmak yerine aynı grafiği bu yoldan görebilirsin.")}</p>
       ) : (
-        <p className="small text-2">İlgili nesneler: {targets.map((t) => g.objects[t].title).join(", ")}.</p>
+        <p className="small text-2">{L("Related objects: ", "İlgili nesneler: ")}{targets.map((t) => g.objects[t].title).join(", ")}.</p>
       )}
       <p className="small">
-        {known > 0 && gaps === 0 ? "Bu alanların çoğunda yeterli altyapın var. " : ""}
-        {gaps > 0 ? `${gaps} zorunlu önkoşulda eksik görünüyorsun${known ? `; ${known} tanesini zaten biliyorsun` : ""}. ` : ""}
-        {gaps > 0 && ready.startHere.length ? `Buradan başlaman öneriliyor: ${ready.startHere.slice(0, 3).map((id) => g.objects[id].title).join(", ")}. Zorunlu değil.` : ""}
-        {gaps === 0 && known === 0 ? "Zorunlu önkoşulların tamam; doğrudan başlayabilirsin." : ""}
+        {known > 0 && gaps === 0 ? L("You already have enough background for most of this. ", "Bu alanların çoğunda yeterli altyapın var. ") : ""}
+        {gaps > 0 ? L(`You seem to be missing ${gaps} required prerequisite${gaps > 1 ? "s" : ""}${known ? `; you already know ${known}` : ""}. `, `${gaps} zorunlu önkoşulda eksik görünüyorsun${known ? `; ${known} tanesini zaten biliyorsun` : ""}. `) : ""}
+        {gaps > 0 && ready.startHere.length ? L(`Suggested starting point: ${ready.startHere.slice(0, 3).map((id) => g.objects[id].title).join(", ")}. Not required.`, `Buradan başlaman öneriliyor: ${ready.startHere.slice(0, 3).map((id) => g.objects[id].title).join(", ")}. Zorunlu değil.`) : ""}
+        {gaps === 0 && known === 0 ? L("Your required prerequisites are in place; you can start right away.", "Zorunlu önkoşulların tamam; doğrudan başlayabilirsin.") : ""}
       </p>
       <div className="row">
         {match.path ? (
-          <button className="btn small" onClick={() => { store.transact((d) => setPath(d, match.path!.id)); navigate("/graph?view=yollar"); }}>Yolu grafikte aç</button>
+          <button className="btn small" onClick={() => { store.transact((d) => setPath(d, match.path!.id)); navigate("/graph?view=yollar"); }}>{L("Open the path in the graph", "Yolu grafikte aç")}</button>
         ) : (
-          <button className="btn small" onClick={createFromGraph}>Grafikten ders oluştur</button>
+          <button className="btn small" onClick={createFromGraph}>{L("Create a course from the graph", "Grafikten ders oluştur")}</button>
         )}
-        <button className="btn small ghost" onClick={() => navigate(`/graph?lo=${encodeURIComponent(targets[0])}`)}>Ayrıntılar</button>
+        <button className="btn small ghost" onClick={() => navigate(`/graph?lo=${encodeURIComponent(targets[0])}`)}>{L("Details", "Ayrıntılar")}</button>
       </div>
     </div>
   );

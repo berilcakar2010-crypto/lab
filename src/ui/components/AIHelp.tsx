@@ -4,6 +4,7 @@ import { diagnoseMistake, evaluateOpenResponse, explainConcept, socraticReply, t
 import { logEvent } from "../../engines/analytics";
 import { act, aiHost, store, useDB } from "../state";
 import { MathText } from "./MathText";
+import { L } from "../../i18n";
 
 export interface AIEvalResult {
   met: boolean[];
@@ -44,7 +45,7 @@ export function AIHelp({ question: q, sessionId, answerText, attempts, lastFeedb
     setBusy(true);
     log("FEEDBACK_GENERATOR");
     const res = await diagnoseMistake(aiHost, q, answerText, lastFeedback, sessionId);
-    setNote({ title: "Neden yanlış olabilir?", text: res.value, offline: res.fallbackUsed });
+    setNote({ title: L("Why it might be wrong", "Neden yanlış olabilir?"), text: res.value, offline: res.fallbackUsed });
     setBusy(false);
   };
 
@@ -52,14 +53,14 @@ export function AIHelp({ question: q, sessionId, answerText, attempts, lastFeedb
     setBusy(true);
     log("TUTOR");
     const res = await explainConcept(aiHost, store.state, q, sessionId);
-    setNote({ title: "Arkasındaki fikir", text: res.value, offline: res.fallbackUsed });
+    setNote({ title: L("The idea behind it", "Arkasındaki fikir"), text: res.value, offline: res.fallbackUsed });
     setBusy(false);
   };
 
   if (!open) {
     return (
       <button type="button" className="btn ghost small" style={{ alignSelf: "flex-start" }} onClick={() => setOpen(true)}>
-        ✦ Rehber{online ? "" : " (çevrimdışı)"}
+        ✦ {L("Guide", "Rehber")}{online ? "" : L(" (offline)", " (çevrimdışı)")}
       </button>
     );
   }
@@ -67,10 +68,10 @@ export function AIHelp({ question: q, sessionId, answerText, attempts, lastFeedb
   return (
     <div className="card raised stack" style={{ gap: 10 }}>
       <div className="row between">
-        <span className="eyebrow">Rehber · {online ? db.preferences.aiProvider : "çevrimdışı"}</span>
-        <button type="button" className="btn ghost small" onClick={() => setOpen(false)}>Gizle</button>
+        <span className="eyebrow">{L("Guide", "Rehber")} · {online ? db.preferences.aiProvider : L("offline", "çevrimdışı")}</span>
+        <button type="button" className="btn ghost small" onClick={() => setOpen(false)}>{L("Hide", "Gizle")}</button>
       </div>
-      <p className="tiny muted">Rehber soru sorar ve fikirleri açıklar. Cevabı eline vermez — o kazanım senin.</p>
+      <p className="tiny muted">{L("The guide asks questions and explains ideas. It won't hand you the answer — that's your win to earn.", "Rehber soru sorar ve fikirleri açıklar. Cevabı eline vermez — o kazanım senin.")}</p>
       {chat.map((t, i) => (
         <div key={i} className="small" style={{ alignSelf: t.role === "student" ? "flex-end" : "flex-start", maxWidth: "88%", background: t.role === "student" ? "var(--accent-soft)" : "var(--raised-2)", borderRadius: 12, padding: "8px 12px" }}>
           <MathText text={t.text} />
@@ -78,19 +79,19 @@ export function AIHelp({ question: q, sessionId, answerText, attempts, lastFeedb
       ))}
       {note && (
         <div className="banner info small rise">
-          <strong>{note.title}{note.offline ? " (çevrimdışı)" : ""}</strong>
+          <strong>{note.title}{note.offline ? L(" (offline)", " (çevrimdışı)") : ""}</strong>
           <MathText text={note.text} style={{ marginTop: 4 }} />
         </div>
       )}
       <div className="row" style={{ gap: 6 }}>
-        <button type="button" className="btn small" disabled={busy} onClick={() => ask()}>{busy ? <span className="spinner" /> : "Bana yol gösteren bir soru sor"}</button>
-        {wrong && <button type="button" className="btn small" disabled={busy} onClick={diagnose}>Neden yanlıştı?</button>}
-        {attempts > 0 && <button type="button" className="btn small" disabled={busy} onClick={explain}>Fikri açıkla</button>}
+        <button type="button" className="btn small" disabled={busy} onClick={() => ask()}>{busy ? <span className="spinner" /> : L("Ask me a guiding question", "Bana yol gösteren bir soru sor")}</button>
+        {wrong && <button type="button" className="btn small" disabled={busy} onClick={diagnose}>{L("Why was it wrong?", "Neden yanlıştı?")}</button>}
+        {attempts > 0 && <button type="button" className="btn small" disabled={busy} onClick={explain}>{L("Explain the idea", "Fikri açıkla")}</button>}
       </div>
       {chat.length > 0 && (
         <form className="row nowrap" onSubmit={(e) => { e.preventDefault(); if (msg.trim()) ask(msg.trim()); }}>
-          <input className="input" placeholder="Rehbere cevap yaz…" value={msg} onChange={(e) => setMsg(e.target.value)} aria-label="Rehbere cevap" />
-          <button className="btn small" disabled={busy || !msg.trim()}>Gönder</button>
+          <input className="input" placeholder={L("Reply to the guide…", "Rehbere cevap yaz…")} value={msg} onChange={(e) => setMsg(e.target.value)} aria-label={L("Reply to the guide", "Rehbere cevap")} />
+          <button className="btn small" disabled={busy || !msg.trim()}>{L("Send", "Gönder")}</button>
         </form>
       )}
     </div>

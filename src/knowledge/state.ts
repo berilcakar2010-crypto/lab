@@ -5,6 +5,7 @@
  * count toward readiness, and even they never lock: Lab recommends a start
  * point ("Buradan başlaman öneriliyor"), it never forces the learner backward.
  */
+import { L, lazyLabels } from "../i18n";
 import type { LabDB, Milestone } from "../domain/types";
 import { topoSort } from "../engines/graph";
 import { ancestors, isActive, prereqMap } from "./graph";
@@ -12,7 +13,7 @@ import type { KnowledgeGraph, LearningObject } from "./schema";
 
 export const LO_STATES = ["USTALASILDI", "TEKRAR", "BEYAN", "CALISILIYOR", "HAZIR", "ONKOSUL_EKSIK", "PASIF"] as const;
 export type LOState = (typeof LO_STATES)[number];
-export const LO_STATE_LABEL: Record<LOState, string> = {
+const LO_STATE_LABEL_TR: Record<LOState, string> = {
   USTALASILDI: "Ustalaşıldı",
   TEKRAR: "Tekrar gerekli",
   BEYAN: "Biliyorum (kendi beyanım)",
@@ -21,6 +22,10 @@ export const LO_STATE_LABEL: Record<LOState, string> = {
   ONKOSUL_EKSIK: "Önkoşul eksik",
   PASIF: "Pasif",
 };
+export const LO_STATE_LABEL = lazyLabels<LOState>({
+  USTALASILDI: "Mastered", TEKRAR: "Needs review", BEYAN: "I know this (self-reported)", CALISILIYOR: "In progress",
+  HAZIR: "Ready to start", ONKOSUL_EKSIK: "Missing prerequisite", PASIF: "Inactive",
+}, LO_STATE_LABEL_TR);
 
 export interface LOProgress {
   state: LOState;
@@ -118,12 +123,12 @@ export function readiness(pg: PersonalGraph, targets: string[]): Readiness {
   const startHere = candidates.filter((id) => (progress.get(id)?.missingRequired.length ?? 0) === 0);
   const alreadyPlanned = valid.filter((t) => (progress.get(t)?.milestones.length ?? 0) > 0);
 
-  const names = (ids: string[]) => ids.slice(0, 3).map((id) => `"${g.objects[id].title}"`).join(", ") + (ids.length > 3 ? ` ve ${ids.length - 3} tane daha` : "");
+  const names = (ids: string[]) => ids.slice(0, 3).map((id) => `"${g.objects[id].title}"`).join(", ") + (ids.length > 3 ? L(` and ${ids.length - 3} more`, ` ve ${ids.length - 3} tane daha`) : "");
   let message: string;
-  if (!valid.length) message = "Hedef grafikte bulunamadı.";
-  else if (valid.every(satisfied)) message = "Bu hedefi zaten tamamlamışsın ya da bildiğini belirtmişsin. Tekrar ya da bir üst adım için grafikten devam edebilirsin.";
-  else if (!requiredGaps.length) message = `Hazırsın: zorunlu önkoşulların tamam${known.length ? ` (${known.length} nesne üzerine kuruyorsun)` : ""}. Doğrudan başlayabilirsin.`;
-  else message = `Buradan başlaman öneriliyor: ${names(startHere)}. Bu bir zorunluluk değil — istersen doğrudan hedeften başlayıp eksikleri yol üstünde tamamlayabilirsin. Henüz tamamlanmamış ${requiredGaps.length} zorunlu önkoşul var.`;
+  if (!valid.length) message = L("The goal was not found in the graph.", "Hedef grafikte bulunamadı.");
+  else if (valid.every(satisfied)) message = L("You have already completed this goal or said you know it. Continue from the graph to review or take the next step.", "Bu hedefi zaten tamamlamışsın ya da bildiğini belirtmişsin. Tekrar ya da bir üst adım için grafikten devam edebilirsin.");
+  else if (!requiredGaps.length) message = L(`You're ready: your required prerequisites are complete${known.length ? ` (you build on ${known.length} objects)` : ""}. You can start directly.`, `Hazırsın: zorunlu önkoşulların tamam${known.length ? ` (${known.length} nesne üzerine kuruyorsun)` : ""}. Doğrudan başlayabilirsin.`);
+  else message = L(`Suggested starting point: ${names(startHere)}. This is not required — you can start straight at the goal and fill the gaps along the way. ${requiredGaps.length} required prerequisites are not complete yet.`, `Buradan başlaman öneriliyor: ${names(startHere)}. Bu bir zorunluluk değil — istersen doğrudan hedeften başlayıp eksikleri yol üstünde tamamlayabilirsin. Henüz tamamlanmamış ${requiredGaps.length} zorunlu önkoşul var.`);
   return { targets: valid, requiredGaps, softGaps: [...soft], startHere, known, alreadyPlanned, message };
 }
 
@@ -152,17 +157,17 @@ export function recommendObjects(pg: PersonalGraph, goals: string[], limit = 5, 
     if (focus && !focus.has(id)) continue;
     const reasons: string[] = [];
     let score = 0;
-    if (p.state === "TEKRAR") { score += 4; reasons.push("Tekrar zamanı geldi"); }
-    if (p.state === "CALISILIYOR") { score += 3; reasons.push("Yarım kalan bir çalışma"); }
-    if (goalAnc.has(id)) { score += goals.includes(id) ? 6 : 4; reasons.push(goals.includes(id) ? "Hedefin" : "Hedefine giden yolda"); }
+    if (p.state === "TEKRAR") { score += 4; reasons.push(L("Time to review", "Tekrar zamanı geldi")); }
+    if (p.state === "CALISILIYOR") { score += 3; reasons.push(L("Unfinished work", "Yarım kalan bir çalışma")); }
+    if (goalAnc.has(id)) { score += goals.includes(id) ? 6 : 4; reasons.push(goals.includes(id) ? L("Your goal", "Hedefin") : L("On the way to your goal", "Hedefine giden yolda")); }
     const opens = o.unlocks.filter((u) => g.objects[u] && progress.get(u)?.missingRequired.length === 1).length;
-    if (opens) { score += Math.min(opens, 4) * 0.6; reasons.push(`${opens} yeni nesnenin önünü açar`); }
+    if (opens) { score += Math.min(opens, 4) * 0.6; reasons.push(L(`Opens the way to ${opens} new objects`, `${opens} yeni nesnenin önünü açar`)); }
     const fit = Math.abs(o.difficulty - (level + 0.5));
     score -= fit * 0.7;
-    if (fit <= 1) reasons.push("Seviyene uygun");
+    if (fit <= 1) reasons.push(L("Fits your level", "Seviyene uygun"));
     if (o.optional) score -= 1;
-    if (o.boss && p.state === "HAZIR") { score += 1; reasons.push("Bir sentez sınavı hazır"); }
-    if (!reasons.length) reasons.push("Önkoşulların tamam");
+    if (o.boss && p.state === "HAZIR") { score += 1; reasons.push(L("A synthesis challenge is ready", "Bir sentez sınavı hazır")); }
+    if (!reasons.length) reasons.push(L("Your prerequisites are complete", "Önkoşulların tamam"));
     out.push({ id, score, reasons });
   }
   out.sort((a, b) => b.score - a.score || g.order.indexOf(a.id) - g.order.indexOf(b.id));

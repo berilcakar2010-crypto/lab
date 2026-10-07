@@ -3,6 +3,7 @@ import type { Question } from "../../domain/types";
 import type { Answer } from "../../engines/evaluation";
 import { answerMode } from "../../engines/evaluation";
 import { Icon } from "./common";
+import { L } from "../../i18n";
 
 /** Shuffle deterministically per question so retries see a stable order. */
 export function stableShuffle<T>(items: T[], seed: string): T[] {
@@ -37,8 +38,8 @@ export function AnswerInput({ question: q, value, onChange, disabled, onSubmit }
       return (
         <div className="row nowrap">
           <input
-            className="input mono" inputMode="decimal" autoComplete="off" placeholder="Cevabın, örn. 8,66"
-            aria-label="Sayısal cevap" disabled={disabled}
+            className="input mono" inputMode="decimal" autoComplete="off" placeholder={L("Your answer, e.g. 8.66", "Cevabın, örn. 8,66")}
+            aria-label={L("Numeric answer", "Sayısal cevap")} disabled={disabled}
             value={value?.kind === "number" ? value.text : ""}
             onChange={(e) => onChange({ kind: "number", text: e.target.value })}
             onKeyDown={(e) => e.key === "Enter" && onSubmit?.()}
@@ -50,8 +51,8 @@ export function AnswerInput({ question: q, value, onChange, disabled, onSubmit }
       return (
         <div className="stack" style={{ gap: 6 }}>
           <input
-            className="input mono" autoComplete="off" autoCapitalize="off" spellCheck={false} placeholder="örn. 6*t + 2"
-            aria-label="İfade cevabı" disabled={disabled}
+            className="input mono" autoComplete="off" autoCapitalize="off" spellCheck={false} placeholder={L("e.g. 6*t + 2", "örn. 6*t + 2")}
+            aria-label={L("Expression answer", "İfade cevabı")} disabled={disabled}
             value={value?.kind === "expression" ? value.text : ""}
             onChange={(e) => onChange({ kind: "expression", text: e.target.value })}
             onKeyDown={(e) => e.key === "Enter" && onSubmit?.()}
@@ -66,7 +67,7 @@ export function AnswerInput({ question: q, value, onChange, disabled, onSubmit }
     default:
       return (
         <textarea
-          className="textarea" placeholder="Cevabını yaz. Akıl yürütmeni göster." aria-label="Yazılı cevap" disabled={disabled}
+          className="textarea" placeholder={L("Write your answer. Show your reasoning.", "Cevabını yaz. Akıl yürütmeni göster.")} aria-label={L("Written answer", "Yazılı cevap")} disabled={disabled}
           value={value?.kind === "text" ? value.text : ""}
           onChange={(e) => onChange({ kind: "text", text: e.target.value, drawing: value?.kind === "text" ? value.drawing : undefined })}
         />
@@ -107,7 +108,7 @@ function OrderInput({ q, value, onChange, disabled }: { q: Question; value: stri
     onChange(next);
   };
   return (
-    <ol className="stack" style={{ gap: 8, padding: 0, margin: 0, listStyle: "none" }} aria-label="Sıralamak için sürükle ya da okları kullan">
+    <ol className="stack" style={{ gap: 8, padding: 0, margin: 0, listStyle: "none" }} aria-label={L("Drag or use arrows to reorder", "Sıralamak için sürükle ya da okları kullan")}>
       {items.map((item, i) => (
         <li
           key={item}
@@ -120,12 +121,12 @@ function OrderInput({ q, value, onChange, disabled }: { q: Question; value: stri
         >
           <span className="mono muted" style={{ width: 20 }}>{i + 1}</span>
           <span className="grow">{item}</span>
-          <button type="button" className="btn ghost small" aria-label="Yukarı taşı" disabled={disabled || i === 0} onClick={() => move(i, i - 1)}><Icon.up /></button>
-          <button type="button" className="btn ghost small" aria-label="Aşağı taşı" disabled={disabled || i === items.length - 1} onClick={() => move(i, i + 1)}><Icon.down /></button>
+          <button type="button" className="btn ghost small" aria-label={L("Move up", "Yukarı taşı")} disabled={disabled || i === 0} onClick={() => move(i, i - 1)}><Icon.up /></button>
+          <button type="button" className="btn ghost small" aria-label={L("Move down", "Aşağı taşı")} disabled={disabled || i === items.length - 1} onClick={() => move(i, i + 1)}><Icon.down /></button>
         </li>
       ))}
       {value === null && !disabled && (
-        <li><button type="button" className="btn ghost small" onClick={() => onChange(items)}>Cevabım bu sıralama</button></li>
+        <li><button type="button" className="btn ghost small" onClick={() => onChange(items)}>{L("This order is my answer", "Cevabım bu sıralama")}</button></li>
       )}
     </ol>
   );

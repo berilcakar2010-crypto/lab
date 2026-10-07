@@ -11,9 +11,10 @@ import { courseMilestones } from "../engines/curriculum";
 import { attemptsFor } from "../engines/progress";
 import { recentPerformance, recommendNext } from "../engines/progression";
 import { evalNumber } from "../engines/expr";
+import { L, lazyLabels } from "../i18n";
 import { parseJSON, runAI, type AIHost, type AIResult } from "./engine";
 
-const STRUGGLE_RULES = `You preserve productive struggle: never state the final answer, the final number, or the complete solution unless explicitly told the student unlocked the full solution. Prefer questions that make the student think. Keep replies short (at most 4 sentences). Always write in Turkish (Türkçe).`;
+const STRUGGLE_RULES = () => `You preserve productive struggle: never state the final answer, the final number, or the complete solution unless explicitly told the student unlocked the full solution. Prefer questions that make the student think. Keep replies short (at most 4 sentences). ${L("Always write in English.", "Always write in Turkish (Türkçe).")}`;
 
 const describeQuestion = (q: Question) =>
   `Question (${q.kind.toLowerCase()}): ${q.prompt}${q.choices ? `\nOptions: ${q.choices.map((c, i) => `${i + 1}) ${c}`).join("  ")}` : ""}`;
@@ -55,10 +56,10 @@ const isTrivial = (x: number) => [0, 1, 2, 10, 100].includes(Math.abs(x));
 
 export function genericHints(q: Question): string[] {
   return [
-    "Soruyu yeniden oku: tam olarak ne isteniyor, ne verilmiş?",
-    "Verilenle istenen arasında hangi tanım, yasa ya da ilke köprü kuruyor?",
-    "Hesaplamadan önce yolu planla: atacağın adımları sırayla yaz.",
-    q.rubric.length ? `Tam bir cevap şunu içerir: ${q.rubric[0]}. Oradan başla.` : "Adım adım ilerle ve her adımı seçtiğin ilkeyle kontrol et.",
+    L("Re-read the question: what exactly is being asked, and what is given?", "Soruyu yeniden oku: tam olarak ne isteniyor, ne verilmiş?"),
+    L("Which definition, law or principle connects what is given to what is asked?", "Verilenle istenen arasında hangi tanım, yasa ya da ilke köprü kuruyor?"),
+    L("Plan the route before calculating: list the steps you would take, in order.", "Hesaplamadan önce yolu planla: atacağın adımları sırayla yaz."),
+    q.rubric.length ? L(`A complete answer covers: ${q.rubric[0]}. Start from there.`, `Tam bir cevap şunu içerir: ${q.rubric[0]}. Oradan başla.`) : L("Work one step at a time and check each against the principle you chose.", "Adım adım ilerle ve her adımı seçtiğin ilkeyle kontrol et."),
   ];
 }
 
@@ -69,7 +70,7 @@ export async function generateHints(host: AIHost, q: Question, sessionId?: ID): 
     summary: `Hints for ${q.prompt.slice(0, 60)}`,
     sessionId,
     milestoneId: q.milestoneId,
-    system: `You are Lab's Hint Generator. ${STRUGGLE_RULES}
+    system: `You are Lab's Hint Generator. ${STRUGGLE_RULES()}
 Write exactly 4 hints of increasing strength: 1) a small nudge, 2) a conceptual hint (which idea applies), 3) a strategic hint (the plan), 4) partial guidance (the first concrete step). None may contain the final answer.
 Return ONLY {"hints":[string,string,string,string]}.`,
     prompt: `${describeQuestion(q)}\n${secret(q)}`,
@@ -93,12 +94,12 @@ export interface ChatTurn {
   text: string;
 }
 
-const SOCRATIC_FALLBACK = [
-  "Soru aslında ne istiyor — bir sayı mı, bir ilişki mi, bir gerekçe mi?",
-  "Bu adımın hedefindeki hangi ilke verilenleri bilinmeyene bağlayabilir?",
-  "Bildiklerini çizebilir ya da listeleyebilir misin? Hâlâ eksik olan ne?",
-  "Daha basit bir durumu dene (küçük sayılar, tek boyut, özel bir açı). Orada ne oluyor?",
-  "Son adımını kontrol et: hangi varsayıma dayanıyordu? O varsayım burada geçerli mi?",
+const SOCRATIC_FALLBACK = () => [
+  L("What is the question really asking for — a number, a relationship, or a reason?", "Soru aslında ne istiyor — bir sayı mı, bir ilişki mi, bir gerekçe mi?"),
+  L("Which principle from this milestone's objective could connect the givens to the unknown?", "Bu adımın hedefindeki hangi ilke verilenleri bilinmeyene bağlayabilir?"),
+  L("Can you draw or list what you know? What is still missing?", "Bildiklerini çizebilir ya da listeleyebilir misin? Hâlâ eksik olan ne?"),
+  L("Try a simpler case (smaller numbers, one dimension, a special angle). What happens there?", "Daha basit bir durumu dene (küçük sayılar, tek boyut, özel bir açı). Orada ne oluyor?"),
+  L("Check your last step: which assumption did it rely on? Is that assumption valid here?", "Son adımını kontrol et: hangi varsayıma dayanıyordu? O varsayım burada geçerli mi?"),
 ];
 
 export async function socraticReply(host: AIHost, q: Question, history: ChatTurn[], studentAnswer: string, sessionId?: ID): Promise<AIResult<string>> {
@@ -109,7 +110,7 @@ export async function socraticReply(host: AIHost, q: Question, history: ChatTurn
     sessionId,
     milestoneId: q.milestoneId,
     json: true,
-    system: `You are Lab's Socratic Guide. ${STRUGGLE_RULES} Respond with one or two guiding questions or a brief observation about the student's reasoning, never a solution. Return ONLY {"reply": string}.`,
+    system: `You are Lab's Socratic Guide. ${STRUGGLE_RULES()} Respond with one or two guiding questions or a brief observation about the student's reasoning, never a solution. Return ONLY {"reply": string}.`,
     prompt: `${describeQuestion(q)}\n${secret(q)}\nStudent's current answer/work: ${studentAnswer || "(none yet)"}\nConversation so far:\n${history.map((h) => `${h.role}: ${h.text}`).join("\n") || "(start)"}`,
     parse: parseJSON((x) => {
       const reply = String((x as { reply?: unknown }).reply ?? "");
@@ -117,7 +118,10 @@ export async function socraticReply(host: AIHost, q: Question, history: ChatTurn
       if (leaksAnswer(reply, q)) throw new Error("Reply leaked the answer");
       return reply;
     }),
-    fallback: () => SOCRATIC_FALLBACK[asked % SOCRATIC_FALLBACK.length],
+    fallback: () => {
+      const qs = SOCRATIC_FALLBACK();
+      return qs[asked % qs.length];
+    },
   });
 }
 
@@ -130,7 +134,7 @@ export async function explainConcept(host: AIHost, db: LabDB, q: Question, sessi
     summary: `Explain concept for ${m?.title ?? "question"}`,
     sessionId,
     milestoneId: q.milestoneId,
-    system: `You are Lab's Tutor. Explain the underlying concept clearly with one short example that is DIFFERENT from the student's question. ${STRUGGLE_RULES} Return ONLY {"explanation": string} (max 6 sentences).`,
+    system: `You are Lab's Tutor. Explain the underlying concept clearly with one short example that is DIFFERENT from the student's question. ${STRUGGLE_RULES()} Return ONLY {"explanation": string} (max 6 sentences).`,
     prompt: `Milestone objective: ${m?.learningObjective}\nConcepts: ${concepts.map((c) => `${c.title}: ${c.description}`).join("; ") || "n/a"}\n${describeQuestion(q)}\n${secret(q)}`,
     parse: parseJSON((x) => {
       const e = String((x as { explanation?: unknown }).explanation ?? "");
@@ -140,10 +144,10 @@ export async function explainConcept(host: AIHost, db: LabDB, q: Question, sessi
     }),
     fallback: () =>
       [
-        m ? `Bu adımın arkasındaki fikir: ${m.learningObjective}` : "",
+        m ? L(`The idea behind this milestone: ${m.learningObjective}`, `Bu adımın arkasındaki fikir: ${m.learningObjective}`) : "",
         ...concepts.map((c) => `${c.title} — ${c.description}`),
-        q.hints[1] ? `Anahtar fikir: ${q.hints[1]}` : "",
-      ].filter(Boolean).join("\n\n") || "Adımın hedefine ve üzerine kurulduğu ön koşula yeniden bak.",
+        q.hints[1] ? L(`Key idea: ${q.hints[1]}`, `Anahtar fikir: ${q.hints[1]}`) : "",
+      ].filter(Boolean).join("\n\n") || L("Revisit the milestone's objective and the prerequisite it builds on.", "Adımın hedefine ve üzerine kurulduğu ön koşula yeniden bak."),
   });
 }
 
@@ -170,7 +174,7 @@ export async function evaluateOpenResponse(
     sessionId,
     milestoneId: q.milestoneId,
     images: image ? [image] : undefined,
-    system: `You are Lab's Evaluator. Judge the student's answer strictly but fairly against each rubric point. Distinguish correctness from reasoning quality, and classify errors as CONCEPTUAL, PROCEDURAL, CARELESS, MISSING_PREREQUISITE or INCOMPLETE_EXPLANATION. Name a successful strategy if there is one. Do not rewrite the solution for them; point to what is missing. Write the message in Turkish.
+    system: `You are Lab's Evaluator. Judge the student's answer strictly but fairly against each rubric point. Distinguish correctness from reasoning quality, and classify errors as CONCEPTUAL, PROCEDURAL, CARELESS, MISSING_PREREQUISITE or INCOMPLETE_EXPLANATION. Name a successful strategy if there is one. Do not rewrite the solution for them; point to what is missing. ${L("Write the message in English.", "Write the message in Turkish.")}
 Return ONLY {"met":[boolean per rubric point],"reasoningQuality":"STRONG|ADEQUATE|WEAK","errorTypes":[...],"successfulStrategy":string|null,"message":string (max 3 sentences),"missingPrerequisite":string|null}.`,
     prompt: `${describeQuestion(q)}\nRubric:\n${q.rubric.map((r, i) => `${i + 1}. ${r}`).join("\n")}\nReference solution: ${q.solution}\nPrerequisite milestones: ${prereqs.join("; ") || "none"}\nStudent's answer:\n${answer || "(see drawing)"}${image ? "\nThe student's drawing is attached." : ""}`,
     parse: parseJSON((x) => {
@@ -200,7 +204,7 @@ export async function diagnoseMistake(host: AIHost, q: Question, studentAnswer: 
     summary: "Diagnose mistake",
     sessionId,
     milestoneId: q.milestoneId,
-    system: `You are Lab's Feedback Generator. Infer the most likely misconception or slip behind the student's wrong answer and say what to re-check. ${STRUGGLE_RULES} Return ONLY {"diagnosis": string}.`,
+    system: `You are Lab's Feedback Generator. Infer the most likely misconception or slip behind the student's wrong answer and say what to re-check. ${STRUGGLE_RULES()} Return ONLY {"diagnosis": string}.`,
     prompt: `${describeQuestion(q)}\n${secret(q)}\nStudent answered: ${studentAnswer}\nAutomatic check said: ${base.message} (${base.errorTypes.join(", ") || "unclassified"})`,
     parse: parseJSON((x) => {
       const d = String((x as { diagnosis?: unknown }).diagnosis ?? "");
@@ -208,7 +212,7 @@ export async function diagnoseMistake(host: AIHost, q: Question, studentAnswer: 
       if (leaksAnswer(d, q)) throw new Error("Diagnosis leaked the answer");
       return d;
     }),
-    fallback: () => `${base.message} ${q.hints[0] ? `Başlamak için: ${q.hints[0]}` : "Uyguladığın ilkeyi ve her adımın işlemlerini yeniden kontrol et."}`,
+    fallback: () => L(`${base.message} ${q.hints[0] ? `A place to start: ${q.hints[0]}` : "Re-check the principle you applied and each step's arithmetic."}`, `${base.message} ${q.hints[0] ? `Başlamak için: ${q.hints[0]}` : "Uyguladığın ilkeyi ve her adımın işlemlerini yeniden kontrol et."}`),
   });
 }
 
@@ -226,7 +230,7 @@ export interface DifficultySignal {
 export function difficultySignal(db: LabDB, milestoneId: ID): DifficultySignal {
   const m = db.milestones[milestoneId];
   const atts = attemptsFor(db, milestoneId).filter((a) => a.correct !== null);
-  if (atts.length < 4) return { suggested: null, rationale: "Zorluğu değerlendirmek için henüz yeterli deneme yok.", sample: atts.length };
+  if (atts.length < 4) return { suggested: null, rationale: L("Not enough attempts yet to judge difficulty.", "Zorluğu değerlendirmek için henüz yeterli deneme yok."), sample: atts.length };
   const firstTry = new Map<ID, boolean>();
   for (const a of atts) if (!firstTry.has(a.questionId)) firstTry.set(a.questionId, !!a.correct);
   const fta = [...firstTry.values()].filter(Boolean).length / firstTry.size;
@@ -236,7 +240,7 @@ export function difficultySignal(db: LabDB, milestoneId: ID): DifficultySignal {
   else if (fta <= 0.3 || hinted >= 0.5) suggested = Math.min(5, m.difficulty + 1);
   return {
     suggested: suggested !== m.difficulty ? suggested : null,
-    rationale: `${firstTry.size} soruda ilk deneme doğruluğu %${Math.round(fta * 100)}; ${atts.length} denemenin %${Math.round(hinted * 100)}'inde güçlü ipucu kullanıldı.`,
+    rationale: L(`First-try accuracy ${Math.round(fta * 100)}% over ${firstTry.size} questions; strong hints used in ${Math.round(hinted * 100)}% of ${atts.length} attempts.`, `${firstTry.size} soruda ilk deneme doğruluğu %${Math.round(fta * 100)}; ${atts.length} denemenin %${Math.round(hinted * 100)}'inde güçlü ipucu kullanıldı.`),
     sample: atts.length,
   };
 }
@@ -249,7 +253,7 @@ export async function calibrateDifficultyAI(host: AIHost, db: LabDB, milestoneId
     role: "DIFFICULTY_CALIBRATOR",
     summary: `Calibrate ${m.title}`,
     milestoneId,
-    system: `You are Lab's Difficulty Calibrator. Given rated difficulty and observed performance, suggest a difficulty from 1 to 5 and explain in one cautious sentence in Turkish (small samples are uncertain). Return ONLY {"difficulty": number, "rationale": string}.`,
+    system: `You are Lab's Difficulty Calibrator. Given rated difficulty and observed performance, suggest a difficulty from 1 to 5 and explain in one cautious sentence ${L("in English", "in Turkish")} (small samples are uncertain). Return ONLY {"difficulty": number, "rationale": string}.`,
     prompt: `Milestone: ${m.title} (rated ${m.difficulty}/5, type ${m.milestoneType}).\nObserved: ${sig.rationale}`,
     parse: parseJSON((x) => {
       const r = x as { difficulty?: number; rationale?: string };
@@ -291,7 +295,7 @@ export function adviseCourse(db: LabDB, courseId: ID): Advice[] {
     const m = db.milestones[r.milestoneId];
     for (const p of m.prerequisites) {
       const pm = db.milestones[p];
-      if (pm?.status === "NEEDS_REVIEW") push({ tone: "review", milestoneId: p, action: "Tekrar et", text: `"${m.title}" adımından önce "${pm.title}" adımını tekrar etmek isteyebilirsin — bir kalıcılık kontrolü unutulmaya başladığını gösterdi.` });
+      if (pm?.status === "NEEDS_REVIEW") push({ tone: "review", milestoneId: p, action: L("Review", "Tekrar et"), text: L(`You may want to review "${pm.title}" before "${m.title}" — a retention check showed it has faded.`, `"${m.title}" adımından önce "${pm.title}" adımını tekrar etmek isteyebilirsin — bir kalıcılık kontrolü unutulmaya başladığını gösterdi.`) });
     }
   }
   for (const m of ms) {
@@ -301,19 +305,19 @@ export function adviseCourse(db: LabDB, courseId: ID): Advice[] {
       const prereqGap = wrong.some((a) => a.feedback.errorTypes.includes("MISSING_PREREQUISITE") || a.feedback.errorTypes.includes("CONCEPTUAL"));
       const weakest = m.prerequisites.map((p) => db.milestones[p]).find((p) => p && (p.status === "SKIPPED" || p.status === "NEEDS_REVIEW" || (p.masteredAt && attemptsFor(db, p.id).length === 0)));
       if (weakest) {
-        push({ tone: "gap", milestoneId: weakest.id, action: "Göz at", text: `"${m.title}" şimdiye kadar zorlayıcı oldu ve "${weakest.title}" üzerine kurulu${weakest.status === "SKIPPED" ? " (bu adımı atlamıştın)" : ""}. Ona dönmek yardımcı olabilir.` });
+        push({ tone: "gap", milestoneId: weakest.id, action: L("Revisit", "Göz at"), text: L(`"${m.title}" has been hard so far, and it builds on "${weakest.title}"${weakest.status === "SKIPPED" ? ", which you skipped" : ""}. Revisiting it may help.`, `"${m.title}" şimdiye kadar zorlayıcı oldu ve "${weakest.title}" üzerine kurulu${weakest.status === "SKIPPED" ? " (bu adımı atlamıştın)" : ""}. Ona dönmek yardımcı olabilir.`) });
       } else if (prereqGap && m.prerequisites.length) {
         const p = db.milestones[m.prerequisites[0]];
-        if (p) push({ tone: "gap", milestoneId: p.id, action: "Göz at", text: `"${m.title}" adımındaki birkaç hata kavramsal görünüyor. "${p.title}" adımına hızlıca dönmek yardımcı olabilir.` });
+        if (p) push({ tone: "gap", milestoneId: p.id, action: L("Revisit", "Göz at"), text: L(`Several answers on "${m.title}" look conceptual. A quick pass over "${p.title}" may help.`, `"${m.title}" adımındaki birkaç hata kavramsal görünüyor. "${p.title}" adımına hızlıca dönmek yardımcı olabilir.`) });
       }
     }
   }
   if (perf.accuracy !== null && perf.sample >= 6 && perf.accuracy >= 0.85) {
     const stretch = recs.find((r) => r.kind === "CHALLENGE" || r.kind === "BOSS");
-    if (stretch) push({ tone: "ready", milestoneId: stretch.milestoneId, action: "Dene", text: `"${db.milestones[stretch.milestoneId].title}" için hazır görünüyorsun — son ${perf.sample} cevabının %${Math.round(perf.accuracy * 100)}'i doğruydu.` });
+    if (stretch) push({ tone: "ready", milestoneId: stretch.milestoneId, action: L("Try it", "Dene"), text: L(`You appear ready for "${db.milestones[stretch.milestoneId].title}" — ${Math.round(perf.accuracy * 100)}% of your last ${perf.sample} answers were correct.`, `"${db.milestones[stretch.milestoneId].title}" için hazır görünüyorsun — son ${perf.sample} cevabının %${Math.round(perf.accuracy * 100)}'i doğruydu.`) });
   }
   if (perf.accuracy !== null && perf.sample >= 6 && perf.accuracy < 0.45) {
-    push({ tone: "info", text: `Son ${perf.sample} cevabının %${Math.round(perf.accuracy * 100)}'i doğru. Daha küçük adımlar ya da bir tekrar adımı sonraki oturumu kolaylaştırabilir.` });
+    push({ tone: "info", text: L(`Your last ${perf.sample} answers were ${Math.round(perf.accuracy * 100)}% correct. Smaller steps or a review milestone could make the next session smoother.`, `Son ${perf.sample} cevabının %${Math.round(perf.accuracy * 100)}'i doğru. Daha küçük adımlar ya da bir tekrar adımı sonraki oturumu kolaylaştırabilir.`) });
   }
   return out.slice(0, 4);
 }
@@ -325,7 +329,7 @@ export async function adviseCourseAI(host: AIHost, db: LabDB, courseId: ID): Pro
   return runAI(host, {
     role: "CURRICULUM_ADVISOR",
     summary: "Course advice",
-    system: `You are Lab's Curriculum Advisor. Suggest at most 3 next moves in Turkish using cautious language ("hazır görünüyorsun", "tekrar etmek isteyebilirsin"). You never change the curriculum; the student decides. Reference milestones by exact title. Return ONLY {"advice":[{"text":string,"milestoneTitle":string|null,"tone":"ready|review|gap|info"}]}.`,
+    system: `You are Lab's Curriculum Advisor. Suggest at most 3 next moves ${L('in English using cautious language ("you appear ready", "you may want to review")', 'in Turkish using cautious language ("hazır görünüyorsun", "tekrar etmek isteyebilirsin")')}. You never change the curriculum; the student decides. Reference milestones by exact title. Return ONLY {"advice":[{"text":string,"milestoneTitle":string|null,"tone":"ready|review|gap|info"}]}.`,
     prompt: `Course: ${db.courses[courseId]?.title}\nMilestones (title — status — difficulty):\n${ms.map((m) => `${m.title} — ${m.status} — ${m.difficulty}`).join("\n")}\nRecent accuracy: ${recentPerformance(db, courseId).accuracy ?? "n/a"}\nRule-based observations: ${base.map((b) => b.text).join(" | ") || "none"}`,
     parse: parseJSON((x) => {
       const list = (x as { advice?: { text?: string; milestoneTitle?: string | null; tone?: string }[] }).advice;
@@ -346,18 +350,18 @@ export async function adviseCourseAI(host: AIHost, db: LabDB, courseId: ID): Pro
 export function reflectSession(db: LabDB, sessionId: ID): string[] {
   const atts = Object.values(db.attempts).filter((a) => a.sessionId === sessionId);
   const notes: string[] = [];
-  if (!atts.length) return ["Bu oturumda kayıtlı deneme yok."];
+  if (!atts.length) return [L("No attempts were recorded in this session.", "Bu oturumda kayıtlı deneme yok.")];
   const retries = atts.filter((a) => a.isRetry);
   const retrySuccess = retries.filter((a) => a.correct).length;
-  if (retries.length) notes.push(`Bir hatadan sonra ${retries.length} kez yeniden denedin ve bunların ${retrySuccess} tanesini doğru yaptın — ${retrySuccess ? "sebat işe yaradı" : "sonuç henüz gelmese de emek ortada"}.`);
+  if (retries.length) notes.push(L(`You retried ${retries.length} time${retries.length > 1 ? "s" : ""} after a miss and got ${retrySuccess} of those right — persistence paid off${retrySuccess ? "" : " in effort, if not yet in results"}.`, `Bir hatadan sonra ${retries.length} kez yeniden denedin ve bunların ${retrySuccess} tanesini doğru yaptın — ${retrySuccess ? "sebat işe yaradı" : "sonuç henüz gelmese de emek ortada"}.`));
   const errs = atts.flatMap((a) => a.feedback.errorTypes);
   const top = mode(errs);
-  if (top) notes.push(`En sık hata türü: ${ERROR_TR[top] ?? top}. Kısa bir tekrar en çok burada işe yarar.`);
+  if (top) notes.push(L(`Most frequent error type: ${ERROR_TR[top] ?? top}. That is where a short review would pay off most.`, `En sık hata türü: ${ERROR_TR[top] ?? top}. Kısa bir tekrar en çok burada işe yarar.`));
   const hinted = atts.filter((a) => a.hintLevelUsed > 0);
   if (hinted.length) {
     const levels: number[] = hinted.map((a) => a.hintLevelUsed);
-    notes.push(`${atts.length} denemenin ${hinted.length} tanesinde yardım kullandın (tipik düzey: ${HINT_TR[Math.round(levels.reduce((s, l) => s + l, 0) / levels.length)]}).`);
-  } else notes.push("Bu oturumda ipucu kullanmadan çalıştın.");
+    notes.push(L(`You used help on ${hinted.length} of ${atts.length} attempts (typical level: ${HINT_TR[Math.round(levels.reduce((s, l) => s + l, 0) / levels.length)]}).`, `${atts.length} denemenin ${hinted.length} tanesinde yardım kullandın (tipik düzey: ${HINT_TR[Math.round(levels.reduce((s, l) => s + l, 0) / levels.length)]}).`));
+  } else notes.push(L("You worked without hints this session.", "Bu oturumda ipucu kullanmadan çalıştın."));
   return notes;
 }
 
@@ -375,7 +379,7 @@ export async function reflectSessionAI(host: AIHost, db: LabDB, sessionId: ID): 
     role: "REFLECTION_ANALYST",
     summary: "Session reflection",
     sessionId,
-    system: `You are Lab's Reflection Analyst. Write 2–3 short, specific, non-judgemental observations about this study session, in Turkish. Use cautious language; one session is not evidence of a trend. Never praise time spent. Return ONLY {"notes":[string]}.`,
+    system: `You are Lab's Reflection Analyst. Write 2–3 short, specific, non-judgemental observations about this study session, ${L("in English", "in Turkish")}. Use cautious language; one session is not evidence of a trend. Never praise time spent. Return ONLY {"notes":[string]}.`,
     prompt: `Attempts: ${atts.length}; correct: ${atts.filter((a) => a.correct).length}; retries: ${atts.filter((a) => a.isRetry).length}; hint levels: ${atts.map((a) => a.hintLevelUsed).join(",")}; error types: ${atts.flatMap((a) => a.feedback.errorTypes).join(",") || "none"}; milestones: ${[...new Set(atts.map((a) => db.milestones[a.milestoneId]?.title))].join("; ")}.\nRule-based notes: ${base.join(" ")}`,
     parse: parseJSON((x) => {
       const n = (x as { notes?: unknown[] }).notes;
@@ -386,8 +390,12 @@ export async function reflectSessionAI(host: AIHost, db: LabDB, sessionId: ID): 
   });
 }
 
-export const HINT_TR = ["yardımsız", "küçük ipucu", "kavramsal ipucu", "stratejik ipucu", "kısmi yönlendirme", "tam çözüm"];
-const ERROR_TR: Record<string, string> = {
-  CONCEPTUAL: "kavramsal yanılgı", PROCEDURAL: "işlem hatası", CARELESS: "dikkatsizlik", MISSING_PREREQUISITE: "eksik ön koşul", INCOMPLETE_EXPLANATION: "eksik açıklama",
-};
+export const HINT_TR = lazyLabels<string>(
+  { 0: "unassisted", 1: "small hint", 2: "conceptual hint", 3: "strategic hint", 4: "partial guidance", 5: "full solution" },
+  { 0: "yardımsız", 1: "küçük ipucu", 2: "kavramsal ipucu", 3: "stratejik ipucu", 4: "kısmi yönlendirme", 5: "tam çözüm" },
+);
+const ERROR_TR = lazyLabels<string>(
+  { CONCEPTUAL: "conceptual", PROCEDURAL: "procedural", CARELESS: "careless", MISSING_PREREQUISITE: "missing prerequisite", INCOMPLETE_EXPLANATION: "incomplete explanation" },
+  { CONCEPTUAL: "kavramsal yanılgı", PROCEDURAL: "işlem hatası", CARELESS: "dikkatsizlik", MISSING_PREREQUISITE: "eksik ön koşul", INCOMPLETE_EXPLANATION: "eksik açıklama" },
+);
 export const hintLabel = (l: HintLevel) => HINT_TR[l] ?? HINT_LEVELS[l];

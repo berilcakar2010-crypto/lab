@@ -14,17 +14,24 @@ import { DrawingCanvas, type DrawingStats } from "./DrawingCanvas";
 import { MathText } from "./MathText";
 import { Icon } from "./common";
 import { AIHelp, evaluateOpenWithAI, type AIEvalResult } from "./AIHelp";
+import { L, lazyLabels, pick } from "../../i18n";
 
 const WORKSPACE_KINDS = new Set(["DRAWING", "DIAGRAM", "PROBLEM_SOLVING", "DERIVATION", "PROOF"]);
 const DRAW_ONLY = new Set(["DRAWING", "DIAGRAM"]);
 
-const ERROR_LABEL: Record<string, string> = {
+const ERROR_LABEL: Record<string, string> = lazyLabels<string>({
+  CONCEPTUAL: "Conceptual misunderstanding",
+  PROCEDURAL: "Procedural error",
+  CARELESS: "Careless slip",
+  MISSING_PREREQUISITE: "Missing prerequisite",
+  INCOMPLETE_EXPLANATION: "Incomplete explanation",
+}, {
   CONCEPTUAL: "Kavramsal yanılgı",
   PROCEDURAL: "İşlem hatası",
   CARELESS: "Dikkatsizlik",
   MISSING_PREREQUISITE: "Eksik ön koşul",
   INCOMPLETE_EXPLANATION: "Eksik açıklama",
-};
+});
 
 export interface QuestionOutcome {
   correct: boolean | null;
@@ -141,8 +148,8 @@ export function QuestionCard({
 
   const [hintBusy, setHintBusy] = useState(false);
   const requestHint = async (level: HintLevel) => {
-    if (level > hintCap && !confirm(`Bu, alışılmış yardım sınırının (düzey ${hintCap}) ötesinde. Biraz daha uğraşmak öğrenmenin kalıcı olmasına çoğu zaman yardım eder. Yine de gösterilsin mi?`)) return;
-    if (level === 5 && attempts === 0 && !confirm("Bunu henüz denemedin. Tam çözüm yine de gösterilsin mi? Çözümü gördükten sonraki cevaplar ustalığa sayılmaz.")) return;
+    if (level > hintCap && !confirm(L(`This goes past your usual help limit (level ${hintCap}). Struggling a little longer often helps learning stick. Show it anyway?`, `Bu, alışılmış yardım sınırının (düzey ${hintCap}) ötesinde. Biraz daha uğraşmak öğrenmenin kalıcı olmasına çoğu zaman yardım eder. Yine de gösterilsin mi?`))) return;
+    if (level === 5 && attempts === 0 && !confirm(L("You haven't attempted this yet. Reveal the full solution anyway? Answers after seeing the solution won't count toward mastery.", "Bunu henüz denemedin. Tam çözüm yine de gösterilsin mi? Çözümü gördükten sonraki cevaplar ustalığa sayılmaz."))) return;
     let source = "authored";
     if (level <= 4 && !q.hints[level - 1]) {
       // No authored hint at this level: generate the ladder once (AI, guarded; generic offline) and keep it.
@@ -168,8 +175,8 @@ export function QuestionCard({
       onPointerDown={(e) => noteInput(e.pointerType === "pen" ? "pen" : e.pointerType === "touch" ? "touch" : "mouse")}
       onKeyDown={() => input.current !== "pen" && noteInput("keyboard")}>
       <div className="row between">
-        <span className="eyebrow">{purpose === "PRACTICE" ? "Isınma" : purpose === "MASTERY" ? "Ustalık sorusu" : purpose === "RETENTION" ? "Kalıcılık kontrolü" : "Transfer kontrolü"} · {INTERACTION_TR[q.kind] ?? q.kind}</span>
-        {attempts > 0 && <span className="tiny muted">{attempts + (result ? 0 : 1)}. deneme</span>}
+        <span className="eyebrow">{purpose === "PRACTICE" ? L("Warm-up", "Isınma") : purpose === "MASTERY" ? L("Mastery question", "Ustalık sorusu") : purpose === "RETENTION" ? L("Retention check", "Kalıcılık kontrolü") : L("Transfer check", "Transfer kontrolü")} · {INTERACTION_TR[q.kind] ?? q.kind}</span>
+        {attempts > 0 && <span className="tiny muted">{L(`attempt ${attempts + (result ? 0 : 1)}`, `${attempts + (result ? 0 : 1)}. deneme`)}</span>}
       </div>
       <MathText text={q.prompt} className="serif" style={{ fontSize: "1.15rem", lineHeight: 1.45 }} />
       {q.graph && <GraphPlot spec={q.graph} />}
@@ -177,12 +184,14 @@ export function QuestionCard({
 
       {!drawOnly && (
         <button type="button" className="btn ghost small" style={{ alignSelf: "flex-start" }} onClick={() => setShowWorkspace(!showWorkspace)}>
-          <Icon.edit /> {WORKSPACE_KINDS.has(q.kind) ? "Çalışma alanını" : "Karalama alanını"} {showWorkspace ? "gizle" : "aç"}
+          <Icon.edit /> {WORKSPACE_KINDS.has(q.kind)
+            ? (showWorkspace ? L("Hide workspace", "Çalışma alanını gizle") : L("Open workspace", "Çalışma alanını aç"))
+            : (showWorkspace ? L("Hide scratch space", "Karalama alanını gizle") : L("Open scratch space", "Karalama alanını aç"))}
         </button>
       )}
       {(showWorkspace || drawOnly) && (
         <DrawingCanvas
-          label={drawOnly ? "Cevabını çiz" : "Çalışma alanı (puanlanmaz)"} height={drawOnly ? 380 : 300} onInput={noteInput}
+          label={drawOnly ? L("Draw your answer", "Cevabını çiz") : L("Workspace (not graded)", "Çalışma alanı (puanlanmaz)")} height={drawOnly ? 380 : 300} onInput={noteInput}
           onChange={(stats, image) => setDrawing({ stats, image })}
         />
       )}
@@ -192,7 +201,7 @@ export function QuestionCard({
       ) : (
         <div onPointerDown={(e) => noteInput(e.pointerType === "pen" ? "pen" : e.pointerType === "touch" ? "touch" : "mouse")}>
           {drawOnly ? (
-            <textarea className="textarea" style={{ minHeight: 70 }} placeholder="İsteğe bağlı: çizimini etiketle ya da açıkla" aria-label="Çizim notları" disabled={!!result}
+            <textarea className="textarea" style={{ minHeight: 70 }} placeholder={L("Optional: label or explain your drawing", "İsteğe bağlı: çizimini etiketle ya da açıkla")} aria-label={L("Drawing notes", "Çizim notları")} disabled={!!result}
               value={answer?.kind === "text" ? answer.text : ""} onChange={(e) => setAnswer({ kind: "text", text: e.target.value })} />
           ) : (
             <AnswerInput question={q} value={answer} onChange={setAnswer} disabled={!!result || !!rubricStep} onSubmit={() => canSubmit && submit()} />
@@ -203,22 +212,22 @@ export function QuestionCard({
       {!result && !rubricStep && (
         <>
           <div className="row" style={{ gap: 6 }}>
-            <span className="small muted">Eminlik</span>
+            <span className="small muted">{L("Confidence", "Eminlik")}</span>
             {[1, 2, 3, 4, 5].map((c) => (
               <button key={c} type="button" className="btn small" aria-pressed={confidence === c} onClick={() => setConfidence(confidence === c ? undefined : c)}
                 style={{ minWidth: 40, borderColor: confidence === c ? "var(--accent)" : undefined, background: confidence === c ? "var(--accent-soft)" : undefined }}>{c}</button>
             ))}
           </div>
           <div className="row">
-            <button className="btn primary grow" disabled={!canSubmit} onClick={submit}>Kontrol et</button>
+            <button className="btn primary grow" disabled={!canSubmit} onClick={submit}>{L("Check", "Kontrol et")}</button>
           </div>
         </>
       )}
 
       {rubricStep && (
         <div className="card raised stack rise" style={{ gap: 10 }}>
-          <span className="eyebrow">Ölçütlere göre değerlendir</span>
-          <p className="small text-2">Cevabının gerçekten içerdiği her maddeyi işaretle. Sıkı ol — bu senin için.</p>
+          <span className="eyebrow">{L("Evaluate against the rubric", "Ölçütlere göre değerlendir")}</span>
+          <p className="small text-2">{L("Tick each point your answer genuinely contains. Be strict — this is for you.", "Cevabının gerçekten içerdiği her maddeyi işaretle. Sıkı ol — bu senin için.")}</p>
           {q.rubric.map((r, i) => (
             <label key={i} className="row nowrap" style={{ alignItems: "flex-start", cursor: "pointer" }}>
               <input type="checkbox" checked={rubricStep.met[i]} style={{ width: 22, height: 22, flex: "none", marginTop: 2 }}
@@ -226,11 +235,11 @@ export function QuestionCard({
               <span>{r}</span>
             </label>
           ))}
-          {rubricStep.ai && <div className="banner info small">YZ değerlendirmesi: {rubricStep.ai.feedback.message} <span className="muted">(her işareti değiştirebilirsin)</span></div>}
-          {rubricStep.ai === null && <div className="banner warn small">YZ değerlendiricisi kullanılamıyor — lütfen kendin değerlendir.</div>}
+          {rubricStep.ai && <div className="banner info small">{L("AI evaluator: ", "YZ değerlendirmesi: ")}{rubricStep.ai.feedback.message} <span className="muted">{L("(you can change any tick)", "(her işareti değiştirebilirsin)")}</span></div>}
+          {rubricStep.ai === null && <div className="banner warn small">{L("The AI evaluator is unavailable — please self-assess.", "YZ değerlendiricisi kullanılamıyor — lütfen kendin değerlendir.")}</div>}
           <div className="row">
-            <button className="btn" onClick={askAI} disabled={rubricStep.aiBusy}>{rubricStep.aiBusy ? <><span className="spinner" /> Değerlendiriliyor…</> : "YZ değerlendirsin"}</button>
-            <button className="btn primary grow" onClick={confirmRubric}>Onayla</button>
+            <button className="btn" onClick={askAI} disabled={rubricStep.aiBusy}>{rubricStep.aiBusy ? <><span className="spinner" /> {L("Evaluating…", "Değerlendiriliyor…")}</> : L("Ask AI to evaluate", "YZ değerlendirsin")}</button>
+            <button className="btn primary grow" onClick={confirmRubric}>{L("Confirm", "Onayla")}</button>
           </div>
         </div>
       )}
@@ -240,16 +249,16 @@ export function QuestionCard({
       {result && (
         <div className="row">
           {result.masteredNow ? (
-            <button className="btn primary grow" onClick={onMastered}>Adımda ustalaştın — devam <Icon.arrow /></button>
+            <button className="btn primary grow" onClick={onMastered}>{L("Milestone mastered — continue", "Adımda ustalaştın — devam")} <Icon.arrow /></button>
           ) : result.correct ? (
-            <button className="btn primary grow" onClick={onNext}>Sonraki <Icon.arrow /></button>
+            <button className="btn primary grow" onClick={onNext}>{L("Next", "Sonraki")} <Icon.arrow /></button>
           ) : (
             <>
-              <button className="btn primary grow" onClick={retry}>Tekrar dene</button>
-              {onDifferent && <button className="btn" onClick={onDifferent}>Başka soru</button>}
+              <button className="btn primary grow" onClick={retry}>{L("Try again", "Tekrar dene")}</button>
+              {onDifferent && <button className="btn" onClick={onDifferent}>{L("Different question", "Başka soru")}</button>}
             </>
           )}
-          {(result.correct || hintLevel >= 5) && q.solution && <button className="btn ghost" onClick={() => setShowSolution(!showSolution)}>{showSolution ? "Çözümü gizle" : "Ayrıntılı çözüm"}</button>}
+          {(result.correct || hintLevel >= 5) && q.solution && <button className="btn ghost" onClick={() => setShowSolution(!showSolution)}>{showSolution ? L("Hide solution", "Çözümü gizle") : L("Worked solution", "Ayrıntılı çözüm")}</button>}
         </div>
       )}
 
@@ -260,7 +269,7 @@ export function QuestionCard({
 
       {showSolution && q.solution && (
         <div className="card raised rise">
-          <span className="eyebrow">Ayrıntılı çözüm</span>
+          <span className="eyebrow">{L("Worked solution", "Ayrıntılı çözüm")}</span>
           <MathText text={q.solution} className="text-2" style={{ marginTop: 6 }} />
         </div>
       )}
@@ -274,29 +283,29 @@ function FeedbackPanel({ result, minimal }: { result: Evaluation & { by: string 
     // Experiment condition: correctness only, no explanation or error classification.
     return (
       <div className={`banner ${result.correct ? "ok" : "error"} rise`} role="status" aria-live="polite">
-        <strong>{result.correct ? "Doğru" : "Henüz değil"}</strong>
+        <strong>{result.correct ? L("Correct", "Doğru") : L("Not yet", "Henüz değil")}</strong>
       </div>
     );
   }
   const tone = f.correctness === "CORRECT" ? "ok" : f.correctness === "PARTIAL" ? "warn" : f.correctness === "UNGRADED" ? "info" : "error";
-  const title = f.correctness === "CORRECT" ? "Doğru" : f.correctness === "PARTIAL" ? (result.correct ? "Sayılacak kadar iyi — eksikleri var" : "Kısmen doğru") : f.correctness === "UNGRADED" ? "Kaydedildi" : "Henüz değil";
+  const title = f.correctness === "CORRECT" ? L("Correct", "Doğru") : f.correctness === "PARTIAL" ? (result.correct ? L("Good enough to count — with gaps", "Sayılacak kadar iyi — eksikleri var") : L("Partly there", "Kısmen doğru")) : f.correctness === "UNGRADED" ? L("Recorded", "Kaydedildi") : L("Not yet", "Henüz değil");
   return (
     <div className={`banner ${tone} stack rise`} style={{ gap: 6 }} role="status" aria-live="polite">
-      <div className="row between"><strong>{title}</strong><span className="tiny muted">{result.by === "auto" ? "otomatik kontrol" : result.by === "ai" ? "YZ değerlendirdi" : "öz değerlendirme"}</span></div>
+      <div className="row between"><strong>{title}</strong><span className="tiny muted">{result.by === "auto" ? L("checked automatically", "otomatik kontrol") : result.by === "ai" ? L("AI-evaluated", "YZ değerlendirdi") : L("self-assessed", "öz değerlendirme")}</span></div>
       <span>{f.message}</span>
       <div className="row" style={{ gap: 6 }}>
         {f.errorTypes.map((e) => <span key={e} className="chip">{ERROR_LABEL[e] ?? e}</span>)}
-        {f.reasoningQuality !== "UNKNOWN" && <span className="chip">akıl yürütme: {{ STRONG: "güçlü", ADEQUATE: "yeterli", WEAK: "zayıf" }[f.reasoningQuality]}</span>}
+        {f.reasoningQuality !== "UNKNOWN" && <span className="chip">{L("reasoning: ", "akıl yürütme: ")}{pick({ STRONG: "strong", ADEQUATE: "adequate", WEAK: "weak" }, { STRONG: "güçlü", ADEQUATE: "yeterli", WEAK: "zayıf" })[f.reasoningQuality]}</span>}
       </div>
-      {f.successfulStrategy && <span className="small">İşe yarayan: {f.successfulStrategy}</span>}
-      {f.correctness !== "CORRECT" && f.errorTypes.includes("MISSING_PREREQUISITE") && <span className="small">Bir ön koşulun tekrarı gerekebilir — yukarıdaki bağlam paneline bak.</span>}
+      {f.successfulStrategy && <span className="small">{L("What worked: ", "İşe yarayan: ")}{f.successfulStrategy}</span>}
+      {f.correctness !== "CORRECT" && f.errorTypes.includes("MISSING_PREREQUISITE") && <span className="small">{L("A prerequisite may need review — see the context panel above.", "Bir ön koşulun tekrarı gerekebilir — yukarıdaki bağlam paneline bak.")}</span>}
     </div>
   );
 }
 
 function HelpLadder({ q, level, cap, onRequest, attempts, busy }: { q: Question; level: HintLevel; cap: HintLevel; onRequest: (l: HintLevel) => void; attempts: number; busy: boolean }) {
   const next = (level + 1) as HintLevel;
-  const labels = ["", "Küçük ipucu", "Kavramsal ipucu", "Stratejik ipucu", "Kısmi yönlendirme", "Tam çözüm"];
+  const labels = pick(["", "Small hint", "Conceptual hint", "Strategic hint", "Partial guidance", "Full solution"], ["", "Küçük ipucu", "Kavramsal ipucu", "Stratejik ipucu", "Kısmi yönlendirme", "Tam çözüm"]);
   // Levels 1–4 are always available (generated on demand when not authored).
   const available = (l: number) => (l <= 4 ? true : !!q.solution);
   return (
@@ -314,12 +323,12 @@ function HelpLadder({ q, level, cap, onRequest, attempts, busy }: { q: Question;
       {level < 5 && available(next) && (
         <div className="row">
           <button type="button" className="btn ghost small" disabled={busy} onClick={() => onRequest(next)}>
-            {busy ? <span className="spinner" /> : <Icon.bulb />} {labels[next]}{next > cap ? " (sınırının ötesinde)" : ""}
+            {busy ? <span className="spinner" /> : <Icon.bulb />} {labels[next]}{next > cap ? L(" (beyond your limit)", " (sınırının ötesinde)") : ""}
           </button>
           {next <= 4 && available(5) && level >= 3 && attempts > 0 && (
-            <button type="button" className="btn ghost small" onClick={() => onRequest(5)}>Tam çözümü göster</button>
+            <button type="button" className="btn ghost small" onClick={() => onRequest(5)}>{L("Show full solution", "Tam çözümü göster")}</button>
           )}
-          <span className="tiny muted">yardım düzeyi {level} / 5</span>
+          <span className="tiny muted">{L("help level", "yardım düzeyi")} {level} / 5</span>
         </div>
       )}
     </div>

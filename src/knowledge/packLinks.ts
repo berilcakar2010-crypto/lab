@@ -7,6 +7,8 @@
  */
 import { mechanicsPack } from "../ai/packs/mechanics";
 import { calculusPack } from "../ai/packs/calculus";
+import { mechanicsPackEn } from "../ai/packs/en/mechanics";
+import { calculusPackEn } from "../ai/packs/en/calculus";
 import type { CurriculumSpec } from "../engines/curriculumSpec";
 
 export const PACK_LO: Record<string, string[]> = {
@@ -91,7 +93,10 @@ let titleIndex: Map<string, string> | null = null;
 export function packKeyForTitle(title: string): string | undefined {
   if (!titleIndex) {
     titleIndex = new Map();
-    for (const [t, k] of [...titlesOf("mech", mechanicsPack), ...titlesOf("calc", calculusPack), ...Object.entries(OLD_TITLES)]) {
+    for (const [t, k] of [
+      ...titlesOf("mech", mechanicsPack), ...titlesOf("calc", calculusPack),
+      ...titlesOf("mech", mechanicsPackEn), ...titlesOf("calc", calculusPackEn), ...Object.entries(OLD_TITLES),
+    ]) {
       titleIndex.set(norm(t), k);
     }
   }
@@ -100,7 +105,7 @@ export function packKeyForTitle(title: string): string | undefined {
 
 /** Which pack a spec is, so `importCurriculum` can attach source keys. */
 export function packPrefix(spec: CurriculumSpec): string | undefined {
-  if (spec === mechanicsPack || spec.title === mechanicsPack.title) return "mech";
-  if (spec === calculusPack || spec.title === calculusPack.title) return "calc";
+  if ([mechanicsPack, mechanicsPackEn].some((p) => spec === p || spec.title === p.title)) return "mech";
+  if ([calculusPack, calculusPackEn].some((p) => spec === p || spec.title === p.title)) return "calc";
   return undefined;
 }

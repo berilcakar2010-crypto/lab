@@ -4,6 +4,7 @@
  */
 import type { ID, LabDB } from "../domain/types";
 import { logEvent } from "../engines/analytics";
+import { L } from "../i18n";
 import { importCurriculum } from "../engines/curriculumSpec";
 import { courseSpecFor } from "./generate";
 import type { KnowledgeGraph } from "./schema";
@@ -38,13 +39,14 @@ export function courseForObject(db: LabDB, loId: string): ID | undefined {
  */
 export function studyObjects(db: LabDB, g: KnowledgeGraph, loIds: string[], title?: string): ID {
   const first = g.objects[loIds[loIds.length - 1]] ?? g.objects[loIds[0]];
-  if (!first) throw new Error("Nesne grafikte bulunamadı.");
+  if (!first) throw new Error(L("Object not found in the graph.", "Nesne grafikte bulunamadı."));
   const spec = courseSpecFor(g, loIds, title ?? first.title, `${first.title}: ${first.learningObjectives[0] ?? first.description}`);
   const report = importCurriculum(db, spec, {
-    source: { kind: "REQUEST", text: `Bilgi grafiği: ${loIds.join(", ")}` },
+    source: { kind: "REQUEST", text: `${L("Knowledge graph", "Bilgi grafiği")}: ${loIds.join(", ")}` },
     generatedBy: `graph:${g.version}`,
     subjectName: spec.subject,
   });
+  db.courses[report.courseId].origin = { kind: "graph", loIds: [...loIds], title };
   logEvent(db, "CURRICULUM_EDIT", { courseId: report.courseId }, { action: "create_from_graph", lo: loIds, milestones: report.milestoneCount });
   return report.courseId;
 }

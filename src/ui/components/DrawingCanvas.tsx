@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { InputMethod } from "../../domain/types";
 import { Icon } from "./common";
+import { L } from "../../i18n";
 
 type Pt = [number, number, number]; // x, y, pressure
 interface Stroke { pts: Pt[]; color: string; width: number; erase: boolean }
@@ -20,7 +21,7 @@ const COLORS = ["#f3e9e1", "#e28a9a", "#e0b46a", "#9cc5a1"];
  * resting on the screen never leaves marks. Without a pen, fingers draw.
  */
 export function DrawingCanvas({
-  height = 340, onChange, onInput, label = "Çalışma alanı",
+  height = 340, onChange, onInput, label = L("Workspace", "Çalışma alanı"),
 }: {
   height?: number;
   onChange?: (stats: DrawingStats, toDataURL: () => string) => void;
@@ -133,15 +134,15 @@ export function DrawingCanvas({
   return (
     <div className="stack" style={{ gap: 6 }}>
       <div className="row between">
-        <span className="small muted">{label}{penSeen.current ? " · kalem algılandı, avuç içi engelleme açık" : ""}</span>
+        <span className="small muted">{label}{penSeen.current ? L(" · pen detected, palm rejection on", " · kalem algılandı, avuç içi engelleme açık") : ""}</span>
         <div className="row nowrap" style={{ gap: 4 }}>
           {COLORS.map((c) => (
-            <button key={c} type="button" aria-label={`Mürekkep ${c}`} onClick={() => { setColor(c); setErase(false); }}
+            <button key={c} type="button" aria-label={L(`Ink ${c}`, `Mürekkep ${c}`)} onClick={() => { setColor(c); setErase(false); }}
               style={{ width: 28, height: 28, borderRadius: 99, background: c, border: color === c && !erase ? "2px solid var(--text)" : "2px solid transparent", cursor: "pointer" }} />
           ))}
-          <button type="button" className="btn small" aria-pressed={erase} onClick={() => setErase(!erase)} style={{ borderColor: erase ? "var(--accent)" : undefined }}>Silgi</button>
-          <button type="button" className="btn small" disabled={!count} onClick={() => { strokes.current.pop(); redraw(); emit(); }}>Geri al</button>
-          <button type="button" className="btn small ghost" disabled={!count} aria-label="Temizle" onClick={() => { strokes.current = []; redraw(); emit(); }}><Icon.close /></button>
+          <button type="button" className="btn small" aria-pressed={erase} onClick={() => setErase(!erase)} style={{ borderColor: erase ? "var(--accent)" : undefined }}>{L("Eraser", "Silgi")}</button>
+          <button type="button" className="btn small" disabled={!count} onClick={() => { strokes.current.pop(); redraw(); emit(); }}>{L("Undo", "Geri al")}</button>
+          <button type="button" className="btn small ghost" disabled={!count} aria-label={L("Clear", "Temizle")} onClick={() => { strokes.current = []; redraw(); emit(); }}><Icon.close /></button>
         </div>
       </div>
       <div ref={wrapRef} style={{ borderRadius: 12, border: "1px solid var(--border-strong)", background: "#180c10", overflow: "hidden",

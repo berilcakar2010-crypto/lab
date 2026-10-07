@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { createEmptyDB } from "../data/db";
+import { setLang } from "../i18n";
 import type { LabDB } from "../domain/types";
 import { importCurriculum, type CurriculumSpec } from "./curriculumSpec";
 import { courseMilestones, milestoneQuestions } from "./curriculum";
@@ -99,10 +100,19 @@ describe("Phase 8 — Focus Lab", () => {
     long.forEach((id, i) => visit(db, id, { complete: true, continued: i < 3 }));
     const { pattern } = analyseFactor(db, visitRows(db), "duration", "continuation");
     expect(pattern).not.toBeNull();
-    expect(pattern!.high.group).toMatch(/kısa/);
+    expect(pattern!.high.group).toMatch(/short/);
     expect(pattern!.strength).toBe("associated");
-    expect(pattern!.sentence).toMatch(/ilişkili görünüyor/);
-    expect(pattern!.sentence).not.toMatch(/neden olur|yol açar|çünkü/i);
+    expect(pattern!.sentence).toMatch(/appears associated with/);
+    expect(pattern!.sentence).not.toMatch(/causes|because|leads to/i);
+    setLang("tr");
+    try {
+      const tr = analyseFactor(db, visitRows(db), "duration", "continuation").pattern!;
+      expect(tr.high.group).toMatch(/kısa/);
+      expect(tr.sentence).toMatch(/ilişkili görünüyor/);
+      expect(tr.sentence).not.toMatch(/neden olur|yol açar|çünkü/i);
+    } finally {
+      setLang("en");
+    }
     expect(focusReport(db).hypothesis[0].pattern).not.toBeNull();
     // Recommendation engine can now use the (observational) continuation lift.
     expect(Object.keys(engagementLift(db)).length).toBeGreaterThan(0);
