@@ -48,7 +48,7 @@ export function SessionPage({ milestoneId }: { milestoneId: ID }) {
     };
   }, [milestoneId]); // re-run only when the milestone changes
 
-  if (!m) return <Empty title="This milestone no longer exists"><button className="btn" onClick={() => navigate("/")}>Home</button></Empty>;
+  if (!m) return <Empty title="Bu adım artık yok"><button className="btn" onClick={() => navigate("/")}>Ana sayfa</button></Empty>;
   const course = db.courses[m.courseId];
 
   const exit = () => navigate(`/course/${m.courseId}`);
@@ -68,9 +68,9 @@ export function SessionPage({ milestoneId }: { milestoneId: ID }) {
       <div className="stack-lg rise">
         <TopBar title={course?.title ?? ""} onBack={exit} onEnd={finishSession} />
         <div className="card stack">
-          <span className="row" style={{ gap: 8 }}><Icon.lock /><span className="eyebrow">Locked</span></span>
+          <span className="row" style={{ gap: 8 }}><Icon.lock /><span className="eyebrow">Kilitli</span></span>
           <h1>{m.title}</h1>
-          <p className="text-2">This builds on milestones you haven't completed yet:</p>
+          <p className="text-2">Bu adım, henüz tamamlamadığın adımlar üzerine kurulu:</p>
           <div className="list">
             {missing.map((p) => (
               <button key={p.id} className="list-item" style={{ background: "none", border: 0, color: "inherit", textAlign: "left" }} onClick={() => navigate(`/session/${p.id}`)}>
@@ -79,8 +79,8 @@ export function SessionPage({ milestoneId }: { milestoneId: ID }) {
             ))}
           </div>
           <div className="row">
-            <button className="btn primary grow" onClick={() => missing[0] && navigate(`/session/${missing[0].id}`)}>Go to the prerequisite</button>
-            <button className="btn" onClick={() => { act((d) => openMilestone(d, sessionId, milestoneId, { override: true })); setGate("open"); }}>Open anyway</button>
+            <button className="btn primary grow" onClick={() => missing[0] && navigate(`/session/${missing[0].id}`)}>Ön koşula git</button>
+            <button className="btn" onClick={() => { act((d) => openMilestone(d, sessionId, milestoneId, { override: true })); setGate("open"); }}>Yine de aç</button>
           </div>
         </div>
       </div>
@@ -108,13 +108,13 @@ export function SessionPage({ milestoneId }: { milestoneId: ID }) {
     <div className="stack-lg rise">
       <TopBar title={course?.title ?? ""} onBack={exit} onEnd={finishSession} />
       {sessionConditions(db, sessionId).armLabel && (
-        <div className="tiny muted">Experiment running · this session: {sessionConditions(db, sessionId).armLabel}</div>
+        <div className="tiny muted">Deney sürüyor · bu oturum: {sessionConditions(db, sessionId).armLabel}</div>
       )}
       <ObjectiveHeader milestoneId={milestoneId} />
       <ContextPanel milestoneId={milestoneId} />
       <WorkArea milestoneId={milestoneId} sessionId={sessionId} onComplete={toComplete} />
       <div className="row">
-        <button className="btn ghost small" onClick={() => { act((d) => skipMilestone(d, milestoneId, sessionId)); toast("Skipped. It stays on the map for later."); exit(); }}>Skip this milestone</button>
+        <button className="btn ghost small" onClick={() => { act((d) => skipMilestone(d, milestoneId, sessionId)); toast("Atlandı. Daha sonrası için haritada duruyor."); exit(); }}>Bu adımı atla</button>
       </div>
     </div>
   );
@@ -153,11 +153,11 @@ function WorkArea({ milestoneId, sessionId, onComplete }: { milestoneId: ID; ses
       {state.mastered && (
         <div className="card stack">
           <div className={`banner ${m.status === "NEEDS_REVIEW" ? "warn" : "ok"}`}>
-            {m.status === "NEEDS_REVIEW" ? "A retention check suggests this has faded. One correct answer below restores it." : "You have mastered this milestone."}
+            {m.status === "NEEDS_REVIEW" ? "Bir kalıcılık kontrolü bunun unutulmaya başladığını gösteriyor. Aşağıdaki tek bir doğru cevap ustalığı geri getirir." : "Bu adımda ustalaştın."}
           </div>
           <div className="row">
-            {!q && !practising && <button className="btn" onClick={() => { setPractising(true); advance(); }}>Practise again</button>}
-            <button className="btn primary" onClick={onComplete}>What's next?</button>
+            {!q && !practising && <button className="btn" onClick={() => { setPractising(true); advance(); }}>Yeniden çalış</button>}
+            <button className="btn primary" onClick={onComplete}>Sırada ne var?</button>
           </div>
         </div>
       )}
@@ -176,7 +176,7 @@ function TopBar({ title, onBack, onEnd }: { title: string; onBack: () => void; o
   return (
     <div className="row between nowrap">
       <button className="btn ghost small" onClick={onBack}><Icon.back /> <span className="truncate" style={{ maxWidth: 200 }}>{title}</span></button>
-      <button className="btn small" onClick={onEnd}>End session</button>
+      <button className="btn small" onClick={onEnd}>Oturumu bitir</button>
     </div>
   );
 }
@@ -194,12 +194,12 @@ function ObjectiveHeader({ milestoneId }: { milestoneId: ID }) {
       </div>
       <h1>{m.title}</h1>
       <div className="card accent stack" style={{ gap: 6 }}>
-        <span className="eyebrow">After this, you can</span>
+        <span className="eyebrow">Bunun sonunda şunu yapabileceksin</span>
         <p className="serif" style={{ fontSize: "1.08rem" }}>{m.learningObjective}</p>
         <div className="row between small text-2" style={{ marginTop: 4 }}>
-          <span>Mastery: {m.masteryCriteria.description}</span>
+          <span>Ustalık ölçütü: {m.masteryCriteria.description}</span>
         </div>
-        <div className="row nowrap" style={{ gap: 6 }} aria-label={`${progress.achieved} of ${progress.required} mastery answers`}>
+        <div className="row nowrap" style={{ gap: 6 }} aria-label={`${progress.required} ustalık cevabından ${progress.achieved} tanesi`}>
           {Array.from({ length: progress.required }).map((_, i) => (
             <span key={i} style={{ flex: 1, height: 6, borderRadius: 99, background: i < progress.achieved ? "var(--mastered)" : "var(--raised-2)", transition: "background .5s" }} />
           ))}
@@ -220,14 +220,14 @@ function ContextPanel({ milestoneId }: { milestoneId: ID }) {
   return (
     <div className="card" style={{ padding: 0 }}>
       <button className="row between" style={{ width: "100%", padding: 14, background: "none", border: 0, color: "inherit", cursor: "pointer" }} onClick={() => setOpen(!open)} aria-expanded={open}>
-        <span className="small text-2">Context · {db.units[m.unitId]?.title} › {db.topics[m.topicId]?.title}</span>
+        <span className="small text-2">Bağlam · {db.units[m.unitId]?.title} › {db.topics[m.topicId]?.title}</span>
         {open ? <Icon.up /> : <Icon.down />}
       </button>
       {open && (
         <div className="stack small" style={{ padding: "0 14px 14px", gap: 8 }}>
           {m.description && <p className="text-2">{m.description}</p>}
           {concepts.map((c) => <p key={c.id}><strong>{c.title}</strong> <span className="text-2">— {c.description}</span></p>)}
-          {prereqs.length > 0 && <div className="text-2">Builds on: {prereqs.map((p) => `${p.title}${p.masteredAt ? " ✓" : ""}`).join(" · ")}</div>}
+          {prereqs.length > 0 && <div className="text-2">Üzerine kurulu: {prereqs.map((p) => `${p.title}${p.masteredAt ? " ✓" : ""}`).join(" · ")}</div>}
         </div>
       )}
     </div>
@@ -247,16 +247,16 @@ function NoQuestions({ milestoneId, sessionId, onMastered, exhausted }: { milest
         if (clean) addQuestion(d, clean);
       }
     });
-    toast(res.fallbackUsed ? "Added rubric-based prompts (offline)." : "Questions generated.");
+    toast(res.fallbackUsed ? "Ölçüt temelli sorular eklendi (çevrimdışı)." : "Sorular oluşturuldu.");
   });
   return (
     <div className="card stack">
-      <p className="text-2">{exhausted ? "You've answered every question, but mastery needs answers given without the full solution." : "This milestone has no questions yet."}</p>
+      <p className="text-2">{exhausted ? "Her soruyu cevapladın, ama ustalık için tam çözüme bakmadan verilmiş cevaplar gerekiyor." : "Bu adımda henüz soru yok."}</p>
       <div className="row">
-        <button className="btn primary" onClick={generate} disabled={busy}>{busy ? <span className="spinner" /> : <Icon.spark />} Generate {exhausted ? "fresh " : ""}questions</button>
-        <button className="btn" onClick={() => { act((d) => grantMastery(d, milestoneId, [], false, true, sessionId)); onMastered(); }}>I can do this — mark mastered</button>
+        <button className="btn primary" onClick={generate} disabled={busy}>{busy ? <span className="spinner" /> : <Icon.spark />} {exhausted ? "Yeni sorular" : "Sorular"} oluştur</button>
+        <button className="btn" onClick={() => { act((d) => grantMastery(d, milestoneId, [], false, true, sessionId)); onMastered(); }}>Bunu yapabiliyorum — ustalaşıldı say</button>
       </div>
-      <p className="tiny muted">Self-attested mastery is recorded as such and still gets retention checks when questions exist.</p>
+      <p className="tiny muted">Kendi beyanınla ustalık bu şekilde kaydedilir; soru varsa yine kalıcılık kontrolleri yapılır.</p>
       {milestoneQuestions(db, milestoneId).length === 0 && null}
     </div>
   );
@@ -279,14 +279,14 @@ function CompletionView({ milestoneId, sessionId, before, onChoose, onFinish, on
   return (
     <div className="stack-lg">
       <div className="row between nowrap">
-        <button className="btn ghost small" onClick={onBack}><Icon.back /> Course</button>
-        <button className="btn small" onClick={onFinish}>Finish session</button>
+        <button className="btn ghost small" onClick={onBack}><Icon.back /> Ders</button>
+        <button className="btn small" onClick={onFinish}>Oturumu bitir</button>
       </div>
       <div className="card stack rise" style={{ alignItems: "center", textAlign: "center", padding: "28px 16px", gap: 10 }}>
         <MasteryMark />
-        <span className="eyebrow" style={{ color: "var(--mastered)" }}>Mastered</span>
+        <span className="eyebrow" style={{ color: "var(--mastered)" }}>Ustalaştın</span>
         <h1>{m.title}</h1>
-        <p className="text-2" style={{ maxWidth: 520 }}>You can now: {m.learningObjective}</p>
+        <p className="text-2" style={{ maxWidth: 520 }}>Artık yapabildiğin: {m.learningObjective}</p>
       </div>
       <ImmediateCheck milestoneId={milestoneId} sessionId={sessionId} />
       <div className="card stack" style={{ gap: 8 }}>
@@ -294,13 +294,13 @@ function CompletionView({ milestoneId, sessionId, before, onChoose, onFinish, on
         <Bar value={shown} mastered />
         {unlocked.length > 0 && (
           <div className="stack" style={{ gap: 4, marginTop: 6 }}>
-            <span className="eyebrow">Unlocked</span>
+            <span className="eyebrow">Kilidi açıldı</span>
             {unlocked.map((u, i) => <div key={u.id} className="row small rise" style={{ animationDelay: `${300 + i * 120}ms` }}><span style={{ color: "var(--accent)" }}>◆</span> {u.title}</div>)}
           </div>
         )}
       </div>
       <section className="stack">
-        <h2>What's next?</h2>
+        <h2>Sırada ne var?</h2>
         <NextOptions courseId={m.courseId} justCompletedId={milestoneId} sessionId={sessionId} onChoose={onChoose} compact />
       </section>
     </div>

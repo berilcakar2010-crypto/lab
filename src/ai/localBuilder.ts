@@ -72,10 +72,10 @@ export function parseSyllabus(text: string): ParsedSyllabus {
   if (nonEmpty.length === 1 && !nonEmpty[0].title) {
     const all = nonEmpty[0].topics;
     const groups: { title: string; topics: string[] }[] = [];
-    for (let i = 0; i < all.length; i += 4) groups.push({ title: `Part ${groups.length + 1}`, topics: all.slice(i, i + 4) });
+    for (let i = 0; i < all.length; i += 4) groups.push({ title: `Bölüm ${groups.length + 1}`, topics: all.slice(i, i + 4) });
     return { units: groups };
   }
-  return { units: nonEmpty.map((u, i) => ({ ...u, title: u.title || `Part ${i + 1}` })) };
+  return { units: nonEmpty.map((u, i) => ({ ...u, title: u.title || `Bölüm ${i + 1}` })) };
 }
 
 // ---------------------------------------------------------------------------
@@ -83,10 +83,10 @@ export function parseSyllabus(text: string): ParsedSyllabus {
 // ---------------------------------------------------------------------------
 
 const H = (topic: string): string[] => [
-  `What is the single most important idea in "${topic}"? Try to state it in one sentence.`,
-  `Which definitions or principles does "${topic}" rest on? Write them down first.`,
-  `Plan before solving: what is given, what is asked, and which principle connects them?`,
-  `Work one small example completely, then generalise. Compare with your source material.`,
+  `"${topic}" konusundaki en önemli tek fikir ne? Bunu tek cümleyle söylemeyi dene.`,
+  `"${topic}" hangi tanım ya da ilkelere dayanıyor? Önce onları yaz.`,
+  `Çözmeden önce planla: ne verilmiş, ne isteniyor ve ikisini hangi ilke bağlıyor?`,
+  `Küçük bir örneği tamamen çöz, sonra genelle. Kaynağınla karşılaştır.`,
 ];
 
 function topicMilestones(topic: string, unitKey: string, ti: number, prevKey: string | null, firstTopicKey: string | null): MilestoneSpec[] {
@@ -95,36 +95,36 @@ function topicMilestones(topic: string, unitKey: string, ti: number, prevKey: st
   return [
     {
       key: `${k}c`, type: "CONCEPT", difficulty: 2, estimatedMinutes: 10, prerequisites: entry,
-      title: `Explain the core idea of ${topic}`,
-      learningObjective: `State the central idea of ${topic} precisely, give an example, and connect it to what you already know.`,
+      title: `Ana fikri açıkla: ${topic}`,
+      learningObjective: `"${topic}" konusunun ana fikrini kesin biçimde ifade et, bir örnek ver ve bildiklerinle ilişkilendir.`,
       interaction: "CONCEPT_EXPLANATION",
-      masteryCriterion: "Your explanation meets every rubric point without looking at notes.",
+      masteryCriterion: "Açıklaman notlara bakmadan tüm ölçütleri karşılıyor.",
       requiredCorrect: 1,
       questions: [
-        { kind: "CONCEPT_EXPLANATION", purpose: "MASTERY", prompt: `Explain ${topic} as if teaching a classmate. Include a definition, one concrete example, and one common misconception.`,
-          rubric: ["Accurate definition or statement of the central idea", "A concrete, correct example", "A plausible misconception and why it is wrong"], hints: H(topic),
-          solution: `Compare your explanation with a trusted source on ${topic}. A complete answer defines it, illustrates it, and names a misconception.` },
-        { kind: "EXPLANATION", purpose: "RETENTION", prompt: `Without notes: what is ${topic}, and when would you use it?`,
-          rubric: ["Correct central idea", "Correct situation of use"], hints: H(topic), solution: `Check against your source on ${topic}.` },
+        { kind: "CONCEPT_EXPLANATION", purpose: "MASTERY", prompt: `"${topic}" konusunu bir sınıf arkadaşına öğretiyormuş gibi açıkla. Bir tanım, somut bir örnek ve sık yapılan bir yanılgı ekle.`,
+          rubric: ["Ana fikrin doğru tanımı ya da ifadesi", "Somut ve doğru bir örnek", "Akla yatkın bir yanılgı ve neden yanlış olduğu"], hints: H(topic),
+          solution: `Açıklamanı "${topic}" hakkında güvenilir bir kaynakla karşılaştır. Tam bir cevap tanımlar, örnekler ve bir yanılgıyı adlandırır.` },
+        { kind: "EXPLANATION", purpose: "RETENTION", prompt: `Notlara bakmadan: "${topic}" nedir ve ne zaman kullanılır?`,
+          rubric: ["Ana fikir doğru", "Kullanım durumu doğru"], hints: H(topic), solution: `"${topic}" kaynağınla karşılaştır.` },
       ],
     },
     {
       key: `${k}p`, type: "PRACTICE", difficulty: 3, estimatedMinutes: 20, prerequisites: [`${k}c`],
-      title: `Solve a standard problem on ${topic}`,
-      learningObjective: `Solve a typical ${topic} problem from your course material with every step justified.`,
+      title: `Standart bir problem çöz: ${topic}`,
+      learningObjective: `Ders materyalinden tipik bir "${topic}" problemini her adımı gerekçelendirerek çöz.`,
       interaction: "PROBLEM_SOLVING",
-      masteryCriterion: "Two different problems solved correctly with justified steps.",
+      masteryCriterion: "İki farklı problem, gerekçeli adımlarla doğru çözüldü.",
       requiredCorrect: 2,
       questions: [1, 2].map((n) => ({
         kind: "PROBLEM_SOLVING", purpose: "MASTERY",
-        prompt: `Choose standard exercise #${n} on ${topic} from your textbook or problem set (a different one each time). Write the problem, then solve it here, showing each step.`,
-        rubric: ["Problem stated and the relevant principle identified", "Each step follows from the previous one", "Final answer checked (units, limiting case or substitution)"],
-        hints: H(topic), solution: "Check your final answer against the textbook's answer key and compare methods.",
+        prompt: `Ders kitabından ya da soru setinden "${topic}" üzerine ${n}. standart alıştırmayı seç (her seferinde farklı bir tane). Problemi yaz, sonra burada her adımı göstererek çöz.`,
+        rubric: ["Problem yazılmış ve ilgili ilke belirlenmiş", "Her adım bir öncekinden çıkıyor", "Sonuç kontrol edilmiş (birim, sınır durumu ya da yerine koyma)"],
+        hints: H(topic), solution: "Sonucunu kitabın cevap anahtarıyla karşılaştır ve yöntemleri kıyasla.",
       })).concat([{
         kind: "PROBLEM_SOLVING", purpose: "TRANSFER",
-        prompt: `Find or invent a problem where ${topic} appears in an unfamiliar context (another subject, or real life). Solve it.`,
-        rubric: ["The context is genuinely different", `${topic} is applied correctly`, "The result is interpreted in context"], hints: H(topic),
-        solution: "A good transfer answer shows the same principle working outside its usual setting.",
+        prompt: `"${topic}" konusunun alışık olmadığın bir bağlamda (başka bir ders ya da gerçek hayat) ortaya çıktığı bir problem bul ya da kur. Çöz.`,
+        rubric: ["Bağlam gerçekten farklı", "Konu doğru uygulanmış", "Sonuç bağlam içinde yorumlanmış"], hints: H(topic),
+        solution: "İyi bir transfer cevabı aynı ilkenin alışılmış ortamı dışında işlediğini gösterir.",
       }]),
     },
   ];
@@ -134,9 +134,9 @@ export function buildGenericSpec(title: string, parsed?: ParsedSyllabus): Curric
   const units: { title: string; topics: string[] }[] = parsed?.units.length
     ? parsed.units
     : [
-        { title: `Foundations of ${title}`, topics: ["Key vocabulary and definitions", "Central principles"] },
-        { title: `Core methods of ${title}`, topics: ["Standard techniques", "Typical problems"] },
-        { title: `Applying ${title}`, topics: ["Connections and applications"] },
+        { title: `${title}: temeller`, topics: ["Temel kavramlar ve tanımlar", "Ana ilkeler"] },
+        { title: `${title}: temel yöntemler`, topics: ["Standart teknikler", "Tipik problemler"] },
+        { title: `${title}: uygulamalar`, topics: ["Bağlantılar ve uygulamalar"] },
       ];
   let prevReview: string | null = null;
   const reviews: string[] = [];
@@ -153,23 +153,23 @@ export function buildGenericSpec(title: string, parsed?: ParsedSyllabus): Curric
     });
     const reviewKey = `${uk}rev`;
     topics.push({
-      title: `${u.title} — review`,
+      title: `${u.title} — tekrar`,
       milestones: [
         {
           key: reviewKey, type: "REVIEW", difficulty: 2, estimatedMinutes: 15, prerequisites: lastKeys,
-          title: `Review: connect the ideas of ${u.title}`,
-          learningObjective: `Explain how the topics of ${u.title} relate to one another and choose the right one for a given problem.`,
+          title: `Tekrar: ${u.title} fikirlerini birleştir`,
+          learningObjective: `"${u.title}" konularının birbiriyle ilişkisini açıkla ve verilen bir problem için doğru olanı seç.`,
           interaction: "COMPARISON", requiredCorrect: 1,
-          questions: [{ kind: "COMPARISON", purpose: "MASTERY", prompt: `Compare the topics of ${u.title} (${u.topics.slice(0, 5).join(", ")}). For each, give one problem type it is the right tool for.`,
-            rubric: ["Each topic matched to a suitable problem type", "At least one connection between topics explained"], hints: H(u.title), solution: "Check each match against your course material." }],
+          questions: [{ kind: "COMPARISON", purpose: "MASTERY", prompt: `"${u.title}" konularını karşılaştır (${u.topics.slice(0, 5).join(", ")}). Her biri için doğru araç olduğu bir problem türü ver.`,
+            rubric: ["Her konu uygun bir problem türüyle eşleşmiş", "Konular arasında en az bir bağlantı açıklanmış"], hints: H(u.title), solution: "Her eşleştirmeyi ders materyalinle kontrol et." }],
         },
         {
           key: `${uk}ch`, type: "CHALLENGE", difficulty: 4, estimatedMinutes: 40, optional: true, prerequisites: [reviewKey],
-          title: `Challenge: a hard ${u.title} problem`,
-          learningObjective: `Solve a demanding problem that combines several ideas from ${u.title}.`,
+          title: `Meydan okuma: zor bir ${u.title} problemi`,
+          learningObjective: `"${u.title}" içinden birkaç fikri birleştiren zorlu bir problemi çöz.`,
           interaction: "PROBLEM_SOLVING", requiredCorrect: 1,
-          questions: [{ kind: "PROBLEM_SOLVING", purpose: "MASTERY", prompt: `Pick the hardest end-of-chapter or competition problem you can find on ${u.title} and solve it here.`,
-            rubric: ["Combines at least two ideas", "Correct reasoning throughout", "Answer verified"], hints: H(u.title), solution: "Compare with the official solution if available." }],
+          questions: [{ kind: "PROBLEM_SOLVING", purpose: "MASTERY", prompt: `"${u.title}" üzerine bulabildiğin en zor bölüm sonu ya da yarışma problemini seç ve burada çöz.`,
+            rubric: ["En az iki fikri birleştiriyor", "Akıl yürütme baştan sona doğru", "Cevap doğrulanmış"], hints: H(u.title), solution: "Varsa resmi çözümle karşılaştır." }],
         },
       ],
     });
@@ -178,25 +178,25 @@ export function buildGenericSpec(title: string, parsed?: ParsedSyllabus): Curric
     return { title: u.title, summary: "", topics };
   });
   unitSpecs.push({
-    title: "Synthesis",
+    title: "Sentez",
     topics: [{
-      title: "Boss",
+      title: "Final",
       milestones: [{
         key: "boss", type: "BOSS", difficulty: 5, estimatedMinutes: 60, prerequisites: reviews,
-        title: `Boss: an exam-level ${title} problem set`,
-        learningObjective: `Solve unseen, exam-level problems that span the whole of ${title}.`,
+        title: `Final: sınav düzeyinde ${title} soru seti`,
+        learningObjective: `${title} dersinin tamamını kapsayan, daha önce görmediğin sınav düzeyinde problemleri çöz.`,
         interaction: "PROBLEM_SOLVING", requiredCorrect: 2,
         questions: [1, 2].map((n) => ({ kind: "PROBLEM_SOLVING", purpose: "MASTERY",
-          prompt: `Take past-exam problem #${n} covering several units of ${title}. Solve it under exam conditions, without notes.`,
-          rubric: ["Correct approach chosen without prompting", "Complete, justified solution", "Within a realistic exam time"], hints: H(title),
-          solution: "Grade yourself strictly against the official mark scheme." })),
+          prompt: `Birkaç üniteyi kapsayan ${n}. çıkmış sınav sorusunu al. Sınav koşullarında, notsuz çöz.`,
+          rubric: ["Doğru yaklaşım yönlendirme olmadan seçilmiş", "Eksiksiz, gerekçeli çözüm", "Gerçekçi bir sınav süresinde"], hints: H(title),
+          solution: "Kendini resmi puanlama anahtarına göre sıkı değerlendir." })),
       }],
     }],
   });
   return {
     title,
-    goal: `Be able to solve unseen problems across ${title} with understanding, not memorisation.`,
-    description: "Offline scaffold — connect Gemini or Groq in Settings for a content-aware curriculum with auto-graded questions.",
+    goal: `${title} genelinde daha önce görmediğin problemleri ezberle değil anlayarak çözebilmek.`,
+    description: "Çevrimdışı iskelet — içeriğe duyarlı ve otomatik puanlanan sorular için Ayarlar'dan Gemini ya da Groq bağla.",
     units: unitSpecs,
   };
 }
@@ -204,24 +204,24 @@ export function buildGenericSpec(title: string, parsed?: ParsedSyllabus): Curric
 export function localBuildCurriculum(request: string, syllabus?: string): { spec: CurriculumSpec; note: string } {
   const pack = matchPack(`${request}\n${syllabus ?? ""}`);
   if (pack && !syllabus?.trim()) {
-    return { spec: pack, note: "Built from Lab's offline knowledge pack (hand-written, auto-graded questions)." };
+    return { spec: pack, note: "Lab'in çevrimdışı bilgi paketinden oluşturuldu (elle yazılmış, otomatik puanlanan sorular)." };
   }
-  const title = request.trim() || "New course";
+  const title = request.trim() || "Yeni ders";
   if (syllabus?.trim()) {
     const parsed = parseSyllabus(syllabus);
     if (parsed.units.length) {
-      return { spec: buildGenericSpec(title, parsed), note: `Structured from your syllabus (${parsed.units.length} units). Questions are rubric-based and self-assessed until an AI provider is connected.` };
+      return { spec: buildGenericSpec(title, parsed), note: `Müfredatından yapılandırıldı (${parsed.units.length} ünite). Bir YZ sağlayıcısı bağlanana kadar sorular ölçüt temelli ve öz değerlendirmeli.` };
     }
   }
-  return { spec: buildGenericSpec(title), note: "Offline scaffold. Paste a syllabus or connect an AI provider for a content-aware curriculum." };
+  return { spec: buildGenericSpec(title), note: "Çevrimdışı iskelet. İçeriğe duyarlı bir müfredat için bir müfredat metni yapıştır ya da bir YZ sağlayıcısı bağla." };
 }
 
 /** Offline split: concept → practice → application chain. */
 export function localSplit(m: Milestone): SplitPart[] {
-  const t = m.title.replace(/^(Explain|Solve|Apply|Understand)\s+/i, "");
+  const t = m.title.replace(/^(Explain|Solve|Apply|Understand|Anla|Alıştır|Uygula|Açıkla)\s*:?\s+/i, "");
   return [
-    { title: `Understand: ${t}`, milestoneType: "CONCEPT", learningObjective: `Explain the idea behind ${t}.`, difficulty: Math.max(1, m.difficulty - 1) },
-    { title: `Practise: ${t}`, milestoneType: "PRACTICE", learningObjective: `Solve standard problems on ${t}.`, difficulty: m.difficulty },
-    { title: `Apply: ${t}`, milestoneType: "APPLICATION", learningObjective: `Use ${t} in an unfamiliar situation.`, difficulty: Math.min(5, m.difficulty + 1) },
+    { title: `Anla: ${t}`, milestoneType: "CONCEPT", learningObjective: `Arkasındaki fikri açıkla: ${t}.`, difficulty: Math.max(1, m.difficulty - 1) },
+    { title: `Alıştır: ${t}`, milestoneType: "PRACTICE", learningObjective: `Standart problemleri çöz: ${t}.`, difficulty: m.difficulty },
+    { title: `Uygula: ${t}`, milestoneType: "APPLICATION", learningObjective: `Alışık olmadığın bir durumda kullan: ${t}.`, difficulty: Math.min(5, m.difficulty + 1) },
   ];
 }

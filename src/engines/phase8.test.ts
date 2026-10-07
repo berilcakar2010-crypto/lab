@@ -99,10 +99,10 @@ describe("Phase 8 — Focus Lab", () => {
     long.forEach((id, i) => visit(db, id, { complete: true, continued: i < 3 }));
     const { pattern } = analyseFactor(db, visitRows(db), "duration", "continuation");
     expect(pattern).not.toBeNull();
-    expect(pattern!.high.group).toMatch(/short/);
+    expect(pattern!.high.group).toMatch(/kısa/);
     expect(pattern!.strength).toBe("associated");
-    expect(pattern!.sentence).toMatch(/appears associated with/);
-    expect(pattern!.sentence).not.toMatch(/causes|because|leads to/i);
+    expect(pattern!.sentence).toMatch(/ilişkili görünüyor/);
+    expect(pattern!.sentence).not.toMatch(/neden olur|yol açar|çünkü/i);
     expect(focusReport(db).hypothesis[0].pattern).not.toBeNull();
     // Recommendation engine can now use the (observational) continuation lift.
     expect(Object.keys(engagementLift(db)).length).toBeGreaterThan(0);

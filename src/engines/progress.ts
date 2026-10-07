@@ -119,9 +119,9 @@ export function endSession(db: LabDB, sessionId: ID, reason: SessionEndReason, a
 /** Opening a milestone makes it the course's single ACTIVE milestone. */
 export function openMilestone(db: LabDB, sessionId: ID, milestoneId: ID, opts: { override?: boolean } = {}) {
   const m = db.milestones[milestoneId];
-  if (!m) throw new Error("Unknown milestone");
+  if (!m) throw new Error("Bilinmeyen adım");
   if (m.status === "LOCKED") {
-    if (!opts.override) throw new Error("Milestone is locked; open with override to proceed anyway");
+    if (!opts.override) throw new Error("Bu adım kilitli; yine de devam etmek için kilidi elle aç");
     m.manuallyUnlocked = true;
   }
   if (m.skippedAt) m.skippedAt = undefined;

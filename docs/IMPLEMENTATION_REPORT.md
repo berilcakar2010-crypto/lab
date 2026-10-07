@@ -50,3 +50,26 @@ None existed; the repository was empty (see Phase 1).
 - **Only what's observed.** Focus Lab and experiments analyse what is recorded. With one learner, sessions are not independent, so findings are framed as evidence rather than proof. Patterns need several weeks of use to appear.
 - **No real-provider calls in tests.** The tests mock Gemini and Groq at the network level; nothing called the real APIs in this environment.
 - **UI is in English.** AI-generated content follows the language of the request (e.g. Turkish).
+
+## Update: Turkish APK, bordo notebook theme, Android fixes
+
+- **Turkish throughout:**
+  - All screens, engine messages (feedback, recommendation reasons, advisor, Focus Lab findings, experiment verdicts), and the offline scaffold.
+  - Both hand-written content packs (Mekanik, Kalkülüs 1).
+  - AI roles are instructed to answer in Turkish.
+  - Dates use `tr-TR`; Turkish-safe lowercasing; numeric answers accept a decimal comma.
+- **Bordo research-notebook theme:**
+  - Oxblood paper with a faint graph grid, cream ink, rose-red margin rules on cards, ruled answer boxes.
+  - EB Garamond headings and IBM Plex Mono labels, bundled offline.
+  - Map, plots and canvas recoloured to match.
+- **Android (Capacitor 8):**
+  - Committed `android/` project with an app icon and splash screen.
+  - GitHub Actions workflow building a signed release APK on every push. It's published as the `son-surum` pre-release and as an artifact; tags `v*` create permanent releases.
+  - Stable signing key, so updates install over the old version without data loss; an optional secret key for store releases.
+- **Gaps fixed for the APK:**
+  - The Android back button closes sheets and navigates back.
+  - Data is saved when the app goes to the background.
+  - Backup and CSV export use the Android share sheet (blob downloads don't work in a WebView).
+  - The keyboard resizes the layout.
+  - The status bar is themed.
+- **APK build verification:** the APK is built and verified only on GitHub Actions. This development environment cannot download the Android SDK.

@@ -16,11 +16,11 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: E
     if (!this.state.error) return this.props.children;
     return (
       <div className="card stack" role="alert">
-        <h2>This screen hit a problem</h2>
-        <p className="text-2 small">Your data is safe. {this.state.error.message}</p>
+        <h2>Bu ekranda bir sorun oluştu</h2>
+        <p className="text-2 small">Verilerin güvende. {this.state.error.message}</p>
         <div className="row">
-          <a className="btn" href="#/">Go home</a>
-          <button className="btn" onClick={() => this.setState({ error: null })}>Try again</button>
+          <a className="btn" href="#/">Ana sayfa</a>
+          <button className="btn" onClick={() => this.setState({ error: null })}>Tekrar dene</button>
         </div>
       </div>
     );

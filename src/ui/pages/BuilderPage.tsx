@@ -7,7 +7,7 @@ import { logEvent } from "../../engines/analytics";
 import { aiHost, navigate, store, toast, useAsync, useDB } from "../state";
 import { Icon, TYPE_LABEL, minutes } from "../components/common";
 
-const EXAMPLES = ["TÜBİTAK Fizik Olimpiyatı Mekanik", "Calculus 1", "Theoretical Neuroscience"];
+const EXAMPLES = ["TÜBİTAK Fizik Olimpiyatı Mekanik", "Kalkülüs 1", "Kuramsal Sinirbilim"];
 
 interface Draft {
   spec: CurriculumSpec;
@@ -32,10 +32,10 @@ export function BuilderPage() {
   const build = () =>
     run(async () => {
       if (!request.trim() && !syllabus.trim()) {
-        toast("Describe the course or paste a syllabus first.", "error");
+        toast("Önce dersi tarif et ya da bir müfredat yapıştır.", "error");
         return;
       }
-      const res = await buildCurriculumAI(aiHost, { request: request.trim() || "My course", syllabus });
+      const res = await buildCurriculumAI(aiHost, { request: request.trim() || "Dersim", syllabus });
       setDraft({ ...res.value, provider: res.provider, fallbackUsed: res.fallbackUsed, error: res.error, request, syllabus });
     });
 
@@ -55,7 +55,7 @@ export function BuilderPage() {
         },
         (d) => assertValidCourse(d, courseId),
       );
-      if (report.repairs.length) toast(`Imported with ${report.repairs.length} automatic repair(s).`);
+      if (report.repairs.length) toast(`${report.repairs.length} otomatik düzeltmeyle içe aktarıldı.`);
       navigate(`/course/${report.courseId}?calibrate=1`);
     } catch (e) {
       toast(e instanceof Error ? e.message : String(e), "error");
@@ -64,7 +64,7 @@ export function BuilderPage() {
 
   const onFile = async (file: File) => {
     if (!/\.(txt|md|markdown|csv|tex)$/i.test(file.name) && !file.type.startsWith("text/")) {
-      toast("Upload a plain-text file (.txt, .md). For PDFs, copy the table of contents and paste it.", "error");
+      toast("Düz metin dosyası yükle (.txt, .md). PDF için içindekiler bölümünü kopyalayıp yapıştır.", "error");
       return;
     }
     const text = await file.text();
@@ -78,15 +78,15 @@ export function BuilderPage() {
   return (
     <div className="stack-lg rise">
       <header className="stack" style={{ gap: 6 }}>
-        <button className="btn ghost small" style={{ alignSelf: "flex-start" }} onClick={() => history.back()}><Icon.back /> Back</button>
-        <h1>New course</h1>
-        <p className="text-2">Name a goal or paste a syllabus. Lab turns it into a graph of meaningful milestones — then you shape it.</p>
+        <button className="btn ghost small" style={{ alignSelf: "flex-start" }} onClick={() => history.back()}><Icon.back /> Geri</button>
+        <h1>Yeni ders</h1>
+        <p className="text-2">Bir hedef yaz ya da müfredat yapıştır. Lab bunu anlamlı adımlardan oluşan bir haritaya dönüştürür — sonra onu sen şekillendirirsin.</p>
       </header>
 
       <div className="card stack">
         <div className="field">
-          <label htmlFor="req">What do you want to master?</label>
-          <input id="req" className="input" placeholder="e.g. Calculus 1, or Physics Olympiad Mechanics" value={request} onChange={(e) => setRequest(e.target.value)} />
+          <label htmlFor="req">Neyde ustalaşmak istiyorsun?</label>
+          <input id="req" className="input" placeholder="örn. Kalkülüs 1 ya da Fizik Olimpiyatı Mekanik" value={request} onChange={(e) => setRequest(e.target.value)} />
         </div>
         <div className="row" style={{ gap: 6 }}>
           {EXAMPLES.map((ex) => (
@@ -95,26 +95,26 @@ export function BuilderPage() {
         </div>
         {showSyllabus ? (
           <div className="field">
-            <label htmlFor="syl">Syllabus, table of contents, exam specification or topic list</label>
+            <label htmlFor="syl">Müfredat, içindekiler, sınav kapsamı ya da konu listesi</label>
             <textarea id="syl" className="textarea" style={{ minHeight: 200 }} value={syllabus} onChange={(e) => setSyllabus(e.target.value)}
-              placeholder={"Unit 1: Kinematics\n- Displacement and velocity\n- Acceleration\nUnit 2: Dynamics\n- Newton's laws"} />
+              placeholder={"Ünite 1: Kinematik\n- Yer değiştirme ve hız\n- İvme\nÜnite 2: Dinamik\n- Newton yasaları"} />
           </div>
         ) : (
           <div className="row">
-            <button className="btn small" onClick={() => setShowSyllabus(true)}>Paste a syllabus</button>
+            <button className="btn small" onClick={() => setShowSyllabus(true)}>Müfredat yapıştır</button>
             <label className="btn small" style={{ cursor: "pointer" }}>
-              Upload text file
+              Metin dosyası yükle
               <input type="file" accept=".txt,.md,.markdown,.csv,.tex,text/*" hidden onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])} />
             </label>
           </div>
         )}
         <div className={`banner ${providerReady ? "info" : "warn"}`}>
           {providerReady
-            ? `AI provider: ${provider === "gemini" ? "Gemini" : "Groq"}. If it fails, Lab falls back to the offline builder.`
-            : "Offline builder: built-in packs for mechanics and calculus; other subjects become an editable scaffold. Add a Gemini or Groq key in Settings for content-aware curricula."}
+            ? `YZ sağlayıcısı: ${provider === "gemini" ? "Gemini" : "Groq"}. Başarısız olursa Lab çevrimdışı oluşturucuya geçer.`
+            : "Çevrimdışı oluşturucu: mekanik ve kalkülüs için hazır paketler var; diğer konular düzenlenebilir bir iskelete dönüşür. İçeriğe duyarlı müfredat için Ayarlar'dan Gemini ya da Groq anahtarı ekle."}
         </div>
         <button className="btn primary block" onClick={build} disabled={busy}>
-          {busy ? <><span className="spinner" /> Structuring the knowledge graph…</> : <>Build curriculum</>}
+          {busy ? <><span className="spinner" /> Bilgi haritası yapılandırılıyor…</> : <>Müfredatı oluştur</>}
         </button>
       </div>
     </div>
@@ -129,15 +129,15 @@ function DraftPreview({ draft, onAccept, onBack, onRegenerate, busy }: { draft: 
   return (
     <div className="stack-lg rise">
       <header className="stack" style={{ gap: 6 }}>
-        <span className="eyebrow">Draft curriculum</span>
+        <span className="eyebrow">Taslak müfredat</span>
         <h1>{spec.title}</h1>
         <p className="text-2">{spec.goal}</p>
       </header>
-      {draft.fallbackUsed && draft.error && <div className="banner warn">The AI provider failed ({draft.error}). This draft comes from the offline builder.</div>}
+      {draft.fallbackUsed && draft.error && <div className="banner warn">YZ sağlayıcısı başarısız oldu ({draft.error}). Bu taslak çevrimdışı oluşturucudan geliyor.</div>}
       <div className="banner info">{draft.note}</div>
       <div className="grid-2">
-        <div className="card"><div className="eyebrow">Milestones</div><div className="serif" style={{ fontSize: 28 }}>{all.length}</div><div className="small muted">≈ {minutes(total)} of focused work, unevenly sized by design</div></div>
-        <div className="card"><div className="eyebrow">Shape</div><div className="small text-2" style={{ marginTop: 6 }}>{Object.entries(types).map(([t, n]) => `${n} ${TYPE_LABEL[t as keyof typeof TYPE_LABEL]?.toLowerCase() ?? t.toLowerCase()}`).join(" · ")}</div></div>
+        <div className="card"><div className="eyebrow">Adımlar</div><div className="serif" style={{ fontSize: 28 }}>{all.length}</div><div className="small muted">≈ {minutes(total)} odaklı çalışma; adımlar bilerek farklı büyüklükte</div></div>
+        <div className="card"><div className="eyebrow">Yapı</div><div className="small text-2" style={{ marginTop: 6 }}>{Object.entries(types).map(([t, n]) => `${n} ${TYPE_LABEL[t as keyof typeof TYPE_LABEL]?.toLocaleLowerCase("tr") ?? t}`).join(" · ")}</div></div>
       </div>
       <div className="stack">
         {spec.units.map((u, i) => (
@@ -149,8 +149,8 @@ function DraftPreview({ draft, onAccept, onBack, onRegenerate, busy }: { draft: 
                 <div className="small text-2" style={{ fontWeight: 600 }}>{t.title}</div>
                 {t.milestones.map((m, k) => (
                   <div key={k} className="row nowrap small" style={{ gap: 8 }}>
-                    <span className="chip" style={{ minWidth: 0 }}>{(m.type ?? "practice").toLowerCase()}</span>
-                    <span className="grow">{m.title}{m.optional ? <span className="muted"> · optional</span> : null}</span>
+                    <span className="chip" style={{ minWidth: 0 }}>{TYPE_LABEL[(m.type ?? "PRACTICE").toUpperCase() as keyof typeof TYPE_LABEL] ?? m.type}</span>
+                    <span className="grow">{m.title}{m.optional ? <span className="muted"> · isteğe bağlı</span> : null}</span>
                   </div>
                 ))}
               </div>
@@ -159,9 +159,9 @@ function DraftPreview({ draft, onAccept, onBack, onRegenerate, busy }: { draft: 
         ))}
       </div>
       <div className="row" style={{ position: "sticky", bottom: "calc(var(--nav-h) + 12px)" }}>
-        <button className="btn" onClick={onBack} disabled={busy}>Back</button>
-        <button className="btn" onClick={onRegenerate} disabled={busy}>{busy ? <span className="spinner" /> : "Regenerate"}</button>
-        <button className="btn primary grow" onClick={onAccept} disabled={busy}>Accept and find my starting point</button>
+        <button className="btn" onClick={onBack} disabled={busy}>Geri</button>
+        <button className="btn" onClick={onRegenerate} disabled={busy}>{busy ? <span className="spinner" /> : "Yeniden oluştur"}</button>
+        <button className="btn primary grow" onClick={onAccept} disabled={busy}>Kabul et ve başlangıç noktamı bul</button>
       </div>
     </div>
   );

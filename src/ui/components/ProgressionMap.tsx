@@ -4,7 +4,7 @@ import { courseMilestones, courseUnits } from "../../engines/curriculum";
 import { layoutMap } from "../../engines/mapLayout";
 import { recommendNext, topPicks } from "../../engines/progression";
 import { useDB } from "../state";
-import { Difficulty, KindChip, Sheet, StatusChip, TYPE_LABEL, minutes } from "./common";
+import { Difficulty, KIND_LABEL, KindChip, STATUS_LABEL, Sheet, StatusChip, TYPE_LABEL, minutes } from "./common";
 
 const SEEN_KEY = (courseId: ID) => `lab.map.seen.${courseId}`;
 
@@ -70,30 +70,30 @@ export function ProgressionMap({ courseId, onOpen }: { courseId: ID; onOpen: (id
   const units = courseUnits(db, courseId);
   const counts = ms.reduce<Record<string, number>>((acc, m) => ((acc[m.status] = (acc[m.status] ?? 0) + 1), acc), {});
 
-  if (!ms.length) return <div className="card"><p className="text-2">This course has no milestones yet. Add some in the Curriculum tab.</p></div>;
+  if (!ms.length) return <div className="card"><p className="text-2">Bu derste henüz adım yok. Müfredat sekmesinden ekleyebilirsin.</p></div>;
 
   const sel = selected ? byId.get(selected) : undefined;
   return (
     <div className="stack">
       <div className="row small text-2" style={{ gap: 12 }}>
-        <Legend color="var(--mastered)" fill label={`Mastered ${(counts.MASTERED ?? 0) + (counts.NEEDS_REVIEW ?? 0)}`} />
-        <Legend color="var(--accent)" label={`Open ${(counts.AVAILABLE ?? 0) + (counts.ATTEMPTED ?? 0) + (counts.ACTIVE ?? 0) + (counts.OPTIONAL ?? 0) + (counts.BOSS ?? 0)}`} />
-        <Legend color="var(--review)" label={`Review ${counts.NEEDS_REVIEW ?? 0}`} />
-        <Legend color="var(--locked)" label={`Locked ${counts.LOCKED ?? 0}`} />
-        {counts.SKIPPED ? <Legend color="var(--muted)" dashed label={`Skipped ${counts.SKIPPED}`} /> : null}
+        <Legend color="var(--mastered)" fill label={`Ustalaşılan ${(counts.MASTERED ?? 0) + (counts.NEEDS_REVIEW ?? 0)}`} />
+        <Legend color="var(--accent)" label={`Açık ${(counts.AVAILABLE ?? 0) + (counts.ATTEMPTED ?? 0) + (counts.ACTIVE ?? 0) + (counts.OPTIONAL ?? 0) + (counts.BOSS ?? 0)}`} />
+        <Legend color="var(--review)" label={`Tekrar ${counts.NEEDS_REVIEW ?? 0}`} />
+        <Legend color="var(--locked)" label={`Kilitli ${counts.LOCKED ?? 0}`} />
+        {counts.SKIPPED ? <Legend color="var(--muted)" dashed label={`Atlanan ${counts.SKIPPED}`} /> : null}
       </div>
       {units.length > 1 && (
         <div className="row" style={{ gap: 6 }}>
-          <button className="btn small" aria-pressed={filterUnit === "all"} onClick={() => setFilterUnit("all")} style={filterUnit === "all" ? { borderColor: "var(--accent)" } : undefined}>Whole course</button>
+          <button className="btn small" aria-pressed={filterUnit === "all"} onClick={() => setFilterUnit("all")} style={filterUnit === "all" ? { borderColor: "var(--accent)" } : undefined}>Tüm ders</button>
           {units.map((u) => (
             <button key={u.id} className="btn small" aria-pressed={filterUnit === u.id} onClick={() => setFilterUnit(u.id)} style={filterUnit === u.id ? { borderColor: "var(--accent)" } : undefined}>{u.title}</button>
           ))}
         </div>
       )}
       <div ref={wrapRef} className="card" style={{ padding: 0, overflowX: "auto", overflowY: "hidden", touchAction: "pan-x pan-y" }}>
-        <svg width={layout.width} height={layout.height} viewBox={`0 0 ${layout.width} ${layout.height}`} role="group" aria-label="Progression map" style={{ display: "block" }}>
+        <svg width={layout.width} height={layout.height} viewBox={`0 0 ${layout.width} ${layout.height}`} role="group" aria-label="İlerleme haritası" style={{ display: "block" }}>
           <defs>
-            <radialGradient id="halo"><stop offset="0%" stopColor="#6cb6dd" stopOpacity="0.35" /><stop offset="100%" stopColor="#6cb6dd" stopOpacity="0" /></radialGradient>
+            <radialGradient id="halo"><stop offset="0%" stopColor="#e28a9a" stopOpacity="0.35" /><stop offset="100%" stopColor="#e28a9a" stopOpacity="0" /></radialGradient>
           </defs>
           {layout.edges.map((e) => {
             const from = byId.get(e.from)!, to = byId.get(e.to)!;
@@ -101,7 +101,7 @@ export function ProgressionMap({ courseId, onOpen }: { courseId: ID; onOpen: (id
             const live = done && to.status !== "LOCKED";
             return (
               <path key={`${e.from}-${e.to}`} d={e.path} fill="none"
-                stroke={live ? (to.masteredAt ? "#3f6d55" : "#3c6e8a") : "#243040"} strokeWidth={live ? 2 : 1.5}
+                stroke={live ? (to.masteredAt ? "#4f7a5a" : "#9b3b50") : "#3e2229"} strokeWidth={live ? 2 : 1.5}
                 strokeDasharray={to.optional ? "4 5" : undefined} style={{ transition: "stroke .6s" }} />
             );
           })}
@@ -117,7 +117,7 @@ export function ProgressionMap({ courseId, onOpen }: { courseId: ID; onOpen: (id
           })}
         </svg>
       </div>
-      {recs.length > 0 && <p className="tiny muted">Glowing nodes are recommended next steps. Tap any milestone — including locked ones — to see why and to open it.</p>}
+      {recs.length > 0 && <p className="tiny muted">Parlayan düğümler önerilen sonraki adımlar. Nedenini görmek ve açmak için herhangi bir adıma — kilitliler dahil — dokun.</p>}
 
       {sel && (
         <Sheet title={sel.title} onClose={() => setSelected(null)}>
@@ -134,11 +134,11 @@ export function ProgressionMap({ courseId, onOpen }: { courseId: ID; onOpen: (id
               <ul className="small text-2" style={{ margin: 0, paddingLeft: 18 }}>{recs.find((r) => r.milestoneId === sel.id)!.reasons.map((r, i) => <li key={i}>{r}</li>)}</ul>
             )}
             {sel.prerequisites.length > 0 && (
-              <div className="small text-2">Builds on: {sel.prerequisites.map((p) => byId.get(p)?.title + (byId.get(p)?.masteredAt ? " ✓" : "")).join(" · ")}</div>
+              <div className="small text-2">Üzerine kurulu: {sel.prerequisites.map((p) => byId.get(p)?.title + (byId.get(p)?.masteredAt ? " ✓" : "")).join(" · ")}</div>
             )}
-            {sel.nextMilestones.length > 0 && <div className="small text-2">Leads to: {sel.nextMilestones.map((p) => byId.get(p)?.title).join(" · ")}</div>}
+            {sel.nextMilestones.length > 0 && <div className="small text-2">Şuraya götürür: {sel.nextMilestones.map((p) => byId.get(p)?.title).join(" · ")}</div>}
             <button className="btn primary" onClick={() => onOpen(sel.id)}>
-              {sel.status === "LOCKED" ? "Look inside" : sel.masteredAt ? "Practise again" : sel.status === "ATTEMPTED" ? "Continue" : "Open"}
+              {sel.status === "LOCKED" ? "İçine bak" : sel.masteredAt ? "Yeniden çalış" : sel.status === "ATTEMPTED" ? "Devam et" : "Aç"}
             </button>
           </div>
         </Sheet>
@@ -157,15 +157,15 @@ function Legend({ color, label, fill, dashed }: { color: string; label: string; 
 }
 
 const COLORS: Record<MilestoneStatus, { stroke: string; fill: string; text: string }> = {
-  MASTERED: { stroke: "#79c79a", fill: "#79c79a", text: "#e4e9f0" },
-  NEEDS_REVIEW: { stroke: "#d8aa62", fill: "#2a2418", text: "#e4e9f0" },
-  ACTIVE: { stroke: "#6cb6dd", fill: "#6cb6dd", text: "#e4e9f0" },
-  AVAILABLE: { stroke: "#6cb6dd", fill: "#11161e", text: "#e4e9f0" },
-  ATTEMPTED: { stroke: "#6cb6dd", fill: "#16303d", text: "#e4e9f0" },
-  OPTIONAL: { stroke: "#9fd3c7", fill: "#11161e", text: "#b4bfcc" },
-  BOSS: { stroke: "#a99be8", fill: "#1c1a2c", text: "#e4e9f0" },
-  LOCKED: { stroke: "#33435a", fill: "#0d1117", text: "#7d8a9b" },
-  SKIPPED: { stroke: "#4a5566", fill: "#0d1117", text: "#7d8a9b" },
+  MASTERED: { stroke: "#9cc5a1", fill: "#9cc5a1", text: "#f3e9e1" },
+  NEEDS_REVIEW: { stroke: "#e0b46a", fill: "#2e2214", text: "#f3e9e1" },
+  ACTIVE: { stroke: "#e28a9a", fill: "#e28a9a", text: "#f3e9e1" },
+  AVAILABLE: { stroke: "#e28a9a", fill: "#1f1015", text: "#f3e9e1" },
+  ATTEMPTED: { stroke: "#e28a9a", fill: "#3a1822", text: "#f3e9e1" },
+  OPTIONAL: { stroke: "#a9cfc0", fill: "#1f1015", text: "#d2bfb5" },
+  BOSS: { stroke: "#a7a3ef", fill: "#221d36", text: "#f3e9e1" },
+  LOCKED: { stroke: "#5a3039", fill: "#170b0f", text: "#a08a84" },
+  SKIPPED: { stroke: "#5c4146", fill: "#170b0f", text: "#a08a84" },
 };
 
 function MapNodeView({ m, x, y, rec, changed, prev, isStart, onSelect, maxLabel }: {
@@ -185,21 +185,21 @@ function MapNodeView({ m, x, y, rec, changed, prev, isStart, onSelect, maxLabel 
     : review ? <rect x={-r} y={-r * 0.8} width={r * 2} height={r * 1.6} rx="6" />
     : <circle r={r} />;
   return (
-    <g transform={`translate(${x},${y})`} role="button" tabIndex={0} aria-label={`${m.title}, ${m.status.toLowerCase().replace("_", " ")}${rec ? `, recommended: ${rec.toLowerCase()}` : ""}`}
+    <g transform={`translate(${x},${y})`} role="button" tabIndex={0} aria-label={`${m.title}, ${STATUS_LABEL[m.status]}${rec ? `, öneri: ${KIND_LABEL[rec]}` : ""}`}
       onClick={onSelect} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onSelect()} style={{ cursor: "pointer", outline: "none" }} className="map-node">
       <rect x={-50} y={-28} width={100} height={84} fill="transparent" />
       {rec && <circle r={r + 16} fill="url(#halo)" className="map-halo" />}
-      {justUnlocked && <circle r={r} fill="none" stroke="#6cb6dd" strokeWidth="2" className="map-burst" />}
+      {justUnlocked && <circle r={r} fill="none" stroke="#e28a9a" strokeWidth="2" className="map-burst" />}
       <g fill={c.fill} stroke={c.stroke} strokeWidth={m.status === "ACTIVE" ? 3 : 2} strokeDasharray={m.status === "SKIPPED" || m.optional ? "3 3" : undefined}
         style={{ transition: "fill .6s, stroke .6s" }} className={justUnlocked ? "map-pop" : justMastered ? "map-fill" : undefined}>
         {shape}
       </g>
-      {m.status === "MASTERED" && <path d="M-6 0l4 4 8-9" fill="none" stroke="#0a0d12" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />}
-      {m.status === "LOCKED" && <g stroke="#7d8a9b" strokeWidth="1.6" fill="none"><rect x="-5" y="-2" width="10" height="8" rx="1.5" /><path d="M-3 -2v-2.5a3 3 0 0 1 6 0V-2" /></g>}
-      {m.status === "NEEDS_REVIEW" && <text y="5" textAnchor="middle" fontSize="14" fill="#d8aa62" fontWeight="700">↻</text>}
-      {m.status === "ACTIVE" && <circle r="5" fill="#0a0d12" />}
-      {m.status === "ATTEMPTED" && <path d={`M0 ${-r} A${r} ${r} 0 0 1 ${r} 0`} fill="none" stroke="#6cb6dd" strokeWidth="4" />}
-      {isStart && <text y={-r - 8} textAnchor="middle" fontSize="10" letterSpacing="1.5" fill="#6cb6dd" fontWeight="700">START HERE</text>}
+      {m.status === "MASTERED" && <path d="M-6 0l4 4 8-9" fill="none" stroke="#150a0d" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />}
+      {m.status === "LOCKED" && <g stroke="#a08a84" strokeWidth="1.6" fill="none"><rect x="-5" y="-2" width="10" height="8" rx="1.5" /><path d="M-3 -2v-2.5a3 3 0 0 1 6 0V-2" /></g>}
+      {m.status === "NEEDS_REVIEW" && <text y="5" textAnchor="middle" fontSize="14" fill="#e0b46a" fontWeight="700">↻</text>}
+      {m.status === "ACTIVE" && <circle r="5" fill="#150a0d" />}
+      {m.status === "ATTEMPTED" && <path d={`M0 ${-r} A${r} ${r} 0 0 1 ${r} 0`} fill="none" stroke="#e28a9a" strokeWidth="4" />}
+      {isStart && <text y={-r - 8} textAnchor="middle" fontSize="10" letterSpacing="1.5" fill="#e28a9a" fontWeight="700">BURADAN BAŞLA</text>}
       {label.map((line, i) => (
         <text key={i} y={r + 16 + i * 14} textAnchor="middle" fontSize="12" fill={c.text} style={{ fontFamily: "var(--sans)" }}>{line}</text>
       ))}
@@ -215,7 +215,7 @@ function hexagon(r: number) {
 }
 
 function wrap(s: string, max: number): string[] {
-  const words = s.replace(/^(Boss|Challenge|Review):\s*/i, "").split(/\s+/);
+  const words = s.replace(/^(Boss|Challenge|Review|Final|Meydan okuma|Tekrar):\s*/i, "").split(/\s+/);
   const lines: string[] = [];
   let cur = "";
   for (const w of words) {

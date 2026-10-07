@@ -1,59 +1,64 @@
-# Lab
+# Lab — kişisel akademik işletim sistemi
 
-A personal academic operating system. Lab turns a big academic goal into a
-graph of small, meaningful milestones. You attempt each one, get feedback, retry
-until you master it, see the progress, and then answer the only question that
-matters: **what's next?** While you work, Lab records enough raw data to learn
-how *you* actually learn best.
+Lab büyük bir akademik hedefi küçük ve anlamlı adımlardan oluşan bir haritaya
+dönüştürür. Her adımı dener, geri bildirim alır, ustalaşana kadar yeniden dener,
+ilerlemeni görür ve tek önemli soruya dönersin: **sırada ne var?** Bu sırada Lab,
+*senin* en iyi nasıl öğrendiğini anlamaya yetecek kadar ham veri toplar.
 
 ```
-BIG GOAL → MICRO-MILESTONE → ACTIVE ATTEMPT → IMMEDIATE FEEDBACK → RETRY
-        → MASTERY → VISIBLE PROGRESS → "WHAT'S NEXT?" → NEXT MILESTONE
+BÜYÜK HEDEF → MİKRO ADIM → AKTİF DENEME → ANINDA GERİ BİLDİRİM → YENİDEN DENE
+           → USTALIK → GÖRÜNÜR İLERLEME → "SIRADA NE VAR?" → SONRAKİ ADIM
 ```
 
-## Run it
+## Android APK (GitHub'dan derlenir)
+
+Her push'ta `.github/workflows/android.yml` bir APK derler:
+
+1. GitHub'da depo → **Releases** → **son-surum** (ön sürüm) sayfasını telefonundan aç.
+2. `Lab-1.0.N.apk` dosyasına dokun ve indir.
+3. Android "bilinmeyen kaynaklardan yükleme" izni isterse ver ve kur.
+
+APK ayrıca **Actions** sekmesindeki her çalıştırmada artifact olarak da bulunur.
+`v1.0.0` gibi bir etiket push'larsan kalıcı bir sürüm yayınlanır.
+
+- Yeni APK eski sürümün **üzerine** kurulur; çalışma verilerin (IndexedDB) korunur.
+  Bunun için APK her zaman aynı anahtarla imzalanır (`android/app/lab-debug.keystore`).
+- Play Store'a yüklemek istersen depo sırlarına `LAB_KEYSTORE_BASE64`,
+  `LAB_KEYSTORE_PASSWORD`, `LAB_KEY_ALIAS`, `LAB_KEY_PASSWORD` ekle; iş akışı
+  APK'yı otomatik olarak o özel anahtarla imzalar.
+- Uygulamada Android geri tuşu açık pencereyi kapatır ya da bir önceki ekrana döner.
+  Yedekler ve CSV dışa aktarımları Android paylaşım menüsüyle kaydedilir.
+
+## Geliştirme
 
 ```bash
 npm install
-npm run dev        # development server (http://localhost:5173)
-npm test           # unit tests (Vitest)
+npm run dev        # geliştirme sunucusu (http://localhost:5173)
+npm test           # birim testleri (Vitest)
 npm run typecheck  # TypeScript, strict
-npm run build      # production build → dist/
-npm run smoke      # end-to-end browser test against dist/ (run `npm run build` first)
+npm run build      # üretim derlemesi → dist/
+npm run smoke      # dist/ üzerinde uçtan uca tarayıcı testi (önce build)
+npx cap sync android && cd android && ./gradlew assembleDebug   # yerelde APK (Android SDK gerekir)
 ```
 
-`dist/` is a static site; any static host works. Routing is hash-based, so
-there is no server configuration. The smoke test uses the Chromium at
-`/opt/pw-browsers/chromium` by default; set `CHROMIUM_PATH` to use another one.
+## YZ sağlayıcıları
 
-### AI providers
+Lab tamamen çevrimdışı çalışır: olimpiyat mekaniği ve Kalkülüs 1 için elle yazılmış
+Türkçe içerik paketleri, bir müfredat ayrıştırıcı ve her YZ rolü için deterministik
+yedek davranış vardır. YZ ile müfredat, ipucu, rehberlik ve değerlendirme için
+**Ayarlar → YZ sağlayıcısı** bölümünden **Gemini** ya da **Groq** seçip API anahtarı
+gir. Anahtarlar yalnızca cihazda saklanır. Bir çağrı başarısız olursa Lab çevrimdışı
+davranışa geçer ve bunu kaydeder. YZ çıktıları varsayılan olarak Türkçedir.
 
-Lab works fully offline. It ships hand-written knowledge packs for olympiad
-mechanics and Calculus 1, a syllabus parser, and deterministic fallbacks for
-every AI role. For AI-generated curricula, hints, guidance and evaluation, open
-**Settings → AI provider**, choose **Gemini** or **Groq** and paste an API key.
-Keys stay in the browser and are sent only to the chosen provider. If a call
-fails or times out, Lab falls back to its offline behaviour and logs the
-fallback.
+## Mimari
 
-## What's inside
-
-| Area | Where |
+| Alan | Yer |
 |---|---|
-| Domain model (subjects, courses, curricula, units, topics, concepts, milestones, questions, attempts, sessions, AI interactions, mastery, retention, experiments, engagement, preferences, raw events) | `src/domain/types.ts` |
-| Store: IndexedDB with a localStorage fallback, transactional edits | `src/data/` |
-| Curriculum engine: graph edits, split, merge, delete, reorder, validation | `src/engines/curriculum.ts`, `graph.ts` |
-| Spec import: validates and repairs AI output | `src/engines/curriculumSpec.ts` |
-| Progression engine: status derivation, recommendations, START HERE calibration | `src/engines/progress.ts`, `progression.ts` |
-| Session sequencing and evaluation (numeric, expression equivalence, ordering, classification, rubrics) | `src/engines/sessionPlan.ts`, `evaluation.ts`, `expr.ts` |
-| Raw analytics and reconstruction | `src/engines/analytics.ts` |
-| Statistics, Focus Lab, experiments | `src/engines/statistics.ts`, `focusLab.ts`, `experiments.ts` |
-| Integrity audit | `src/engines/integrity.ts` |
-| AI layer: provider abstraction plus ten roles | `src/ai/` |
-| UI: Home, Session, Builder, Map, Statistics, Focus Lab, Retention, Settings | `src/ui/` |
+| Veri modeli | `src/domain/types.ts` |
+| Depolama (IndexedDB, işlemsel düzenlemeler) | `src/data/` |
+| Müfredat, ilerleme, değerlendirme, analitik, istatistik, Odak Lab, deneyler, bütünlük | `src/engines/` |
+| YZ katmanı (sağlayıcı soyutlaması + 10 rol) | `src/ai/` |
+| Arayüz (bordo araştırma defteri teması) | `src/ui/` |
+| Android kabuğu (Capacitor) | `android/`, `capacitor.config.ts`, `src/ui/native.ts` |
 
-Principles: the curriculum is independent of the UI; the AI provider can be
-swapped; analytics come from raw events; milestones are graph nodes, not
-checklist items; the user can always override.
-
-See `docs/IMPLEMENTATION_REPORT.md` for the full report.
+Ayrıntılı rapor: `docs/IMPLEMENTATION_REPORT.md`.

@@ -22,7 +22,7 @@ describe("Phase 4 — evaluation and feedback", () => {
     expect(sign.feedback.errorTypes).toContain("PROCEDURAL");
     expect(evaluateAuto(n, { kind: "number", text: "86.6" }).feedback.errorTypes).toContain("CARELESS");
     expect(evaluateAuto(n, { kind: "number", text: "8.9" }).feedback.correctness).toBe("PARTIAL");
-    expect(evaluateAuto(n, { kind: "number", text: "17.32" }).feedback.message).toMatch(/factor of 2/);
+    expect(evaluateAuto(n, { kind: "number", text: "17.32" }).feedback.message).toMatch(/2 kat/);
     expect(evaluateAuto(n, { kind: "number", text: "hello" }).correct).toBe(false);
   });
 
@@ -30,7 +30,7 @@ describe("Phase 4 — evaluation and feedback", () => {
     const e = q({ kind: "EQUATION", acceptedExpressions: ["6*t + 2"], variables: ["t"] });
     expect(evaluateAuto(e, { kind: "expression", text: "2 + 6t" }).correct).toBe(true);
     expect(evaluateAuto(e, { kind: "expression", text: "-6t-2" }).feedback.correctness).toBe("PARTIAL");
-    expect(evaluateAuto(e, { kind: "expression", text: "12t + 4" }).feedback.message).toMatch(/factor/);
+    expect(evaluateAuto(e, { kind: "expression", text: "12t + 4" }).feedback.message).toMatch(/çarpan/);
   });
 
   it("grades ordering and classification with partial credit", () => {
@@ -58,7 +58,7 @@ describe("Phase 4 — session loop", () => {
   const setup = () => {
     const db = createEmptyDB();
     const { courseId } = importCurriculum(db, structuredClone(mechanicsPack), { source: { kind: "SEED", text: "" }, generatedBy: "seed" });
-    const m = courseMilestones(db, courseId).find((x) => x.title.startsWith("Resolve a vector"))!;
+    const m = courseMilestones(db, courseId).find((x) => x.title.startsWith("Bir vektörü bileşenlerine"))!;
     const s = ensureSession(db, courseId);
     return { db, m, s, courseId };
   };

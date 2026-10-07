@@ -44,8 +44,8 @@ describe("Phase 7 — raw analytics", () => {
     const db: LabDB = createEmptyDB();
     const { courseId } = importCurriculum(db, structuredClone(mechanicsPack), { source: { kind: "SEED", text: "" }, generatedBy: "seed" });
     const ms = courseMilestones(db, courseId);
-    const vec = ms.find((m) => m.title.startsWith("Resolve a vector"))!;
-    const calc = ms.find((m) => m.title.startsWith("Differentiate position"))!;
+    const vec = ms.find((m) => m.title.startsWith("Bir vektörü bileşenlerine"))!;
+    const calc = ms.find((m) => m.title.startsWith("Konumun türevinden"))!;
     const s = ensureSession(db, courseId);
     const answer = (q: Question, correct: boolean, extra: { hint?: number; input?: "pen" | "keyboard" } = {}) =>
       recordAttempt(db, {
@@ -66,7 +66,7 @@ describe("Phase 7 — raw analytics", () => {
     openMilestone(db, s.id, calc.id);
     answer(nextQuestion(db, calc.id)!, false);
     leaveMilestone(db, s.id, calc.id, false);
-    const add = ms.find((m) => m.title.startsWith("Add vectors"))!;
+    const add = ms.find((m) => m.title.startsWith("Vektörleri bileşenleriyle"))!;
     openMilestone(db, s.id, add.id);
     skipMilestone(db, add.id, s.id);
     endSession(db, s.id, "USER_ENDED");

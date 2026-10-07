@@ -77,8 +77,8 @@ Energy: work, kinetic energy, potential energy`);
   });
 
   it("local builder picks packs by keyword, including Turkish requests", () => {
-    expect(localBuildCurriculum("TÜBİTAK Fizik Olimpiyatı Mekanik").spec.title).toMatch(/Mechanics/);
-    expect(localBuildCurriculum("Calculus 1").spec.title).toBe("Calculus 1");
+    expect(localBuildCurriculum("TÜBİTAK Fizik Olimpiyatı Mekanik").spec.title).toMatch(/Mekanik/);
+    expect(localBuildCurriculum("Calculus 1").spec.title).toBe("Kalkülüs 1");
     expect(localBuildCurriculum("Theoretical Neuroscience").spec.title).toBe("Theoretical Neuroscience");
   });
 
@@ -96,7 +96,7 @@ Energy: work, kinetic energy, potential energy`);
     const report = importCurriculum(db, res.value.spec, { source: { kind: "REQUEST", text: "Toy" }, generatedBy: res.provider });
     assertValidCourse(db, report.courseId);
     expect(report.repairs.some((r) => r.includes("ghost"))).toBe(true);
-    expect(report.repairs.some((r) => r.includes("loop"))).toBe(true);
+    expect(report.repairs.some((r) => /döngü/i.test(r))).toBe(true);
     expect(Object.values(db.questions).find((q) => q.prompt === "bad mc")?.kind).toBe("FREE_RESPONSE");
     expect(Object.values(db.aiInteractions)[0].ok).toBe(true);
   });
@@ -105,7 +105,7 @@ Energy: work, kinetic energy, potential energy`);
     const db = createEmptyDB();
     const res = await buildCurriculumAI(hostFor(db, fakeProvider(new Error("Gemini 500: boom"))), { request: "Calculus 1" });
     expect(res.fallbackUsed).toBe(true);
-    expect(res.value.spec.title).toBe("Calculus 1");
+    expect(res.value.spec.title).toBe("Kalkülüs 1");
     const ai = Object.values(db.aiInteractions)[0];
     expect(ai.ok).toBe(false);
     expect(ai.error).toContain("500");
@@ -114,7 +114,7 @@ Energy: work, kinetic energy, potential energy`);
 
   it("splits with AI fallback and keeps the graph valid", async () => {
     const { db, courseId } = importPack(mechanicsPack);
-    const target = courseMilestones(db, courseId).find((m) => m.title.startsWith("Analyse projectile"))!;
+    const target = courseMilestones(db, courseId).find((m) => m.title.startsWith("Eğik atış hareketini"))!;
     const res = await splitMilestoneAI(hostFor(db), target);
     splitMilestone(db, target.id, res.value);
     assertValidCourse(db, courseId);
@@ -122,7 +122,7 @@ Energy: work, kinetic energy, potential energy`);
 
   it("regenerates one topic and reattaches the surrounding graph", () => {
     const { db, courseId } = importPack(mechanicsPack);
-    const fbd = courseMilestones(db, courseId).find((m) => m.title === "Construct a free-body diagram")!;
+    const fbd = courseMilestones(db, courseId).find((m) => m.title === "Serbest cisim diyagramı çiz")!;
     const topicId = fbd.topicId;
     const { created } = replaceTopicMilestones(db, topicId, [
       { key: "x", title: "Identify contact forces", questions: [{ kind: "NUMERIC", prompt: "?", numeric: { value: 1 } }] },
@@ -131,7 +131,7 @@ Energy: work, kinetic energy, potential energy`);
     expect(created).toHaveLength(2);
     assertValidCourse(db, courseId);
     // Energy depended on n2 (in this topic) and must now depend on the new leaf.
-    const energy = courseMilestones(db, courseId).find((m) => m.title === "Use the work–energy theorem")!;
+    const energy = courseMilestones(db, courseId).find((m) => m.title === "İş–enerji teoremini kullan")!;
     expect(energy.prerequisites).toContain(created[1]);
     expect(db.milestones[created[0]].prerequisites.length).toBeGreaterThan(0);
   });
@@ -150,13 +150,13 @@ describe("Phase 3 — progression engine", () => {
     const { db, courseId } = importPack(mechanicsPack);
     const ms = courseMilestones(db, courseId);
     const byTitle = (t: string) => ms.find((m) => m.title.startsWith(t))!;
-    for (const t of ["Resolve a vector", "Add vectors", "Construct a free-body", "Apply Newton's second"]) grantMastery(db, byTitle(t).id, [], false, false);
-    const newton2 = byTitle("Apply Newton's second");
+    for (const t of ["Bir vektörü bileşenlerine", "Vektörleri bileşenleriyle", "Serbest cisim diyagramı", "Newton'un ikinci yasasını"]) grantMastery(db, byTitle(t).id, [], false, false);
+    const newton2 = byTitle("Newton'un ikinci yasasını");
     const recs = recommendNext(db, courseId, { justCompletedId: newton2.id });
     const ids = recs.map((r) => r.milestoneId);
     // Energy and momentum branches both become available.
-    expect(ids).toContain(byTitle("Use the work–energy").id);
-    expect(ids).toContain(byTitle("Relate impulse").id);
+    expect(ids).toContain(byTitle("İş–enerji teoremini").id);
+    expect(ids).toContain(byTitle("İtmeyi momentum").id);
     const picks = topPicks(recs);
     expect(new Set(picks.map((p) => p.kind)).size).toBeGreaterThan(1);
     expect(picks.length).toBeLessThanOrEqual(4);
@@ -167,9 +167,9 @@ describe("Phase 3 — progression engine", () => {
     const plan = diagnosticPlan(db, courseId);
     expect(plan.length).toBeGreaterThan(1);
     const units = Object.values(db.units).filter((u) => u.courseId === courseId);
-    const tools = units.find((u) => u.title === "Mathematical tools")!;
-    const kin = courseMilestones(db, courseId).find((m) => m.title.startsWith("Solve constant-acceleration"))!;
-    const fbd = courseMilestones(db, courseId).find((m) => m.title.startsWith("Construct a free-body"))!;
+    const tools = units.find((u) => u.title === "Matematiksel araçlar")!;
+    const kin = courseMilestones(db, courseId).find((m) => m.title.startsWith("Sabit ivmeli"))!;
+    const fbd = courseMilestones(db, courseId).find((m) => m.title.startsWith("Serbest cisim diyagramı"))!;
     const result = estimateStart(db, courseId, { selfRatings: { [tools.id]: 2 }, diagnostic: { [kin.id]: true, [fbd.id]: false } });
     expect(result.startHereId).toBe(fbd.id);
     expect(result.likelyKnown.length).toBeGreaterThan(2);
@@ -178,7 +178,7 @@ describe("Phase 3 — progression engine", () => {
     expect(recommendNext(db, courseId)[0].milestoneId).toBe(fbd.id);
     // The user can still open anything that is unlocked.
     const s = startSession(db, courseId);
-    const vec = courseMilestones(db, courseId).find((m) => m.title.startsWith("Resolve a vector"))!;
+    const vec = courseMilestones(db, courseId).find((m) => m.title.startsWith("Bir vektörü bileşenlerine"))!;
     openMilestone(db, s.id, vec.id);
     expect(db.milestones[vec.id].status).toBe("ACTIVE");
   });

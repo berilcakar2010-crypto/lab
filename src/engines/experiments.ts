@@ -28,34 +28,34 @@ export interface ExperimentTemplate {
 
 export const EXPERIMENT_TEMPLATES: ExperimentTemplate[] = [
   {
-    variable: "MILESTONE_SIZE", title: "Long tasks vs micro-milestones",
-    hypothesis: "Small, concrete milestones keep me going longer than large ones.",
-    arms: [{ label: "Micro-milestones", condition: { preferScope: "MICRO" } }, { label: "Longer tasks", condition: { preferScope: "LONG" } }],
+    variable: "MILESTONE_SIZE", title: "Uzun görevler mi, mikro adımlar mı?",
+    hypothesis: "Küçük, somut adımlar beni büyük görevlerden daha uzun süre çalışmaya devam ettirir.",
+    arms: [{ label: "Mikro adımlar", condition: { preferScope: "MICRO" } }, { label: "Uzun görevler", condition: { preferScope: "LONG" } }],
   },
   {
-    variable: "STYLUS", title: "Micro-milestones + stylus workspace",
-    hypothesis: "Working by hand with the stylus helps me persist and understand.",
-    arms: [{ label: "Workspace open (stylus)", condition: { workspaceOpen: true, preferScope: "MICRO" } }, { label: "Typing only", condition: { workspaceOpen: false, preferScope: "MICRO" } }],
+    variable: "STYLUS", title: "Mikro adımlar + kalemle çalışma alanı",
+    hypothesis: "Kalemle elle çalışmak sebat etmeme ve anlamama yardım eder.",
+    arms: [{ label: "Çalışma alanı açık (kalem)", condition: { workspaceOpen: true, preferScope: "MICRO" } }, { label: "Sadece yazarak", condition: { workspaceOpen: false, preferScope: "MICRO" } }],
   },
   {
-    variable: "IMMEDIATE_FEEDBACK", title: "Micro-milestones + detailed immediate feedback",
-    hypothesis: "Detailed, immediate feedback makes me retry more and learn more.",
-    arms: [{ label: "Detailed feedback", condition: { feedbackDetail: "full", preferScope: "MICRO" } }, { label: "Correct / not yet only", condition: { feedbackDetail: "minimal", preferScope: "MICRO" } }],
+    variable: "IMMEDIATE_FEEDBACK", title: "Mikro adımlar + ayrıntılı anında geri bildirim",
+    hypothesis: "Ayrıntılı ve anında geri bildirim daha çok yeniden denememi ve daha çok öğrenmemi sağlar.",
+    arms: [{ label: "Ayrıntılı geri bildirim", condition: { feedbackDetail: "full", preferScope: "MICRO" } }, { label: "Sadece doğru / henüz değil", condition: { feedbackDetail: "minimal", preferScope: "MICRO" } }],
   },
   {
-    variable: "NEXT_CHOICE", title: "Micro-milestones + choosing what's next",
-    hypothesis: "Choosing my next milestone keeps me more engaged than being assigned one.",
-    arms: [{ label: "I choose", condition: { choiceMode: "choose" } }, { label: "One suggestion (override allowed)", condition: { choiceMode: "assigned" } }],
+    variable: "NEXT_CHOICE", title: "Mikro adımlar + sıradakini kendim seçmek",
+    hypothesis: "Sıradaki adımı kendim seçmek, bana atanmasından daha bağlı tutar.",
+    arms: [{ label: "Ben seçerim", condition: { choiceMode: "choose" } }, { label: "Tek öneri (değiştirilebilir)", condition: { choiceMode: "assigned" } }],
   },
   {
-    variable: "DIFFICULTY", title: "Higher vs moderate difficulty",
-    hypothesis: "A bit more challenge keeps me engaged without hurting learning.",
-    arms: [{ label: "Stretch (+1 difficulty)", condition: { difficultyOffset: 1 } }, { label: "Moderate", condition: { difficultyOffset: 0 } }],
+    variable: "DIFFICULTY", title: "Yüksek mi, orta zorluk mu?",
+    hypothesis: "Biraz daha zorlanmak, öğrenmeye zarar vermeden bağlılığımı artırır.",
+    arms: [{ label: "Zorlayıcı (+1 zorluk)", condition: { difficultyOffset: 1 } }, { label: "Orta", condition: { difficultyOffset: 0 } }],
   },
   {
-    variable: "AI_ASSISTANCE", title: "More vs less AI assistance",
-    hypothesis: "Less help leads to better retention, even if sessions feel harder.",
-    arms: [{ label: "More help (up to partial guidance, guide on)", condition: { hintCap: 4, guide: true } }, { label: "Less help (small hints, guide off)", condition: { hintCap: 1, guide: false } }],
+    variable: "AI_ASSISTANCE", title: "Daha çok mu, daha az mı YZ desteği?",
+    hypothesis: "Oturumlar zor gelse de daha az yardım daha iyi kalıcılık sağlar.",
+    arms: [{ label: "Daha çok yardım (kısmi yönlendirmeye kadar, rehber açık)", condition: { hintCap: 4, guide: true } }, { label: "Daha az yardım (küçük ipuçları, rehber kapalı)", condition: { hintCap: 1, guide: false } }],
   },
 ];
 
@@ -63,9 +63,9 @@ export const runningExperiment = (db: LabDB): Experiment | undefined =>
   Object.values(db.experiments).find((e) => e.status === "RUNNING");
 
 export function startExperiment(db: LabDB, variable: ExperimentVariable, minSessionsPerArm = 6): Experiment {
-  if (runningExperiment(db)) throw new Error("Another experiment is running. Pause or conclude it first, so conditions don't mix.");
+  if (runningExperiment(db)) throw new Error("Başka bir deney sürüyor. Koşullar karışmasın diye önce onu duraklat ya da bitir.");
   const t = EXPERIMENT_TEMPLATES.find((x) => x.variable === variable);
-  if (!t) throw new Error("Unknown experiment");
+  if (!t) throw new Error("Bilinmeyen deney");
   const exp: Experiment = {
     id: newId("exp"),
     title: t.title,
@@ -83,7 +83,7 @@ export function startExperiment(db: LabDB, variable: ExperimentVariable, minSess
 export function setExperimentStatus(db: LabDB, id: ID, status: Experiment["status"], note?: string) {
   const e = db.experiments[id];
   if (!e) return;
-  if (status === "RUNNING" && runningExperiment(db) && runningExperiment(db)!.id !== id) throw new Error("Another experiment is running.");
+  if (status === "RUNNING" && runningExperiment(db) && runningExperiment(db)!.id !== id) throw new Error("Başka bir deney sürüyor.");
   e.status = status;
   if (status === "CONCLUDED") {
     e.concludedAt = Date.now();
@@ -132,12 +132,12 @@ export function sessionConditions(db: LabDB, sessionId?: ID): Conditions & { exp
 export type Metric = "engagement" | "completion" | "persistence" | "continuation" | "performance" | "retention" | "transfer";
 
 export const METRIC_LABEL: Record<Metric, string> = {
-  engagement: "Engagement index",
-  completion: "Completion",
-  persistence: "Persistence after failure",
-  continuation: "Continuation",
-  performance: "First-try accuracy",
-  retention: "Delayed retention",
+  engagement: "Bağlılık endeksi",
+  completion: "Tamamlama",
+  persistence: "Hatadan sonra sebat",
+  continuation: "Devam etme",
+  performance: "İlk denemede doğruluk",
+  retention: "Gecikmeli kalıcılık",
   transfer: "Transfer",
 };
 
@@ -190,29 +190,29 @@ export function compareExperiment(db: LabDB, expId: ID): Comparison {
     const [a, b] = arms;
     const ra = a.rates[metric], rb = b.rates[metric];
     if (!enoughSessions || ra.value === null || rb.value === null) {
-      findings.push({ metric, leader: null, text: "Not enough data yet" });
+      findings.push({ metric, leader: null, text: "Henüz yeterli veri yok" });
       continue;
     }
     const z = zTwoProportions(ra, rb);
     if (Math.abs(z) >= 1.96 && Math.abs(ra.value - rb.value) >= 0.15) {
       const lead = z > 0 ? a : b;
-      findings.push({ metric, leader: lead.arm.label, text: `Higher with "${lead.arm.label}" (${Math.round(ra.value * 100)}% vs ${Math.round(rb.value * 100)}%)` });
+      findings.push({ metric, leader: lead.arm.label, text: `"${lead.arm.label}" ile daha yüksek (%${Math.round(ra.value * 100)} ve %${Math.round(rb.value * 100)})` });
     } else {
-      findings.push({ metric, leader: null, text: `No reliable difference (${Math.round(ra.value * 100)}% vs ${Math.round(rb.value * 100)}%)` });
+      findings.push({ metric, leader: null, text: `Güvenilir bir fark yok (%${Math.round(ra.value * 100)} ve %${Math.round(rb.value * 100)})` });
     }
   }
   const leads = findings.filter((f) => f.leader);
   let verdict: string;
   if (!enoughSessions) {
-    const need = arms.map((a) => `${Math.max(0, exp.minSessionsPerArm - a.sessions)} more with "${a.arm.label}"`).join(", ");
-    verdict = `Too early to compare. Keep going: ${need}.`;
+    const need = arms.map((a) => `"${a.arm.label}" ile ${Math.max(0, exp.minSessionsPerArm - a.sessions)} oturum daha`).join(", ");
+    verdict = `Karşılaştırmak için henüz erken. Devam: ${need}.`;
   } else if (!leads.length) {
-    verdict = "No reliable difference so far. Both conditions seem to work similarly for you — or the effect is too small to see yet.";
+    verdict = "Şimdilik güvenilir bir fark yok. İki koşul da sende benzer işliyor gibi — ya da etki henüz görülemeyecek kadar küçük.";
   } else {
     const byArm = new Map<string, string[]>();
     for (const f of leads) (byArm.get(f.leader!) ?? byArm.set(f.leader!, []).get(f.leader!)!).push(METRIC_LABEL[f.metric].toLowerCase());
-    verdict = [...byArm.entries()].map(([arm, ms]) => `"${arm}" appears better for ${ms.join(", ")}`).join("; ") +
-      ". This is evidence from your own sessions, not proof — other things changed between sessions too.";
+    verdict = [...byArm.entries()].map(([arm, ms]) => `"${arm}" şu açılardan daha iyi görünüyor: ${ms.join(", ")}`).join("; ") +
+      ". Bu kendi oturumlarından gelen bir kanıt, kesin ispat değil — oturumlar arasında başka şeyler de değişti.";
   }
   return { arms, enoughSessions, findings, verdict };
 }

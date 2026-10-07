@@ -24,15 +24,15 @@ export function AdvisorPanel({ courseId }: { courseId: ID }) {
   return (
     <section className="stack" style={{ gap: 8 }}>
       <div className="row between">
-        <span className="eyebrow">Advisor{aiAdvice ? (offline ? " · offline" : ` · ${db.preferences.aiProvider}`) : ""}</span>
-        {online && <button className="btn ghost small" onClick={ask} disabled={busy}>{busy ? <span className="spinner" /> : "Ask the advisor"}</button>}
+        <span className="eyebrow">Danışman{aiAdvice ? (offline ? " · çevrimdışı" : ` · ${db.preferences.aiProvider}`) : ""}</span>
+        {online && <button className="btn ghost small" onClick={ask} disabled={busy}>{busy ? <span className="spinner" /> : "Danışmana sor"}</button>}
       </div>
-      {advice.length === 0 && <p className="small muted">No suggestions right now.</p>}
+      {advice.length === 0 && <p className="small muted">Şu an öneri yok.</p>}
       {advice.map((a, i) => (
         <div key={i} className={`banner ${TONE[a.tone]} row between nowrap`}>
           <span className="small">{a.text}</span>
           {a.milestoneId && db.milestones[a.milestoneId] && (
-            <button className="btn small" onClick={() => navigate(`/session/${a.milestoneId}`)}>{a.action ?? "Open"}</button>
+            <button className="btn small" onClick={() => navigate(`/session/${a.milestoneId}`)}>{a.action ?? "Aç"}</button>
           )}
         </div>
       ))}

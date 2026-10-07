@@ -13,11 +13,11 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { SummaryPage } from "./pages/SummaryPage";
 
 const NAV: { path: string; label: string; icon: () => ReactNode; match: string[] }[] = [
-  { path: "/", label: "Home", icon: Icon.home, match: ["", "course", "build"] },
-  { path: "/retention", label: "Retention", icon: Icon.memory, match: ["retention"] },
-  { path: "/stats", label: "Statistics", icon: Icon.stats, match: ["stats"] },
-  { path: "/focus", label: "Focus Lab", icon: Icon.flask, match: ["focus"] },
-  { path: "/settings", label: "Settings", icon: Icon.gear, match: ["settings"] },
+  { path: "/", label: "Ana sayfa", icon: Icon.home, match: ["", "course", "build"] },
+  { path: "/retention", label: "Kalıcılık", icon: Icon.memory, match: ["retention"] },
+  { path: "/stats", label: "İstatistik", icon: Icon.stats, match: ["stats"] },
+  { path: "/focus", label: "Odak Lab", icon: Icon.flask, match: ["focus"] },
+  { path: "/settings", label: "Ayarlar", icon: Icon.gear, match: ["settings"] },
 ];
 
 export function App() {
@@ -46,7 +46,7 @@ export function App() {
         <ErrorBoundary key={route.join("/")}>{page}</ErrorBoundary>
       </main>
       {!inSession && (
-        <nav className="nav" aria-label="Main">
+        <nav className="nav" aria-label="Ana menü">
           <div className="nav-inner">
             {NAV.map((n) => (
               <a key={n.path} href={`#${n.path}`} className={n.match.includes(head ?? "") ? "active" : ""} aria-current={n.match.includes(head ?? "") ? "page" : undefined}>

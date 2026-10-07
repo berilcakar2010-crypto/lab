@@ -12,7 +12,7 @@ export interface DrawingStats {
   mouseStrokes: number;
 }
 
-const COLORS = ["#e4e9f0", "#6cb6dd", "#d8aa62", "#79c79a"];
+const COLORS = ["#f3e9e1", "#e28a9a", "#e0b46a", "#9cc5a1"];
 
 /**
  * Stylus-first drawing surface. Pen input draws with pressure; once a pen has
@@ -20,7 +20,7 @@ const COLORS = ["#e4e9f0", "#6cb6dd", "#d8aa62", "#79c79a"];
  * resting on the screen never leaves marks. Without a pen, fingers draw.
  */
 export function DrawingCanvas({
-  height = 340, onChange, onInput, label = "Workspace",
+  height = 340, onChange, onInput, label = "Çalışma alanı",
 }: {
   height?: number;
   onChange?: (stats: DrawingStats, toDataURL: () => string) => void;
@@ -133,19 +133,19 @@ export function DrawingCanvas({
   return (
     <div className="stack" style={{ gap: 6 }}>
       <div className="row between">
-        <span className="small muted">{label}{penSeen.current ? " · pen detected, palm rejection on" : ""}</span>
+        <span className="small muted">{label}{penSeen.current ? " · kalem algılandı, avuç içi engelleme açık" : ""}</span>
         <div className="row nowrap" style={{ gap: 4 }}>
           {COLORS.map((c) => (
-            <button key={c} type="button" aria-label={`Ink ${c}`} onClick={() => { setColor(c); setErase(false); }}
+            <button key={c} type="button" aria-label={`Mürekkep ${c}`} onClick={() => { setColor(c); setErase(false); }}
               style={{ width: 28, height: 28, borderRadius: 99, background: c, border: color === c && !erase ? "2px solid var(--text)" : "2px solid transparent", cursor: "pointer" }} />
           ))}
-          <button type="button" className="btn small" aria-pressed={erase} onClick={() => setErase(!erase)} style={{ borderColor: erase ? "var(--accent)" : undefined }}>Eraser</button>
-          <button type="button" className="btn small" disabled={!count} onClick={() => { strokes.current.pop(); redraw(); emit(); }}>Undo</button>
-          <button type="button" className="btn small ghost" disabled={!count} aria-label="Clear" onClick={() => { strokes.current = []; redraw(); emit(); }}><Icon.close /></button>
+          <button type="button" className="btn small" aria-pressed={erase} onClick={() => setErase(!erase)} style={{ borderColor: erase ? "var(--accent)" : undefined }}>Silgi</button>
+          <button type="button" className="btn small" disabled={!count} onClick={() => { strokes.current.pop(); redraw(); emit(); }}>Geri al</button>
+          <button type="button" className="btn small ghost" disabled={!count} aria-label="Temizle" onClick={() => { strokes.current = []; redraw(); emit(); }}><Icon.close /></button>
         </div>
       </div>
-      <div ref={wrapRef} style={{ borderRadius: 12, border: "1px solid var(--border-strong)", background: "#0d1218", overflow: "hidden",
-        backgroundImage: "radial-gradient(circle, rgba(180,191,204,0.12) 1px, transparent 1px)", backgroundSize: "22px 22px" }}>
+      <div ref={wrapRef} style={{ borderRadius: 12, border: "1px solid var(--border-strong)", background: "#180c10", overflow: "hidden",
+        backgroundImage: "radial-gradient(circle, rgba(226,138,154,0.10) 1px, transparent 1px)", backgroundSize: "22px 22px" }}>
         <canvas
           ref={canvasRef} aria-label={label} role="img"
           style={{ display: "block", touchAction: "none", cursor: erase ? "cell" : "crosshair" }}
@@ -164,7 +164,7 @@ function exportImage(c: HTMLCanvasElement): string {
   out.width = Math.round(c.width * scale);
   out.height = Math.round(c.height * scale);
   const ctx = out.getContext("2d")!;
-  ctx.fillStyle = "#0d1218";
+  ctx.fillStyle = "#180c10";
   ctx.fillRect(0, 0, out.width, out.height);
   ctx.drawImage(c, 0, 0, out.width, out.height);
   return out.toDataURL("image/jpeg", 0.6);

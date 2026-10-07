@@ -34,7 +34,7 @@ describe("Phase 9 — retention", () => {
   it("runs immediate, delayed and transfer checks, expands intervals and supports review recovery", () => {
     const db = createEmptyDB();
     const { courseId } = importCurriculum(db, structuredClone(mechanicsPack), { source: { kind: "SEED", text: "" }, generatedBy: "seed" });
-    const vec = courseMilestones(db, courseId).find((m) => m.title.startsWith("Resolve a vector"))!;
+    const vec = courseMilestones(db, courseId).find((m) => m.title.startsWith("Bir vektörü bileşenlerine"))!;
     const s = ensureSession(db, courseId);
     openMilestone(db, s.id, vec.id);
     const mastery = milestoneQuestions(db, vec.id).filter((q) => q.purpose === "MASTERY");
@@ -87,7 +87,7 @@ describe("Phase 9 — personal experiments", () => {
   it("allows one running experiment, alternates arms and exposes conditions", () => {
     const db = createEmptyDB();
     const exp = startExperiment(db, "MILESTONE_SIZE", 3);
-    expect(() => startExperiment(db, "STYLUS")).toThrow(/Another experiment/);
+    expect(() => startExperiment(db, "STYLUS")).toThrow(/Başka bir deney/);
     const arms: string[] = [];
     for (let i = 0; i < 6; i++) {
       const s = ensureSession(db, undefined, tick(3_600_000));
@@ -127,7 +127,7 @@ describe("Phase 9 — personal experiments", () => {
     runSession(() => false, 4);
     const early = compareExperiment(db, exp.id);
     expect(early.enoughSessions).toBe(false);
-    expect(early.verdict).toMatch(/Too early/);
+    expect(early.verdict).toMatch(/henüz erken/);
     expect(early.findings.every((f) => f.leader === null)).toBe(true);
 
     runSession((i) => i % 5 === 0, 16);
@@ -135,8 +135,8 @@ describe("Phase 9 — personal experiments", () => {
     expect(c.enoughSessions).toBe(true);
     const cont = c.findings.find((f) => f.metric === "continuation")!;
     expect(cont.leader).toBe(exp.arms[0].label);
-    expect(c.verdict).toMatch(/appears better/);
-    expect(c.verdict).toMatch(/not proof/);
+    expect(c.verdict).toMatch(/daha iyi görünüyor/);
+    expect(c.verdict).toMatch(/kesin ispat değil/);
   });
 
   it("does not assign when experiments are disabled", () => {

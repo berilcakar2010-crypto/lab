@@ -37,7 +37,7 @@ export function Sheet({ title, onClose, children, wide }: { title: string; onClo
       <div className="sheet" style={wide ? { maxWidth: 860 } : undefined} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={title}>
         <div className="row between nowrap" style={{ marginBottom: 16 }}>
           <h2>{title}</h2>
-          <button className="btn ghost small" onClick={onClose} aria-label="Close"><Icon.close /></button>
+          <button className="btn ghost small" onClick={onClose} aria-label="Kapat"><Icon.close /></button>
         </div>
         {children}
       </div>
@@ -47,17 +47,17 @@ export function Sheet({ title, onClose, children, wide }: { title: string; onClo
 }
 
 export const STATUS_LABEL: Record<MilestoneStatus, string> = {
-  LOCKED: "Locked", AVAILABLE: "Available", ACTIVE: "Active", ATTEMPTED: "In progress", MASTERED: "Mastered",
-  NEEDS_REVIEW: "Needs review", SKIPPED: "Skipped", OPTIONAL: "Optional", BOSS: "Boss",
+  LOCKED: "Kilitli", AVAILABLE: "Açık", ACTIVE: "Etkin", ATTEMPTED: "Devam ediyor", MASTERED: "Ustalaşıldı",
+  NEEDS_REVIEW: "Tekrar gerek", SKIPPED: "Atlandı", OPTIONAL: "İsteğe bağlı", BOSS: "Final",
 };
 
 export const KIND_LABEL: Record<RecommendationKind, string> = {
-  CONTINUE: "Continue", REVIEW: "Review", PRACTICE: "Practice", CHALLENGE: "Challenge", EXPLORE: "Explore", BOSS: "Boss",
+  CONTINUE: "Devam", REVIEW: "Tekrar", PRACTICE: "Alıştırma", CHALLENGE: "Meydan okuma", EXPLORE: "Keşfet", BOSS: "Final",
 };
 
 export const TYPE_LABEL: Record<MilestoneType, string> = {
-  CONCEPT: "Concept", PRACTICE: "Practice", APPLICATION: "Application", DERIVATION: "Derivation", PROOF: "Proof",
-  PROBLEM_SOLVING: "Problem solving", EXPERIMENT: "Experiment", PROJECT: "Project", REVIEW: "Review", CHALLENGE: "Challenge", BOSS: "Boss",
+  CONCEPT: "Kavram", PRACTICE: "Alıştırma", APPLICATION: "Uygulama", DERIVATION: "Türetme", PROOF: "İspat",
+  PROBLEM_SOLVING: "Problem çözme", EXPERIMENT: "Deney", PROJECT: "Proje", REVIEW: "Tekrar", CHALLENGE: "Meydan okuma", BOSS: "Final",
 };
 
 export const StatusChip = ({ status }: { status: MilestoneStatus }) => <span className={`chip s-${status}`}>{STATUS_LABEL[status]}</span>;
@@ -78,11 +78,11 @@ export function Empty({ title, children }: { title: string; children?: ReactNode
   return <div className="empty"><h3>{title}</h3>{children}</div>;
 }
 
-export const minutes = (n: number) => (n >= 90 ? `${Math.round((n / 60) * 10) / 10} h` : `${Math.round(n)} min`);
+export const minutes = (n: number) => (n >= 90 ? `${String(Math.round((n / 60) * 10) / 10).replace(".", ",")} sa` : `${Math.round(n)} dk`);
 
 export function Difficulty({ value }: { value: number }) {
   return (
-    <span className="row nowrap" style={{ gap: 3 }} aria-label={`Difficulty ${value} of 5`} title={`Difficulty ${value}/5`}>
+    <span className="row nowrap" style={{ gap: 3 }} aria-label={`Zorluk ${value}/5`} title={`Zorluk ${value}/5`}>
       {[1, 2, 3, 4, 5].map((i) => (
         <span key={i} style={{ width: 6, height: 6, borderRadius: 2, background: i <= value ? "var(--text-2)" : "var(--border-strong)" }} />
       ))}

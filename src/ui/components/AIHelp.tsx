@@ -44,7 +44,7 @@ export function AIHelp({ question: q, sessionId, answerText, attempts, lastFeedb
     setBusy(true);
     log("FEEDBACK_GENERATOR");
     const res = await diagnoseMistake(aiHost, q, answerText, lastFeedback, sessionId);
-    setNote({ title: "Why it might be wrong", text: res.value, offline: res.fallbackUsed });
+    setNote({ title: "Neden yanlış olabilir?", text: res.value, offline: res.fallbackUsed });
     setBusy(false);
   };
 
@@ -52,14 +52,14 @@ export function AIHelp({ question: q, sessionId, answerText, attempts, lastFeedb
     setBusy(true);
     log("TUTOR");
     const res = await explainConcept(aiHost, store.state, q, sessionId);
-    setNote({ title: "The idea behind it", text: res.value, offline: res.fallbackUsed });
+    setNote({ title: "Arkasındaki fikir", text: res.value, offline: res.fallbackUsed });
     setBusy(false);
   };
 
   if (!open) {
     return (
       <button type="button" className="btn ghost small" style={{ alignSelf: "flex-start" }} onClick={() => setOpen(true)}>
-        ✦ Guide{online ? "" : " (offline)"}
+        ✦ Rehber{online ? "" : " (çevrimdışı)"}
       </button>
     );
   }
@@ -67,10 +67,10 @@ export function AIHelp({ question: q, sessionId, answerText, attempts, lastFeedb
   return (
     <div className="card raised stack" style={{ gap: 10 }}>
       <div className="row between">
-        <span className="eyebrow">Guide · {online ? db.preferences.aiProvider : "offline"}</span>
-        <button type="button" className="btn ghost small" onClick={() => setOpen(false)}>Hide</button>
+        <span className="eyebrow">Rehber · {online ? db.preferences.aiProvider : "çevrimdışı"}</span>
+        <button type="button" className="btn ghost small" onClick={() => setOpen(false)}>Gizle</button>
       </div>
-      <p className="tiny muted">The guide asks questions and explains ideas. It won't hand you the answer — that's your win to earn.</p>
+      <p className="tiny muted">Rehber soru sorar ve fikirleri açıklar. Cevabı eline vermez — o kazanım senin.</p>
       {chat.map((t, i) => (
         <div key={i} className="small" style={{ alignSelf: t.role === "student" ? "flex-end" : "flex-start", maxWidth: "88%", background: t.role === "student" ? "var(--accent-soft)" : "var(--raised-2)", borderRadius: 12, padding: "8px 12px" }}>
           <MathText text={t.text} />
@@ -78,19 +78,19 @@ export function AIHelp({ question: q, sessionId, answerText, attempts, lastFeedb
       ))}
       {note && (
         <div className="banner info small rise">
-          <strong>{note.title}{note.offline ? " (offline)" : ""}</strong>
+          <strong>{note.title}{note.offline ? " (çevrimdışı)" : ""}</strong>
           <MathText text={note.text} style={{ marginTop: 4 }} />
         </div>
       )}
       <div className="row" style={{ gap: 6 }}>
-        <button type="button" className="btn small" disabled={busy} onClick={() => ask()}>{busy ? <span className="spinner" /> : "Ask me a guiding question"}</button>
-        {wrong && <button type="button" className="btn small" disabled={busy} onClick={diagnose}>Why was it wrong?</button>}
-        {attempts > 0 && <button type="button" className="btn small" disabled={busy} onClick={explain}>Explain the idea</button>}
+        <button type="button" className="btn small" disabled={busy} onClick={() => ask()}>{busy ? <span className="spinner" /> : "Bana yol gösteren bir soru sor"}</button>
+        {wrong && <button type="button" className="btn small" disabled={busy} onClick={diagnose}>Neden yanlıştı?</button>}
+        {attempts > 0 && <button type="button" className="btn small" disabled={busy} onClick={explain}>Fikri açıkla</button>}
       </div>
       {chat.length > 0 && (
         <form className="row nowrap" onSubmit={(e) => { e.preventDefault(); if (msg.trim()) ask(msg.trim()); }}>
-          <input className="input" placeholder="Reply to the guide…" value={msg} onChange={(e) => setMsg(e.target.value)} aria-label="Reply to the guide" />
-          <button className="btn small" disabled={busy || !msg.trim()}>Send</button>
+          <input className="input" placeholder="Rehbere cevap yaz…" value={msg} onChange={(e) => setMsg(e.target.value)} aria-label="Rehbere cevap" />
+          <button className="btn small" disabled={busy || !msg.trim()}>Gönder</button>
         </form>
       )}
     </div>

@@ -42,20 +42,20 @@ export function CalibrationSheet({ courseId, onClose }: { courseId: ID; onClose:
   const apply = () => {
     if (!result) return;
     act((d) => applyCalibration(d, courseId, result, skipKnown));
-    toast(result.startHereId ? "Starting point set. You can always choose differently." : "Calibration saved.");
+    toast(result.startHereId ? "Başlangıç noktası belirlendi. İstediğin zaman farklı seçebilirsin." : "Ayarlama kaydedildi.");
     onClose();
   };
 
   return (
-    <Sheet title="Find your starting point" onClose={onClose}>
+    <Sheet title="Başlangıç noktanı bul" onClose={onClose}>
       {step === "rate" && (
         <div className="stack">
-          <p className="text-2">How familiar is each part? This only shapes the recommendation — nothing is locked or marked as mastered.</p>
+          <p className="text-2">Her bölüm sana ne kadar tanıdık? Bu yalnızca öneriyi şekillendirir — hiçbir şey kilitlenmez ya da ustalaşılmış sayılmaz.</p>
           {units.map((u) => (
             <div key={u.id} className="card raised stack" style={{ gap: 8 }}>
               <strong>{u.title}</strong>
               <div className="row" style={{ gap: 6 }}>
-                {(["New to me", "Some exposure", "Confident"] as const).map((label, i) => (
+                {(["Yeni", "Biraz biliyorum", "Eminim"] as const).map((label, i) => (
                   <button key={label} className="btn small" onClick={() => setRatings({ ...ratings, [u.id]: i as 0 | 1 | 2 })}
                     style={{ borderColor: ratings[u.id] === i ? "var(--accent)" : undefined, background: ratings[u.id] === i ? "var(--accent-soft)" : undefined }}>{label}</button>
                 ))}
@@ -63,35 +63,35 @@ export function CalibrationSheet({ courseId, onClose }: { courseId: ID; onClose:
             </div>
           ))}
           <div className="row">
-            <button className="btn" onClick={() => finish({})}>Skip the questions</button>
+            <button className="btn" onClick={() => finish({})}>Soruları atla</button>
             <button className="btn primary grow" onClick={() => (plan.length ? setStep("diagnose") : finish({}))}>
-              {plan.length ? `Answer ${plan.length} quick diagnostic questions` : "See recommendation"}
+              {plan.length ? `${plan.length} kısa tanılama sorusunu cevapla` : "Öneriyi gör"}
             </button>
           </div>
         </div>
       )}
       {step === "diagnose" && plan[index] && (
         <div className="stack">
-          <div className="row between"><span className="eyebrow">Diagnostic {index + 1} / {plan.length}</span><span className="small muted">{db.milestones[plan[index].milestoneId]?.title}</span></div>
+          <div className="row between"><span className="eyebrow">Tanılama {index + 1} / {plan.length}</span><span className="small muted">{db.milestones[plan[index].milestoneId]?.title}</span></div>
           <MathText className="serif" style={{ fontSize: "1.1rem" }} text={db.questions[plan[index].questionId].prompt} />
           <AnswerInput question={db.questions[plan[index].questionId]} value={answer} onChange={setAnswer} onSubmit={() => answer && submitDiag()} />
           <div className="row">
-            <button className="btn" onClick={() => submitDiag(true)}>I don't know yet</button>
-            <button className="btn primary grow" disabled={!answer} onClick={() => submitDiag()}>Next</button>
+            <button className="btn" onClick={() => submitDiag(true)}>Henüz bilmiyorum</button>
+            <button className="btn primary grow" disabled={!answer} onClick={() => submitDiag()}>Sonraki</button>
           </div>
-          <p className="tiny muted">No feedback here on purpose — this only estimates where to begin.</p>
+          <p className="tiny muted">Burada bilerek geri bildirim yok — bu sadece nereden başlayacağını tahmin eder.</p>
         </div>
       )}
       {step === "result" && result && (
         <div className="stack">
           {result.startHereId ? (
             <div className="card accent stack" style={{ gap: 6 }}>
-              <span className="eyebrow">Start here</span>
+              <span className="eyebrow">Buradan başla</span>
               <h3>{db.milestones[result.startHereId]?.title}</h3>
               <p className="small text-2">{db.milestones[result.startHereId]?.learningObjective}</p>
             </div>
           ) : (
-            <div className="banner ok">Everything appears familiar.</div>
+            <div className="banner ok">Her şey tanıdık görünüyor.</div>
           )}
           <ul className="small text-2" style={{ margin: 0, paddingLeft: 18 }}>
             {result.rationale.map((r, i) => <li key={i}>{r}</li>)}
@@ -99,12 +99,12 @@ export function CalibrationSheet({ courseId, onClose }: { courseId: ID; onClose:
           {result.likelyKnown.length > 0 && (
             <label className="row nowrap card raised" style={{ cursor: "pointer" }}>
               <input type="checkbox" checked={skipKnown} onChange={(e) => setSkipKnown(e.target.checked)} style={{ width: 20, height: 20 }} />
-              <span className="small">Skip the {result.likelyKnown.length} milestones that look familiar. They stay in the map as <em>skipped</em> — not mastered — and you can return to them anytime.</span>
+              <span className="small">Tanıdık görünen {result.likelyKnown.length} adımı atla. Haritada <em>atlandı</em> olarak kalırlar — ustalaşılmış değil — ve istediğin zaman geri dönebilirsin.</span>
             </label>
           )}
           <div className="row">
-            <button className="btn" onClick={onClose}>Not now</button>
-            <button className="btn primary grow" onClick={apply}>Use this starting point</button>
+            <button className="btn" onClick={onClose}>Şimdi değil</button>
+            <button className="btn primary grow" onClick={apply}>Bu başlangıç noktasını kullan</button>
           </div>
         </div>
       )}

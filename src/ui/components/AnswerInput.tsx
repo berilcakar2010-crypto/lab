@@ -37,8 +37,8 @@ export function AnswerInput({ question: q, value, onChange, disabled, onSubmit }
       return (
         <div className="row nowrap">
           <input
-            className="input mono" inputMode="decimal" autoComplete="off" placeholder="Your answer, e.g. 8.66"
-            aria-label="Numeric answer" disabled={disabled}
+            className="input mono" inputMode="decimal" autoComplete="off" placeholder="Cevabın, örn. 8,66"
+            aria-label="Sayısal cevap" disabled={disabled}
             value={value?.kind === "number" ? value.text : ""}
             onChange={(e) => onChange({ kind: "number", text: e.target.value })}
             onKeyDown={(e) => e.key === "Enter" && onSubmit?.()}
@@ -50,8 +50,8 @@ export function AnswerInput({ question: q, value, onChange, disabled, onSubmit }
       return (
         <div className="stack" style={{ gap: 6 }}>
           <input
-            className="input mono" autoComplete="off" autoCapitalize="off" spellCheck={false} placeholder="e.g. 6*t + 2"
-            aria-label="Expression answer" disabled={disabled}
+            className="input mono" autoComplete="off" autoCapitalize="off" spellCheck={false} placeholder="örn. 6*t + 2"
+            aria-label="İfade cevabı" disabled={disabled}
             value={value?.kind === "expression" ? value.text : ""}
             onChange={(e) => onChange({ kind: "expression", text: e.target.value })}
             onKeyDown={(e) => e.key === "Enter" && onSubmit?.()}
@@ -66,7 +66,7 @@ export function AnswerInput({ question: q, value, onChange, disabled, onSubmit }
     default:
       return (
         <textarea
-          className="textarea" placeholder="Write your answer. Show your reasoning." aria-label="Written answer" disabled={disabled}
+          className="textarea" placeholder="Cevabını yaz. Akıl yürütmeni göster." aria-label="Yazılı cevap" disabled={disabled}
           value={value?.kind === "text" ? value.text : ""}
           onChange={(e) => onChange({ kind: "text", text: e.target.value, drawing: value?.kind === "text" ? value.drawing : undefined })}
         />
@@ -107,7 +107,7 @@ function OrderInput({ q, value, onChange, disabled }: { q: Question; value: stri
     onChange(next);
   };
   return (
-    <ol className="stack" style={{ gap: 8, padding: 0, margin: 0, listStyle: "none" }} aria-label="Drag or use arrows to reorder">
+    <ol className="stack" style={{ gap: 8, padding: 0, margin: 0, listStyle: "none" }} aria-label="Sıralamak için sürükle ya da okları kullan">
       {items.map((item, i) => (
         <li
           key={item}
@@ -120,12 +120,12 @@ function OrderInput({ q, value, onChange, disabled }: { q: Question; value: stri
         >
           <span className="mono muted" style={{ width: 20 }}>{i + 1}</span>
           <span className="grow">{item}</span>
-          <button type="button" className="btn ghost small" aria-label="Move up" disabled={disabled || i === 0} onClick={() => move(i, i - 1)}><Icon.up /></button>
-          <button type="button" className="btn ghost small" aria-label="Move down" disabled={disabled || i === items.length - 1} onClick={() => move(i, i + 1)}><Icon.down /></button>
+          <button type="button" className="btn ghost small" aria-label="Yukarı taşı" disabled={disabled || i === 0} onClick={() => move(i, i - 1)}><Icon.up /></button>
+          <button type="button" className="btn ghost small" aria-label="Aşağı taşı" disabled={disabled || i === items.length - 1} onClick={() => move(i, i + 1)}><Icon.down /></button>
         </li>
       ))}
       {value === null && !disabled && (
-        <li><button type="button" className="btn ghost small" onClick={() => onChange(items)}>This order is my answer</button></li>
+        <li><button type="button" className="btn ghost small" onClick={() => onChange(items)}>Cevabım bu sıralama</button></li>
       )}
     </ol>
   );

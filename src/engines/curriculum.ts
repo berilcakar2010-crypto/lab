@@ -50,7 +50,7 @@ export function orderedMilestones(db: LabDB, courseId: ID): Milestone[] {
 
 export function createSubject(db: LabDB, input: { name: string; description?: string }): Subject {
   const name = input.name.trim();
-  if (!name) throw new CurriculumError("Subject name is required");
+  if (!name) throw new CurriculumError("Alan adı gerekli");
   const existing = Object.values(db.subjects).find((s) => s.name.toLowerCase() === name.toLowerCase());
   if (existing) return existing;
   const s: Subject = { id: newId("subj"), name, description: input.description ?? "", createdAt: Date.now() };
@@ -69,8 +69,8 @@ export function createCourse(
     generatedBy: string;
   },
 ): { course: Course; curriculum: Curriculum } {
-  if (!db.subjects[input.subjectId]) throw new CurriculumError("Unknown subject");
-  if (!input.title.trim()) throw new CurriculumError("Course title is required");
+  if (!db.subjects[input.subjectId]) throw new CurriculumError("Bilinmeyen alan");
+  if (!input.title.trim()) throw new CurriculumError("Ders adı gerekli");
   const now = Date.now();
   const courseId = newId("course");
   const curriculum: Curriculum = {
@@ -108,7 +108,7 @@ export function addUnit(db: LabDB, courseId: ID, title: string, summary = ""): U
 
 export function addTopic(db: LabDB, unitId: ID, title: string): Topic {
   const unit = db.units[unitId];
-  if (!unit) throw new CurriculumError("Unknown unit");
+  if (!unit) throw new CurriculumError("Bilinmeyen ünite");
   const t: Topic = { id: newId("topic"), courseId: unit.courseId, unitId, title, order: unitTopics(db, unitId).length };
   db.topics[t.id] = t;
   return t;
@@ -116,7 +116,7 @@ export function addTopic(db: LabDB, unitId: ID, title: string): Topic {
 
 export function addConcept(db: LabDB, topicId: ID, title: string, description = ""): Concept {
   const topic = db.topics[topicId];
-  if (!topic) throw new CurriculumError("Unknown topic");
+  if (!topic) throw new CurriculumError("Bilinmeyen konu");
   const c: Concept = { id: newId("concept"), courseId: topic.courseId, topicId, title, description };
   db.concepts[c.id] = c;
   return c;
@@ -126,8 +126,8 @@ export function defaultMastery(type: MilestoneType, difficulty: number): Mastery
   const heavy = type === "BOSS" || type === "CHALLENGE" || type === "PROJECT";
   return {
     description: heavy
-      ? "Solve the challenge correctly without a full solution reveal."
-      : "Answer the mastery questions correctly without needing the full solution.",
+      ? "Tam çözümü açmadan meydan okumayı doğru çöz."
+      : "Ustalık sorularını tam çözüme bakmadan doğru cevapla.",
     requiredCorrect: heavy ? 1 : difficulty >= 4 ? 3 : 2,
     requireUnassisted: true,
     minScore: 0.7,
@@ -163,7 +163,7 @@ export type MilestoneInput = Partial<Omit<Milestone, "id" | "courseId" | "subjec
 
 export function addMilestone(db: LabDB, input: MilestoneInput): Milestone {
   const topic = db.topics[input.topicId];
-  if (!topic) throw new CurriculumError("Unknown topic");
+  if (!topic) throw new CurriculumError("Bilinmeyen konu");
   const course = requireCourse(db, topic.courseId);
   const type = input.milestoneType ?? "PRACTICE";
   const difficulty = clamp(Math.round(input.difficulty ?? 2), 1, 5);
@@ -203,7 +203,7 @@ export function addMilestone(db: LabDB, input: MilestoneInput): Milestone {
 }
 
 export function addQuestion(db: LabDB, q: Omit<Question, "id"> & { id?: ID }): Question {
-  if (!db.milestones[q.milestoneId]) throw new CurriculumError("Unknown milestone");
+  if (!db.milestones[q.milestoneId]) throw new CurriculumError("Bilinmeyen adım");
   const question: Question = { ...q, id: q.id ?? newId("q") };
   db.questions[question.id] = question;
   return question;
@@ -216,12 +216,12 @@ export function addQuestion(db: LabDB, q: Omit<Question, "id"> & { id?: ID }): Q
 export function connectPrerequisite(db: LabDB, milestoneId: ID, prereqId: ID) {
   const m = db.milestones[milestoneId];
   const p = db.milestones[prereqId];
-  if (!m || !p) throw new CurriculumError("Unknown milestone");
-  if (m.courseId !== p.courseId) throw new CurriculumError("Prerequisites must be in the same course");
-  if (milestoneId === prereqId) throw new CurriculumError("A milestone cannot require itself");
+  if (!m || !p) throw new CurriculumError("Bilinmeyen adım");
+  if (m.courseId !== p.courseId) throw new CurriculumError("Ön koşullar aynı derste olmalı");
+  if (milestoneId === prereqId) throw new CurriculumError("Bir adım kendisini ön koşul alamaz");
   if (m.prerequisites.includes(prereqId)) return;
   if (dependsOn(prereqMap(db, m.courseId), prereqId, milestoneId)) {
-    throw new CurriculumError(`"${p.title}" already depends on "${m.title}"; this would create a loop`);
+    throw new CurriculumError(`"${p.title}" zaten "${m.title}" adımına bağlı; bu bir döngü oluşturur`);
   }
   m.prerequisites.push(prereqId);
   if (!p.nextMilestones.includes(milestoneId)) p.nextMilestones.push(milestoneId);
@@ -257,12 +257,12 @@ export type MilestonePatch = Partial<
 
 export function updateMilestone(db: LabDB, id: ID, patch: MilestonePatch): Milestone {
   const m = db.milestones[id];
-  if (!m) throw new CurriculumError("Unknown milestone");
-  if (patch.title !== undefined && !patch.title.trim()) throw new CurriculumError("Title cannot be empty");
+  if (!m) throw new CurriculumError("Bilinmeyen adım");
+  if (patch.title !== undefined && !patch.title.trim()) throw new CurriculumError("Başlık boş olamaz");
   Object.assign(m, patch);
   if (patch.topicId) {
     const t = db.topics[patch.topicId];
-    if (!t || t.courseId !== m.courseId) throw new CurriculumError("Topic must belong to the same course");
+    if (!t || t.courseId !== m.courseId) throw new CurriculumError("Konu aynı derse ait olmalı");
     m.unitId = t.unitId;
   }
   m.difficulty = clamp(Math.round(m.difficulty), 1, 5);
@@ -303,7 +303,7 @@ export function deleteMilestone(db: LabDB, id: ID) {
 /** Move a milestone to a new position in the course's display order. */
 export function reorderMilestone(db: LabDB, id: ID, toIndex: number) {
   const m = db.milestones[id];
-  if (!m) throw new CurriculumError("Unknown milestone");
+  if (!m) throw new CurriculumError("Bilinmeyen adım");
   const list = courseMilestones(db, m.courseId).filter((x) => x.id !== id);
   list.splice(clamp(toIndex, 0, list.length), 0, m);
   list.forEach((x, i) => (x.order = i));
@@ -326,8 +326,8 @@ export interface SplitPart {
  */
 export function splitMilestone(db: LabDB, id: ID, parts: SplitPart[]): Milestone[] {
   const m = db.milestones[id];
-  if (!m) throw new CurriculumError("Unknown milestone");
-  if (parts.length < 2) throw new CurriculumError("Split needs at least two parts");
+  if (!m) throw new CurriculumError("Bilinmeyen adım");
+  if (parts.length < 2) throw new CurriculumError("Bölmek için en az iki parça gerekli");
   const dependents = courseMilestones(db, m.courseId).filter((d) => d.prerequisites.includes(id));
   const share = Math.max(2, Math.round(m.estimatedDuration / parts.length));
 
@@ -383,14 +383,14 @@ export function splitMilestone(db: LabDB, id: ID, parts: SplitPart[]): Milestone
  */
 export function mergeMilestones(db: LabDB, ids: ID[], title?: string): Milestone {
   const unique = [...new Set(ids)];
-  if (unique.length < 2) throw new CurriculumError("Select at least two milestones to merge");
+  if (unique.length < 2) throw new CurriculumError("Birleştirmek için en az iki adım seç");
   const ms = unique.map((id) => {
     const m = db.milestones[id];
-    if (!m) throw new CurriculumError("Unknown milestone");
+    if (!m) throw new CurriculumError("Bilinmeyen adım");
     return m;
   });
   const courseId = ms[0].courseId;
-  if (ms.some((m) => m.courseId !== courseId)) throw new CurriculumError("Milestones must be in the same course");
+  if (ms.some((m) => m.courseId !== courseId)) throw new CurriculumError("Adımlar aynı derste olmalı");
   const keep = ms[0];
   const merged = new Set(unique);
   const prereqs = new Set<ID>();
@@ -463,18 +463,18 @@ export function validateCourse(db: LabDB, courseId: ID): ValidationIssue[] {
   for (const m of ms) {
     for (const p of m.prerequisites) {
       const pm = db.milestones[p];
-      if (!pm) issues.push({ level: "error", message: `"${m.title}" requires a missing milestone`, milestoneId: m.id });
-      else if (pm.courseId !== courseId) issues.push({ level: "error", message: `"${m.title}" requires a milestone from another course`, milestoneId: m.id });
+      if (!pm) issues.push({ level: "error", message: `"${m.title}" eksik bir adıma bağlı`, milestoneId: m.id });
+      else if (pm.courseId !== courseId) issues.push({ level: "error", message: `"${m.title}" başka bir dersteki adıma bağlı`, milestoneId: m.id });
     }
-    if (!db.topics[m.topicId]) issues.push({ level: "error", message: `"${m.title}" has no topic`, milestoneId: m.id });
-    if (m.masteredAt && m.skippedAt) issues.push({ level: "warning", message: `"${m.title}" is both mastered and skipped`, milestoneId: m.id });
+    if (!db.topics[m.topicId]) issues.push({ level: "error", message: `"${m.title}" bir konuya bağlı değil`, milestoneId: m.id });
+    if (m.masteredAt && m.skippedAt) issues.push({ level: "warning", message: `"${m.title}" hem ustalaşılmış hem atlanmış`, milestoneId: m.id });
   }
   const cycle = findCycle(prereqMap(db, courseId));
   if (cycle) {
-    issues.push({ level: "error", message: `Prerequisite loop: ${cycle.map((id) => db.milestones[id]?.title).join(" → ")}` });
+    issues.push({ level: "error", message: `Ön koşul döngüsü: ${cycle.map((id) => db.milestones[id]?.title).join(" → ")}` });
   }
   if (ms.length && !ms.some((m) => m.prerequisites.length === 0)) {
-    issues.push({ level: "error", message: "No milestone can be started: every milestone has prerequisites" });
+    issues.push({ level: "error", message: "Hiçbir adıma başlanamıyor: her adımın ön koşulu var" });
   }
   return issues;
 }
@@ -491,7 +491,7 @@ export function assertValidCourse(db: LabDB, courseId: ID) {
 
 function requireCourse(db: LabDB, courseId: ID): Course {
   const c = db.courses[courseId];
-  if (!c) throw new CurriculumError("Unknown course");
+  if (!c) throw new CurriculumError("Bilinmeyen ders");
   return c;
 }
 

@@ -44,8 +44,8 @@ export function evaluateAuto(q: Question, a: Answer): Evaluation {
     case "choice": {
       const ok = a.index === q.correctChoice;
       return ok
-        ? { correct: true, score: 1, feedback: fb("CORRECT", "Correct.") }
-        : { correct: false, score: 0, feedback: fb("INCORRECT", `Not this one. Think about why "${q.choices?.[a.index] ?? ""}" is tempting — and what it misses.`, ["CONCEPTUAL"]) };
+        ? { correct: true, score: 1, feedback: fb("CORRECT", "Doğru.") }
+        : { correct: false, score: 0, feedback: fb("INCORRECT", `Bu değil. "${q.choices?.[a.index] ?? ""}" neden cazip geliyor — ve neyi gözden kaçırıyor?`, ["CONCEPTUAL"]) };
     }
     case "number":
       return evaluateNumber(q, a.text);
@@ -53,14 +53,14 @@ export function evaluateAuto(q: Question, a: Answer): Evaluation {
       return evaluateExpression(q, a.text);
     case "order": {
       const ref = q.orderItems ?? [];
-      if (a.items.length !== ref.length) return { correct: false, score: 0, feedback: fb("INCORRECT", "Place every step.", ["INCOMPLETE_EXPLANATION"]) };
+      if (a.items.length !== ref.length) return { correct: false, score: 0, feedback: fb("INCORRECT", "Her adımı yerleştir.", ["INCOMPLETE_EXPLANATION"]) };
       let pairs = 0;
       for (let i = 0; i + 1 < a.items.length; i++) if (ref.indexOf(a.items[i]) < ref.indexOf(a.items[i + 1])) pairs++;
       const exact = a.items.every((x, i) => x === ref[i]);
       const score = exact ? 1 : pairs / Math.max(1, ref.length - 1);
       return exact
-        ? { correct: true, score: 1, feedback: fb("CORRECT", "Correct order.") }
-        : { correct: false, score, feedback: fb(score >= 0.6 ? "PARTIAL" : "INCORRECT", `${pairs} of ${ref.length - 1} neighbouring steps are in the right order. Which step must logically come first?`, ["PROCEDURAL"]) };
+        ? { correct: true, score: 1, feedback: fb("CORRECT", "Sıralama doğru.") }
+        : { correct: false, score, feedback: fb(score >= 0.6 ? "PARTIAL" : "INCORRECT", `${ref.length - 1} komşu adımdan ${pairs} tanesi doğru sırada. Mantıksal olarak hangi adım önce gelmeli?`, ["PROCEDURAL"]) };
     }
     case "classify": {
       const items = q.classification?.items ?? [];
@@ -68,60 +68,60 @@ export function evaluateAuto(q: Question, a: Answer): Evaluation {
       const score = items.length ? right / items.length : 0;
       const wrong = items.filter((i) => a.map[i.text] !== i.category).map((i) => `"${i.text}"`);
       return score === 1
-        ? { correct: true, score, feedback: fb("CORRECT", "All classified correctly.") }
-        : { correct: false, score, feedback: fb(score >= 0.5 ? "PARTIAL" : "INCORRECT", `${right}/${items.length} correct. Reconsider ${wrong.slice(0, 3).join(", ")}.`, ["CONCEPTUAL"]) };
+        ? { correct: true, score, feedback: fb("CORRECT", "Hepsi doğru sınıflandırıldı.") }
+        : { correct: false, score, feedback: fb(score >= 0.5 ? "PARTIAL" : "INCORRECT", `${right}/${items.length} doğru. Şunları yeniden düşün: ${wrong.slice(0, 3).join(", ")}.`, ["CONCEPTUAL"]) };
     }
     case "text":
-      return { correct: null, score: 0, feedback: fb("UNGRADED", "Compare your answer with the rubric.") };
+      return { correct: null, score: 0, feedback: fb("UNGRADED", "Cevabını değerlendirme ölçütleriyle karşılaştır.") };
   }
 }
 
 function evaluateNumber(q: Question, text: string): Evaluation {
   const ref = q.numeric!;
   const v = evalNumber(text);
-  if (v === null) return { correct: false, score: 0, feedback: fb("INCORRECT", "I couldn't read a number there. Enter a value like 8.66 or 3/4 (units optional).", ["CARELESS"]) };
+  if (v === null) return { correct: false, score: 0, feedback: fb("INCORRECT", "Burada bir sayı okuyamadım. 8,66 veya 3/4 gibi bir değer gir (birim isteğe bağlı).", ["CARELESS"]) };
   const tol = ref.value === 0 ? ref.tolerance : Math.abs(ref.value) * ref.tolerance;
   const err = Math.abs(v - ref.value);
-  if (err <= Math.max(tol, 1e-9)) return { correct: true, score: 1, feedback: fb("CORRECT", "Correct.", [], { successfulStrategy: undefined }) };
+  if (err <= Math.max(tol, 1e-9)) return { correct: true, score: 1, feedback: fb("CORRECT", "Doğru.", [], { successfulStrategy: undefined }) };
   if (ref.value !== 0) {
     if (Math.abs(v + ref.value) <= tol) {
-      return { correct: false, score: 0.3, feedback: fb("INCORRECT", "The magnitude is right but the sign is not. Check your choice of positive direction.", ["PROCEDURAL"]) };
+      return { correct: false, score: 0.3, feedback: fb("INCORRECT", "Büyüklük doğru ama işaret değil. Pozitif yön seçimini kontrol et.", ["PROCEDURAL"]) };
     }
     const ratio = v / ref.value;
     const log10 = Math.log10(Math.abs(ratio));
     if (Math.abs(log10 - Math.round(log10)) < 0.01 && Math.round(log10) !== 0) {
-      return { correct: false, score: 0.2, feedback: fb("INCORRECT", "Off by a power of ten — check units and decimal places.", ["CARELESS"]) };
+      return { correct: false, score: 0.2, feedback: fb("INCORRECT", "Onun kuvveti kadar sapma var — birimleri ve ondalık basamakları kontrol et.", ["CARELESS"]) };
     }
     if (Math.abs(ratio - 2) < 0.02 || Math.abs(ratio - 0.5) < 0.01) {
-      return { correct: false, score: 0.2, feedback: fb("INCORRECT", "Off by a factor of 2 — check for a missing ½ or a doubled term.", ["PROCEDURAL"]) };
+      return { correct: false, score: 0.2, feedback: fb("INCORRECT", "2 kat sapma var — eksik bir ½ ya da iki kez sayılan bir terim olabilir.", ["PROCEDURAL"]) };
     }
     if (err <= Math.abs(ref.value) * 0.06) {
-      return { correct: false, score: 0.5, feedback: fb("PARTIAL", "Very close — probably rounding or a slightly different constant (e.g. g). Recheck the arithmetic.", ["CARELESS"]) };
+      return { correct: false, score: 0.5, feedback: fb("PARTIAL", "Çok yakın — muhtemelen yuvarlama ya da biraz farklı bir sabit (örn. g). İşlemleri tekrar kontrol et.", ["CARELESS"]) };
     }
   }
-  return { correct: false, score: 0, feedback: fb("INCORRECT", "Revisit which principle connects what is given to what is asked.", []) };
+  return { correct: false, score: 0, feedback: fb("INCORRECT", "Verilenle istenen arasında hangi ilkenin köprü kurduğunu yeniden düşün.", []) };
 }
 
 function evaluateExpression(q: Question, text: string): Evaluation {
-  if (!text.trim()) return { correct: false, score: 0, feedback: fb("INCORRECT", "Enter an expression.", ["CARELESS"]) };
+  if (!text.trim()) return { correct: false, score: 0, feedback: fb("INCORRECT", "Bir ifade gir.", ["CARELESS"]) };
   let best: ReturnType<typeof compareExpressions> = { result: "DIFFERENT" };
   for (const ref of q.acceptedExpressions ?? []) {
     const c = compareExpressions(text, ref, q.variables ?? []);
-    if (c.result === "EQUAL") return { correct: true, score: 1, feedback: fb("CORRECT", "Correct — equivalent to the expected expression.") };
+    if (c.result === "EQUAL") return { correct: true, score: 1, feedback: fb("CORRECT", "Doğru — beklenen ifadeye denk.") };
     if (c.result === "SIGN" || c.result === "FACTOR" || (best.result !== "SIGN" && best.result !== "FACTOR" && c.result === "INVALID")) best = c;
   }
   switch (best.result) {
     case "SIGN":
-      return { correct: false, score: 0.4, feedback: fb("PARTIAL", "Right structure, opposite sign. Check a subtraction or a direction.", ["PROCEDURAL"]) };
+      return { correct: false, score: 0.4, feedback: fb("PARTIAL", "Yapı doğru, işaret ters. Bir çıkarmayı ya da yönü kontrol et.", ["PROCEDURAL"]) };
     case "FACTOR": {
       const f = best.factor!;
       const nice = [2, 0.5, 4, 0.25, 3, 1 / 3, Math.PI, 1 / Math.PI].find((x) => Math.abs(f - x) < 1e-6);
-      return { correct: false, score: 0.5, feedback: fb("PARTIAL", `Off by a constant factor${nice ? ` (×${roundNice(nice)})` : ""} — check coefficients.`, ["PROCEDURAL"]) };
+      return { correct: false, score: 0.5, feedback: fb("PARTIAL", `Sabit bir çarpan kadar fark var${nice ? ` (×${roundNice(nice)})` : ""} — katsayıları kontrol et.`, ["PROCEDURAL"]) };
     }
     case "INVALID":
-      return { correct: false, score: 0, feedback: fb("INCORRECT", `I couldn't parse that. Use ${q.variables?.length ? `the variables ${q.variables.join(", ")} and ` : ""}* / ^ ( ).`, ["CARELESS"]) };
+      return { correct: false, score: 0, feedback: fb("INCORRECT", `Bunu çözümleyemedim. ${q.variables?.length ? `${q.variables.join(", ")} değişkenlerini ve ` : ""}* / ^ ( ) kullan.`, ["CARELESS"]) };
     default:
-      return { correct: false, score: 0, feedback: fb("INCORRECT", "Not equivalent to the expected result. Re-derive one step at a time.", []) };
+      return { correct: false, score: 0, feedback: fb("INCORRECT", "Beklenen sonuca denk değil. Adım adım yeniden türet.", []) };
   }
 }
 
@@ -140,7 +140,7 @@ export function evaluateSelf(q: Question, met: boolean[], minScore: number): Eva
       correctness: score === 1 ? "CORRECT" : correct ? "PARTIAL" : score > 0 ? "PARTIAL" : "INCORRECT",
       reasoningQuality: score === 1 ? "STRONG" : score >= 0.6 ? "ADEQUATE" : "WEAK",
       errorTypes: missing.length ? ["INCOMPLETE_EXPLANATION"] : [],
-      message: missing.length ? `Missing: ${missing.join("; ")}.` : "Every rubric point met.",
+      message: missing.length ? `Eksik: ${missing.join("; ")}.` : "Tüm ölçütler karşılandı.",
     },
   };
 }

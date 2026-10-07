@@ -41,7 +41,7 @@ export function NextOptions({
   }, [courseId, justCompletedId]); // once per screen, not on every re-render
 
   if (!recs.length) {
-    return <div className="card"><p className="text-2">Nothing is open right now. Every remaining milestone is locked or done — open the map to choose one anyway, or add new milestones.</p></div>;
+    return <div className="card"><p className="text-2">Şu an açık adım yok. Kalan her adım kilitli ya da tamamlanmış — yine de birini seçmek için haritayı aç veya yeni adımlar ekle.</p></div>;
   }
 
   const choose = (r: Recommendation, rank: number) => {
@@ -57,7 +57,7 @@ export function NextOptions({
         return (
           <button key={r.milestoneId} className={`card clickable rise ${i === 0 && !showAll ? "accent" : ""}`} style={{ textAlign: "left", animationDelay: `${i * 40}ms`, color: "inherit", font: "inherit" }} onClick={() => choose(r, recs.indexOf(r))}>
             <div className="row between nowrap" style={{ marginBottom: 6 }}>
-              <div className="row nowrap" style={{ gap: 8 }}><KindChip kind={r.kind} />{i === 0 && !showAll && <span className="tiny muted">suggested</span>}</div>
+              <div className="row nowrap" style={{ gap: 8 }}><KindChip kind={r.kind} />{i === 0 && !showAll && <span className="tiny muted">önerilen</span>}</div>
               <div className="row nowrap tiny muted" style={{ gap: 8 }}><Difficulty value={m.difficulty} /><span>{minutes(m.estimatedDuration)}</span></div>
             </div>
             <div className="serif" style={{ fontSize: "1.08rem", lineHeight: 1.3 }}>{m.title}</div>
@@ -70,7 +70,7 @@ export function NextOptions({
       })}
       {recs.length > picks.length && (
         <button className="btn ghost small" onClick={() => setShowAll(!showAll)} style={{ alignSelf: "flex-start" }}>
-          {showAll ? "Show suggestions only" : assigned ? "Choose differently" : `See all ${recs.length} open milestones`} <Icon.arrow />
+          {showAll ? "Yalnızca önerileri göster" : assigned ? "Başka bir şey seç" : `Açık ${recs.length} adımın hepsini gör`} <Icon.arrow />
         </button>
       )}
     </div>

@@ -7,6 +7,7 @@ import { logEvent } from "../../engines/analytics";
 import { act, aiHost, useDB } from "../state";
 import { generateHints } from "../../ai/tutor";
 import type { Conditions } from "../../engines/experiments";
+import { INTERACTION_TR } from "../../engines/statistics";
 import { AnswerInput } from "./AnswerInput";
 import { CodeEditor, GraphPlot, SimulationPanel } from "./Widgets";
 import { DrawingCanvas, type DrawingStats } from "./DrawingCanvas";
@@ -18,11 +19,11 @@ const WORKSPACE_KINDS = new Set(["DRAWING", "DIAGRAM", "PROBLEM_SOLVING", "DERIV
 const DRAW_ONLY = new Set(["DRAWING", "DIAGRAM"]);
 
 const ERROR_LABEL: Record<string, string> = {
-  CONCEPTUAL: "Conceptual misunderstanding",
-  PROCEDURAL: "Procedural error",
-  CARELESS: "Careless slip",
-  MISSING_PREREQUISITE: "Missing prerequisite",
-  INCOMPLETE_EXPLANATION: "Incomplete explanation",
+  CONCEPTUAL: "Kavramsal yanılgı",
+  PROCEDURAL: "İşlem hatası",
+  CARELESS: "Dikkatsizlik",
+  MISSING_PREREQUISITE: "Eksik ön koşul",
+  INCOMPLETE_EXPLANATION: "Eksik açıklama",
 };
 
 export interface QuestionOutcome {
@@ -140,8 +141,8 @@ export function QuestionCard({
 
   const [hintBusy, setHintBusy] = useState(false);
   const requestHint = async (level: HintLevel) => {
-    if (level > hintCap && !confirm(`This goes past your usual help limit (level ${hintCap}). Struggling a little longer often helps learning stick. Show it anyway?`)) return;
-    if (level === 5 && attempts === 0 && !confirm("You haven't attempted this yet. Reveal the full solution anyway? Answers after seeing the solution won't count toward mastery.")) return;
+    if (level > hintCap && !confirm(`Bu, alışılmış yardım sınırının (düzey ${hintCap}) ötesinde. Biraz daha uğraşmak öğrenmenin kalıcı olmasına çoğu zaman yardım eder. Yine de gösterilsin mi?`)) return;
+    if (level === 5 && attempts === 0 && !confirm("Bunu henüz denemedin. Tam çözüm yine de gösterilsin mi? Çözümü gördükten sonraki cevaplar ustalığa sayılmaz.")) return;
     let source = "authored";
     if (level <= 4 && !q.hints[level - 1]) {
       // No authored hint at this level: generate the ladder once (AI, guarded; generic offline) and keep it.
@@ -167,8 +168,8 @@ export function QuestionCard({
       onPointerDown={(e) => noteInput(e.pointerType === "pen" ? "pen" : e.pointerType === "touch" ? "touch" : "mouse")}
       onKeyDown={() => input.current !== "pen" && noteInput("keyboard")}>
       <div className="row between">
-        <span className="eyebrow">{purpose === "PRACTICE" ? "Warm-up" : purpose === "MASTERY" ? "Mastery question" : purpose === "RETENTION" ? "Retention check" : "Transfer check"} · {q.kind.replace(/_/g, " ").toLowerCase()}</span>
-        {attempts > 0 && <span className="tiny muted">attempt {attempts + (result ? 0 : 1)}</span>}
+        <span className="eyebrow">{purpose === "PRACTICE" ? "Isınma" : purpose === "MASTERY" ? "Ustalık sorusu" : purpose === "RETENTION" ? "Kalıcılık kontrolü" : "Transfer kontrolü"} · {INTERACTION_TR[q.kind] ?? q.kind}</span>
+        {attempts > 0 && <span className="tiny muted">{attempts + (result ? 0 : 1)}. deneme</span>}
       </div>
       <MathText text={q.prompt} className="serif" style={{ fontSize: "1.15rem", lineHeight: 1.45 }} />
       {q.graph && <GraphPlot spec={q.graph} />}
@@ -176,12 +177,12 @@ export function QuestionCard({
 
       {!drawOnly && (
         <button type="button" className="btn ghost small" style={{ alignSelf: "flex-start" }} onClick={() => setShowWorkspace(!showWorkspace)}>
-          <Icon.edit /> {showWorkspace ? "Hide" : "Open"} {WORKSPACE_KINDS.has(q.kind) ? "workspace" : "scratch space"}
+          <Icon.edit /> {WORKSPACE_KINDS.has(q.kind) ? "Çalışma alanını" : "Karalama alanını"} {showWorkspace ? "gizle" : "aç"}
         </button>
       )}
       {(showWorkspace || drawOnly) && (
         <DrawingCanvas
-          label={drawOnly ? "Draw your answer" : "Workspace (not graded)"} height={drawOnly ? 380 : 300} onInput={noteInput}
+          label={drawOnly ? "Cevabını çiz" : "Çalışma alanı (puanlanmaz)"} height={drawOnly ? 380 : 300} onInput={noteInput}
           onChange={(stats, image) => setDrawing({ stats, image })}
         />
       )}
@@ -191,7 +192,7 @@ export function QuestionCard({
       ) : (
         <div onPointerDown={(e) => noteInput(e.pointerType === "pen" ? "pen" : e.pointerType === "touch" ? "touch" : "mouse")}>
           {drawOnly ? (
-            <textarea className="textarea" style={{ minHeight: 70 }} placeholder="Optional: label or explain your drawing" aria-label="Drawing notes" disabled={!!result}
+            <textarea className="textarea" style={{ minHeight: 70 }} placeholder="İsteğe bağlı: çizimini etiketle ya da açıkla" aria-label="Çizim notları" disabled={!!result}
               value={answer?.kind === "text" ? answer.text : ""} onChange={(e) => setAnswer({ kind: "text", text: e.target.value })} />
           ) : (
             <AnswerInput question={q} value={answer} onChange={setAnswer} disabled={!!result || !!rubricStep} onSubmit={() => canSubmit && submit()} />
@@ -202,22 +203,22 @@ export function QuestionCard({
       {!result && !rubricStep && (
         <>
           <div className="row" style={{ gap: 6 }}>
-            <span className="small muted">Confidence</span>
+            <span className="small muted">Eminlik</span>
             {[1, 2, 3, 4, 5].map((c) => (
               <button key={c} type="button" className="btn small" aria-pressed={confidence === c} onClick={() => setConfidence(confidence === c ? undefined : c)}
                 style={{ minWidth: 40, borderColor: confidence === c ? "var(--accent)" : undefined, background: confidence === c ? "var(--accent-soft)" : undefined }}>{c}</button>
             ))}
           </div>
           <div className="row">
-            <button className="btn primary grow" disabled={!canSubmit} onClick={submit}>Check</button>
+            <button className="btn primary grow" disabled={!canSubmit} onClick={submit}>Kontrol et</button>
           </div>
         </>
       )}
 
       {rubricStep && (
         <div className="card raised stack rise" style={{ gap: 10 }}>
-          <span className="eyebrow">Evaluate against the rubric</span>
-          <p className="small text-2">Tick each point your answer genuinely contains. Be strict — this is for you.</p>
+          <span className="eyebrow">Ölçütlere göre değerlendir</span>
+          <p className="small text-2">Cevabının gerçekten içerdiği her maddeyi işaretle. Sıkı ol — bu senin için.</p>
           {q.rubric.map((r, i) => (
             <label key={i} className="row nowrap" style={{ alignItems: "flex-start", cursor: "pointer" }}>
               <input type="checkbox" checked={rubricStep.met[i]} style={{ width: 22, height: 22, flex: "none", marginTop: 2 }}
@@ -225,11 +226,11 @@ export function QuestionCard({
               <span>{r}</span>
             </label>
           ))}
-          {rubricStep.ai && <div className="banner info small">AI evaluator: {rubricStep.ai.feedback.message} <span className="muted">(you can change any tick)</span></div>}
-          {rubricStep.ai === null && <div className="banner warn small">The AI evaluator is unavailable — please self-assess.</div>}
+          {rubricStep.ai && <div className="banner info small">YZ değerlendirmesi: {rubricStep.ai.feedback.message} <span className="muted">(her işareti değiştirebilirsin)</span></div>}
+          {rubricStep.ai === null && <div className="banner warn small">YZ değerlendiricisi kullanılamıyor — lütfen kendin değerlendir.</div>}
           <div className="row">
-            <button className="btn" onClick={askAI} disabled={rubricStep.aiBusy}>{rubricStep.aiBusy ? <><span className="spinner" /> Evaluating…</> : "Ask AI to evaluate"}</button>
-            <button className="btn primary grow" onClick={confirmRubric}>Confirm</button>
+            <button className="btn" onClick={askAI} disabled={rubricStep.aiBusy}>{rubricStep.aiBusy ? <><span className="spinner" /> Değerlendiriliyor…</> : "YZ değerlendirsin"}</button>
+            <button className="btn primary grow" onClick={confirmRubric}>Onayla</button>
           </div>
         </div>
       )}
@@ -239,16 +240,16 @@ export function QuestionCard({
       {result && (
         <div className="row">
           {result.masteredNow ? (
-            <button className="btn primary grow" onClick={onMastered}>Milestone mastered — continue <Icon.arrow /></button>
+            <button className="btn primary grow" onClick={onMastered}>Adımda ustalaştın — devam <Icon.arrow /></button>
           ) : result.correct ? (
-            <button className="btn primary grow" onClick={onNext}>Next <Icon.arrow /></button>
+            <button className="btn primary grow" onClick={onNext}>Sonraki <Icon.arrow /></button>
           ) : (
             <>
-              <button className="btn primary grow" onClick={retry}>Try again</button>
-              {onDifferent && <button className="btn" onClick={onDifferent}>Different question</button>}
+              <button className="btn primary grow" onClick={retry}>Tekrar dene</button>
+              {onDifferent && <button className="btn" onClick={onDifferent}>Başka soru</button>}
             </>
           )}
-          {(result.correct || hintLevel >= 5) && q.solution && <button className="btn ghost" onClick={() => setShowSolution(!showSolution)}>{showSolution ? "Hide" : "Worked"} solution</button>}
+          {(result.correct || hintLevel >= 5) && q.solution && <button className="btn ghost" onClick={() => setShowSolution(!showSolution)}>{showSolution ? "Çözümü gizle" : "Ayrıntılı çözüm"}</button>}
         </div>
       )}
 
@@ -259,7 +260,7 @@ export function QuestionCard({
 
       {showSolution && q.solution && (
         <div className="card raised rise">
-          <span className="eyebrow">Worked solution</span>
+          <span className="eyebrow">Ayrıntılı çözüm</span>
           <MathText text={q.solution} className="text-2" style={{ marginTop: 6 }} />
         </div>
       )}
@@ -273,29 +274,29 @@ function FeedbackPanel({ result, minimal }: { result: Evaluation & { by: string 
     // Experiment condition: correctness only, no explanation or error classification.
     return (
       <div className={`banner ${result.correct ? "ok" : "error"} rise`} role="status" aria-live="polite">
-        <strong>{result.correct ? "Correct" : "Not yet"}</strong>
+        <strong>{result.correct ? "Doğru" : "Henüz değil"}</strong>
       </div>
     );
   }
   const tone = f.correctness === "CORRECT" ? "ok" : f.correctness === "PARTIAL" ? "warn" : f.correctness === "UNGRADED" ? "info" : "error";
-  const title = f.correctness === "CORRECT" ? "Correct" : f.correctness === "PARTIAL" ? (result.correct ? "Good enough to count — with gaps" : "Partly there") : f.correctness === "UNGRADED" ? "Recorded" : "Not yet";
+  const title = f.correctness === "CORRECT" ? "Doğru" : f.correctness === "PARTIAL" ? (result.correct ? "Sayılacak kadar iyi — eksikleri var" : "Kısmen doğru") : f.correctness === "UNGRADED" ? "Kaydedildi" : "Henüz değil";
   return (
     <div className={`banner ${tone} stack rise`} style={{ gap: 6 }} role="status" aria-live="polite">
-      <div className="row between"><strong>{title}</strong><span className="tiny muted">{result.by === "auto" ? "checked automatically" : result.by === "ai" ? "AI-evaluated" : "self-assessed"}</span></div>
+      <div className="row between"><strong>{title}</strong><span className="tiny muted">{result.by === "auto" ? "otomatik kontrol" : result.by === "ai" ? "YZ değerlendirdi" : "öz değerlendirme"}</span></div>
       <span>{f.message}</span>
       <div className="row" style={{ gap: 6 }}>
         {f.errorTypes.map((e) => <span key={e} className="chip">{ERROR_LABEL[e] ?? e}</span>)}
-        {f.reasoningQuality !== "UNKNOWN" && <span className="chip">reasoning: {f.reasoningQuality.toLowerCase()}</span>}
+        {f.reasoningQuality !== "UNKNOWN" && <span className="chip">akıl yürütme: {{ STRONG: "güçlü", ADEQUATE: "yeterli", WEAK: "zayıf" }[f.reasoningQuality]}</span>}
       </div>
-      {f.successfulStrategy && <span className="small">What worked: {f.successfulStrategy}</span>}
-      {f.correctness !== "CORRECT" && f.errorTypes.includes("MISSING_PREREQUISITE") && <span className="small">A prerequisite may need review — see the context panel above.</span>}
+      {f.successfulStrategy && <span className="small">İşe yarayan: {f.successfulStrategy}</span>}
+      {f.correctness !== "CORRECT" && f.errorTypes.includes("MISSING_PREREQUISITE") && <span className="small">Bir ön koşulun tekrarı gerekebilir — yukarıdaki bağlam paneline bak.</span>}
     </div>
   );
 }
 
 function HelpLadder({ q, level, cap, onRequest, attempts, busy }: { q: Question; level: HintLevel; cap: HintLevel; onRequest: (l: HintLevel) => void; attempts: number; busy: boolean }) {
   const next = (level + 1) as HintLevel;
-  const labels = ["", "Small hint", "Conceptual hint", "Strategic hint", "Partial guidance", "Full solution"];
+  const labels = ["", "Küçük ipucu", "Kavramsal ipucu", "Stratejik ipucu", "Kısmi yönlendirme", "Tam çözüm"];
   // Levels 1–4 are always available (generated on demand when not authored).
   const available = (l: number) => (l <= 4 ? true : !!q.solution);
   return (
@@ -313,12 +314,12 @@ function HelpLadder({ q, level, cap, onRequest, attempts, busy }: { q: Question;
       {level < 5 && available(next) && (
         <div className="row">
           <button type="button" className="btn ghost small" disabled={busy} onClick={() => onRequest(next)}>
-            {busy ? <span className="spinner" /> : <Icon.bulb />} {labels[next]}{next > cap ? " (beyond your limit)" : ""}
+            {busy ? <span className="spinner" /> : <Icon.bulb />} {labels[next]}{next > cap ? " (sınırının ötesinde)" : ""}
           </button>
           {next <= 4 && available(5) && level >= 3 && attempts > 0 && (
-            <button type="button" className="btn ghost small" onClick={() => onRequest(5)}>Show full solution</button>
+            <button type="button" className="btn ghost small" onClick={() => onRequest(5)}>Tam çözümü göster</button>
           )}
-          <span className="tiny muted">help level {level} / 5</span>
+          <span className="tiny muted">yardım düzeyi {level} / 5</span>
         </div>
       )}
     </div>

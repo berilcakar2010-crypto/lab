@@ -36,7 +36,7 @@ export function CoursePage({ courseId }: { courseId: ID }) {
     if (query.get("calibrate") === "1") navigate(`/course/${courseId}`);
   }, []); // run once: strip the one-shot query flag
 
-  if (!course) return <Empty title="Course not found"><button className="btn" onClick={() => navigate("/")}>Home</button></Empty>;
+  if (!course) return <Empty title="Ders bulunamadı"><button className="btn" onClick={() => navigate("/")}>Ana sayfa</button></Empty>;
   const p = courseProgress(db, courseId);
   const start = course.startHereMilestoneId ? db.milestones[course.startHereMilestoneId] : undefined;
   const open = (id: ID) => navigate(`/session/${id}`);
@@ -44,17 +44,17 @@ export function CoursePage({ courseId }: { courseId: ID }) {
   return (
     <div className="stack-lg rise">
       <header className="stack" style={{ gap: 8 }}>
-        <button className="btn ghost small" style={{ alignSelf: "flex-start" }} onClick={() => navigate("/")}><Icon.back /> Home</button>
+        <button className="btn ghost small" style={{ alignSelf: "flex-start" }} onClick={() => navigate("/")}><Icon.back /> Ana sayfa</button>
         <span className="eyebrow">{db.subjects[course.subjectId]?.name}</span>
         <h1>{course.title}</h1>
         <p className="text-2">{course.goal}</p>
         <div className="stack" style={{ gap: 6, marginTop: 6 }}>
           <Bar value={p.requiredTotal ? p.requiredMastered / p.requiredTotal : 0} mastered />
           <div className="row small muted" style={{ gap: 14 }}>
-            <span><strong style={{ color: "var(--text)" }}>{p.requiredMastered}</strong> / {p.requiredTotal} core milestones mastered</span>
-            {p.total > p.requiredTotal && <span>{p.total - p.requiredTotal} optional</span>}
-            {p.review > 0 && <span style={{ color: "var(--review)" }}>{p.review} need review</span>}
-            {p.skipped > 0 && <span>{p.skipped} skipped</span>}
+            <span><strong style={{ color: "var(--text)" }}>{p.requiredMastered}</strong> / {p.requiredTotal} temel adımda ustalaşıldı</span>
+            {p.total > p.requiredTotal && <span>{p.total - p.requiredTotal} isteğe bağlı</span>}
+            {p.review > 0 && <span style={{ color: "var(--review)" }}>{p.review} tekrar bekliyor</span>}
+            {p.skipped > 0 && <span>{p.skipped} atlandı</span>}
           </div>
         </div>
       </header>
@@ -62,7 +62,7 @@ export function CoursePage({ courseId }: { courseId: ID }) {
       <div className="tabs" role="tablist">
         {(["next", "map", "edit"] as Tab[]).map((t) => (
           <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? "on" : ""} onClick={() => setTab(t)}>
-            {t === "next" ? "What's next" : t === "map" ? "Map" : "Curriculum"}
+            {t === "next" ? "Sırada ne var" : t === "map" ? "Harita" : "Müfredat"}
           </button>
         ))}
       </div>
@@ -71,13 +71,13 @@ export function CoursePage({ courseId }: { courseId: ID }) {
         <div className="stack">
           {start && start.status !== "MASTERED" && !courseMilestones(db, courseId).some((m) => m.masteredAt) && (
             <div className="banner info row between">
-              <span>Start here: <strong>{start.title}</strong></span>
-              <button className="btn small" onClick={() => open(start.id)}>Open</button>
+              <span>Buradan başla: <strong>{start.title}</strong></span>
+              <button className="btn small" onClick={() => open(start.id)}>Aç</button>
             </div>
           )}
           <NextOptions courseId={courseId} onChoose={open} />
           <AdvisorPanel courseId={courseId} />
-          <button className="btn ghost small" style={{ alignSelf: "flex-start" }} onClick={() => setCalibrate(true)}>Recalibrate my starting point</button>
+          <button className="btn ghost small" style={{ alignSelf: "flex-start" }} onClick={() => setCalibrate(true)}>Başlangıç noktamı yeniden belirle</button>
         </div>
       )}
       {tab === "map" && <ProgressionMap courseId={courseId} onOpen={open} />}

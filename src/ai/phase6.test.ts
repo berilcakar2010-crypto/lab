@@ -20,7 +20,7 @@ const setup = () => {
   const db = createEmptyDB();
   const { courseId } = importCurriculum(db, structuredClone(mechanicsPack), { source: { kind: "SEED", text: "" }, generatedBy: "seed" });
   const ms = courseMilestones(db, courseId);
-  const vec = ms.find((m) => m.title.startsWith("Resolve a vector"))!;
+  const vec = ms.find((m) => m.title.startsWith("Bir vektörü bileşenlerine"))!;
   const q = milestoneQuestions(db, vec.id).find((x) => x.numeric?.value === 8.66)!;
   return { db, courseId, ms, vec, q };
 };
@@ -97,7 +97,7 @@ describe("Phase 6 — productive struggle", () => {
 
   it("the evaluator separates correctness, reasoning quality and error types", async () => {
     const { db, ms } = setup();
-    const fbd = ms.find((m) => m.title.startsWith("Construct a free-body"))!;
+    const fbd = ms.find((m) => m.title.startsWith("Serbest cisim diyagramı"))!;
     const open = milestoneQuestions(db, fbd.id).find((x) => x.rubric.length === 4)!;
     const res = await evaluateOpenResponse(host(db, fake({ met: [true, true, false, true], reasoningQuality: "ADEQUATE", errorTypes: ["CONCEPTUAL", "BOGUS"], successfulStrategy: "Isolated the body first", message: "Friction direction is missing.", missingPrerequisite: null })), db, open, "weight, normal", undefined);
     expect(res.value!.met).toEqual([true, true, false, true]);
@@ -116,10 +116,10 @@ describe("Phase 6 — advisor, calibrator, reflection", () => {
     const q = db.questions[check.questionId];
     const { attempt } = recordAttempt(db, { questionId: q.id, milestoneId: vec.id, sessionId: s.id, answer: null, correct: false, score: 0, feedback: { correctness: "INCORRECT", reasoningQuality: "UNKNOWN", errorTypes: [], message: "" }, hintLevelUsed: 0, evaluatedBy: "auto", inputMethod: "keyboard", usedStylus: false, durationMs: 1, purpose: "RETENTION" });
     completeRetentionCheck(db, check.id, attempt);
-    const add = ms.find((m) => m.title.startsWith("Add vectors"))!;
+    const add = ms.find((m) => m.title.startsWith("Vektörleri bileşenleriyle"))!;
     expect(db.milestones[add.id].status).toBe("AVAILABLE");
     const advice = adviseCourse(db, courseId);
-    expect(advice.some((a) => a.tone === "review" && a.milestoneId === vec.id && /may want to review/.test(a.text))).toBe(true);
+    expect(advice.some((a) => a.tone === "review" && a.milestoneId === vec.id && /tekrar etmek isteyebilirsin/.test(a.text))).toBe(true);
   });
 
   it("difficulty calibration needs data and then suggests a direction", () => {
@@ -131,6 +131,6 @@ describe("Phase 6 — advisor, calibrator, reflection", () => {
     }
     const sig = difficultySignal(db, vec.id);
     expect(sig.suggested).toBe(vec.difficulty + 1);
-    expect(reflectSession(db, s.id).join(" ")).toMatch(/retried/);
+    expect(reflectSession(db, s.id).join(" ")).toMatch(/yeniden denedin/);
   });
 });

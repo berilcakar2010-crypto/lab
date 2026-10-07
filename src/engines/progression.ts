@@ -71,25 +71,25 @@ export function recommendNext(db: LabDB, courseId: ID, opts: RecommendOptions = 
 
     if (just && just.nextMilestones.includes(m.id)) {
       score += 20;
-      reasons.push(`Builds directly on "${just.title}"`);
+      reasons.push(`Doğrudan "${just.title}" üzerine kurulu`);
     }
     if (nothingDone && course.startHereMilestoneId === m.id) {
       score += 25;
-      reasons.push("Calibrated starting point");
+      reasons.push("Belirlenen başlangıç noktası");
     }
     const unlocks = m.nextMilestones.length;
     if (unlocks) {
       score += Math.min(4, unlocks) * 3;
-      reasons.push(`Unlocks ${unlocks} milestone${unlocks > 1 ? "s" : ""}`);
+      reasons.push(`${unlocks} adımın kilidini açar`);
     }
     const diffGap = Math.abs(m.difficulty - target);
     score -= diffGap * 6;
-    if (diffGap <= 0.75) reasons.push("Difficulty matches your recent performance");
+    if (diffGap <= 0.75) reasons.push("Zorluk son performansınla uyumlu");
 
     if (opts.engagementLift?.[m.milestoneType] !== undefined) {
       const lift = opts.engagementLift[m.milestoneType]!;
       score += clamp(lift * 20, -8, 8);
-      if (lift > 0.1) reasons.push(`You tend to continue after ${m.milestoneType.toLowerCase()} milestones`);
+      if (lift > 0.1) reasons.push(`Bu türdeki adımlardan sonra devam etme eğilimindesin`);
     }
     if (opts.preferScope === "MICRO") score += m.scope === "MICRO" || m.estimatedDuration <= 15 ? 8 : -6;
     if (opts.preferScope === "LONG") score += m.estimatedDuration >= 30 ? 8 : -6;
@@ -101,25 +101,25 @@ export function recommendNext(db: LabDB, courseId: ID, opts: RecommendOptions = 
     if (m.status === "NEEDS_REVIEW" || isDue) {
       kind = "REVIEW";
       score += m.status === "NEEDS_REVIEW" ? 18 : 15;
-      reasons.unshift(m.status === "NEEDS_REVIEW" ? "A retention check showed this has faded" : "A retention check is due");
+      reasons.unshift(m.status === "NEEDS_REVIEW" ? "Bir kalıcılık kontrolü bunun unutulmaya başladığını gösterdi" : "Bir kalıcılık kontrolünün zamanı geldi");
     } else if (m.milestoneType === "BOSS") {
       kind = "BOSS";
-      reasons.unshift("Integrates several branches you have unlocked");
+      reasons.unshift("Açtığın birkaç dalı birleştiriyor");
     } else if (m.milestoneType === "CHALLENGE" || m.difficulty >= target + 1.5) {
       kind = "CHALLENGE";
       if (perf.accuracy !== null && perf.accuracy >= 0.8) {
         score += 8;
-        reasons.unshift("Your recent accuracy is high — a stretch could help");
-      } else reasons.unshift("A step above your current level");
+        reasons.unshift("Son doğruluk oranın yüksek — biraz zorlamak iyi gelebilir");
+      } else reasons.unshift("Şu anki seviyenin bir adım üstünde");
     } else if (m.status === "ATTEMPTED" || m.status === "ACTIVE") {
       kind = "PRACTICE";
       score += 12;
-      reasons.unshift("You started this — finishing it closes a mastery gap");
+      reasons.unshift("Buna başlamıştın — bitirmek bir ustalık açığını kapatır");
     } else if (m.optional || (novelUnit && !(just && just.nextMilestones.includes(m.id)))) {
       kind = "EXPLORE";
-      reasons.unshift(m.optional ? "Optional branch — explore if curious" : "Opens a different area of the course");
+      reasons.unshift(m.optional ? "İsteğe bağlı dal — merak ediyorsan keşfet" : "Dersin farklı bir alanını açar");
     } else {
-      reasons.unshift("Next step on the main path");
+      reasons.unshift("Ana yoldaki bir sonraki adım");
     }
     out.push({ milestoneId: m.id, kind, score: Math.round(score), reasons });
   }
@@ -209,10 +209,10 @@ export function estimateStart(db: LabDB, courseId: ID, input: CalibrationInput):
     const confident = input.selfRatings[m.unitId] === 2 && !failedUnits.has(m.unitId) && m.milestoneType !== "BOSS" && m.milestoneType !== "CHALLENGE";
     if (impliedByPass || confident) known.add(m.id);
   }
-  for (const p of passed) rationale.push(`You solved a "${db.milestones[p]?.title}" problem, so its prerequisites are probably familiar.`);
-  for (const f of failed) rationale.push(`"${db.milestones[f]?.title}" needs work, so the path should go through it.`);
+  for (const p of passed) rationale.push(`"${db.milestones[p]?.title}" sorusunu çözdün; ön koşulları muhtemelen tanıdık.`);
+  for (const f of failed) rationale.push(`"${db.milestones[f]?.title}" üzerinde çalışmak gerekiyor; yol buradan geçmeli.`);
   for (const [unitId, r] of Object.entries(input.selfRatings)) {
-    if (r === 2 && !failedUnits.has(unitId)) rationale.push(`You rated "${db.units[unitId]?.title}" as confident.`);
+    if (r === 2 && !failedUnits.has(unitId)) rationale.push(`"${db.units[unitId]?.title}" konusunda kendinden emin olduğunu belirttin.`);
   }
   const ready = (m: Milestone) => !known.has(m.id) && m.prerequisites.every((p) => known.has(p));
   // Prefer the frontier leading to a diagnosed gap, then the main path.
@@ -221,8 +221,8 @@ export function estimateStart(db: LabDB, courseId: ID, input: CalibrationInput):
     ?? ordered.find((m) => m.required && ready(m))
     ?? ordered.find(ready)
     ?? null;
-  if (start) rationale.push(`Recommended start: "${start.title}". You can always choose a different milestone.`);
-  else rationale.push("Everything appears familiar — consider the boss or challenge milestones.");
+  if (start) rationale.push(`Önerilen başlangıç: "${start.title}". İstediğin zaman başka bir adım seçebilirsin.`);
+  else rationale.push("Her şey tanıdık görünüyor — final ya da meydan okuma adımlarına bakabilirsin.");
   return { startHereId: start?.id ?? null, likelyKnown: [...known].filter((id) => !db.milestones[id].masteredAt), rationale };
 }
 
