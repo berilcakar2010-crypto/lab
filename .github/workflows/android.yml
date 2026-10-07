@@ -90,13 +90,23 @@ jobs:
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         env:
           GH_TOKEN: ${{ github.token }}
+          TITLE: "Lab — son derleme (1.0.${{ github.run_number }})"
         run: |
-          gh release delete son-surum --cleanup-tag --yes || true
-          gh release create son-surum Lab-*.apk \
-            --prerelease \
-            --target "$GITHUB_SHA" \
-            --title "Lab — son derleme (1.0.${{ github.run_number }})" \
-            --notes "Dal: ${GITHUB_REF_NAME} · Commit: ${GITHUB_SHA::7}. Telefondan bu sayfayı açıp APK dosyasına dokun, sonra 'Bilinmeyen kaynaklardan yükleme' iznini ver. Yeni sürüm eskisinin üzerine kurulur; verilerin silinmez."
+          # GitHub API'si ara sıra geçici 500 hatası verir: her çağrı birkaç kez denenir.
+          retry() { for i in 1 2 3 4; do "$@" && return 0; sleep $((i * 5)); done; return 1; }
+          NOTES="Dal: ${GITHUB_REF_NAME} · Commit: ${GITHUB_SHA::7}. Telefondan bu sayfayı açıp APK dosyasına dokun, sonra 'Bilinmeyen kaynaklardan yükleme' iznini ver. Yeni sürüm eskisinin üzerine kurulur; verilerin silinmez."
+          if gh release view son-surum >/dev/null 2>&1; then
+            # Var olan ön sürümü silmeden güncelle: etiketi bu commit'e taşı, eski APK'ları kaldır, yenisini yükle.
+            git tag -f son-surum "$GITHUB_SHA"
+            retry git push -f origin refs/tags/son-surum
+            for a in $(gh release view son-surum --json assets --jq '.assets[].name'); do
+              retry gh release delete-asset son-surum "$a" --yes
+            done
+            retry gh release upload son-surum Lab-*.apk --clobber
+            retry gh release edit son-surum --prerelease --title "$TITLE" --notes "$NOTES"
+          else
+            retry gh release create son-surum Lab-*.apk --prerelease --target "$GITHUB_SHA" --title "$TITLE" --notes "$NOTES"
+          fi
 
       - name: Kalıcı sürüm (etiket)
         if: startsWith(github.ref, 'refs/tags/v')
