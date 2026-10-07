@@ -177,9 +177,20 @@ export default async function flows({ page, step, shot, click, BASE }) {
     await shot("12-guide");
   });
 
-  await step("end session", async () => {
+  await step("end session shows a summary and returns to what's next", async () => {
     await click("End session");
-    await page.getByText("Session saved").waitFor();
+    await page.getByText("Session complete").waitFor();
+    await page.getByRole("heading", { name: "Reflection" }).waitFor();
+    await page.getByRole("heading", { name: "What's next?" }).waitFor();
+    await shot("18-summary");
+  });
+
+  await step("home shows objective, progress, next actions and recent progress", async () => {
+    await page.goto(`${BASE}#/`);
+    await page.getByRole("heading", { name: "What's next?" }).waitFor();
+    await page.getByRole("heading", { name: "Recent progress" }).waitFor();
+    await page.getByRole("heading", { name: "Courses" }).waitFor();
+    await shot("19-home");
   });
 
   await step("statistics render from events with insufficient-data states", async () => {
@@ -253,6 +264,54 @@ export default async function flows({ page, step, shot, click, BASE }) {
     await page.getByText("AI activity").waitFor();
     await page.getByRole("button", { name: "Offline", exact: true }).click();
   });
+
+  await step("boss milestone: open via the map with an override and solve an equation", async () => {
+    await page.goto(`${BASE}#/`);
+    await page.getByRole("button", { name: /Mechanics/ }).first().click();
+    await page.getByRole("tab", { name: "Map" }).click();
+    await page.getByRole("button", { name: /loop-the-loop launcher/ }).first().click();
+    await click("Look inside");
+    await click("Open anyway");
+    await page.getByText("Boss", { exact: true }).first().waitFor();
+    await page.getByLabel("Expression answer").fill("5R/2");
+    await click("Check");
+    await page.getByText("Correct — equivalent to the expected expression.").waitFor();
+    await shot("21-boss");
+  });
+
+  await step("unknown and stale routes degrade gracefully", async () => {
+    for (const r of ["#/nonsense", "#/course/missing", "#/session/missing", "#/summary/missing"]) {
+      await page.goto(`${BASE}${r}`);
+      await page.waitForTimeout(150);
+      const body = await page.textContent("body");
+      if (!/What's next\?|not found|no longer exists/i.test(body)) throw new Error(`route ${r} rendered nothing useful`);
+    }
+  });
+
+  await step("integrity check passes in the real app", async () => {
+    await page.goto(`${BASE}#/settings`);
+    await click("Check integrity");
+    await page.getByText("Integrity check passed").waitFor();
+  });
+
+  for (const [w, h, label] of [[390, 844, "phone"], [1180, 820, "tablet-landscape"], [820, 1180, "tablet-portrait"]]) {
+    await step(`no horizontal overflow at ${label} (${w}px)`, async () => {
+      await page.setViewportSize({ width: w, height: h });
+      for (const r of ["#/", "#/stats", "#/focus", "#/retention", "#/settings", "#/build"]) {
+        await page.goto(`${BASE}${r}`);
+        await page.waitForTimeout(250);
+        const over = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+        if (over > 1) throw new Error(`${r} overflows by ${over}px`);
+      }
+      await page.goto(`${BASE}#/`);
+      await page.getByRole("button", { name: /Mechanics/ }).first().click();
+      await page.getByRole("tab", { name: "Map" }).click();
+      const over = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+      if (over > 1) throw new Error(`map overflows the page by ${over}px`);
+      await shot(`20-${label}`);
+    });
+  }
+  await page.setViewportSize({ width: 820, height: 1180 });
 
   if (globalThis.SMOKE_EXTRA) await globalThis.SMOKE_EXTRA({ page, step, shot, click, BASE });
 }

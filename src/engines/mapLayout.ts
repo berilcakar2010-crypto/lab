@@ -67,7 +67,7 @@ export function layoutMap(
 
   const maxCols = Math.max(1, ...layers.map((l) => l.length));
   // Fit the widest layer to the screen when possible; scroll only beyond that.
-  const colW = opts.colWidth ?? Math.min(160, Math.max(108, (opts.minWidth - padX * 2) / maxCols));
+  const colW = opts.colWidth ?? Math.min(160, Math.max(opts.minWidth < 480 ? 96 : 108, (opts.minWidth - padX * 2) / maxCols));
   const width = Math.max(opts.minWidth, padX * 2 + maxCols * colW);
   const nodes = new Map<ID, MapNode>();
   layers.forEach((l, li) => {

@@ -5,6 +5,7 @@ import { act, store, toast, useAsync, useDB } from "../state";
 import { makeProvider } from "../../ai/providers";
 import { hydrateDB } from "../../data/db";
 import { recomputeAll } from "../../engines/progress";
+import { auditDatabase } from "../../engines/integrity";
 
 export function SettingsPage() {
   const db = useDB();
@@ -117,6 +118,10 @@ export function SettingsPage() {
         <div className="row">
           <button className="btn" onClick={exportData}>Export backup</button>
           <button className="btn" onClick={exportEvents}>Export raw events (CSV)</button>
+          <button className="btn" onClick={() => {
+            const issues = auditDatabase(store.state);
+            toast(issues.length ? `${issues.length} issue(s): ${issues.slice(0, 2).join("; ")}` : "Integrity check passed: no loops, dead ends or impossible states.", issues.length ? "error" : "info");
+          }}>Check integrity</button>
           <label className="btn" style={{ cursor: "pointer" }}>Restore backup<input type="file" accept="application/json,.json" hidden onChange={(e) => e.target.files?.[0] && importData(e.target.files[0])} /></label>
         </div>
       </section>

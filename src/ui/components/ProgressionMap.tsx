@@ -58,6 +58,12 @@ export function ProgressionMap({ courseId, onOpen }: { courseId: ID; onOpen: (id
     () => layoutMap(visible, { minWidth: Math.max(320, width) }),
     [sig, width], // `sig` captures every field the layout reads
   );
+  // Wide graphs scroll inside the card; start centred on the graph rather than at its left edge.
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (el && layout.width > el.clientWidth) el.scrollLeft = (layout.width - el.clientWidth) / 2;
+  }, [layout.width, filterUnit]);
+
   const recs = topPicks(recommendNext(db, courseId), 4);
   const recKind = new Map<ID, RecommendationKind>(recs.map((r) => [r.milestoneId, r.kind]));
   const byId = new Map(ms.map((m) => [m.id, m]));
