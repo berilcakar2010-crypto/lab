@@ -7,6 +7,7 @@
  */
 
 import type { LearningObject } from "../knowledge/schema";
+import type { Lang } from "../i18n";
 
 export type ID = string;
 export type Millis = number;
@@ -144,6 +145,8 @@ export interface UserPreference {
   experimentsEnabled: boolean;
   /** Days after mastery before the first delayed retention check. */
   retentionDelayDays: number;
+  /** Interface and content language. English is the default. */
+  language: Lang;
 }
 
 export interface Subject {

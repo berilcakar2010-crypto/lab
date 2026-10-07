@@ -4,6 +4,8 @@ import { indexedDBAdapter, localStorageAdapter, Store } from "../data/store";
 import type { AIHost } from "../ai/engine";
 import { recomputeAll } from "../engines/progress";
 import { closeStaleSessions } from "../engines/sessions";
+import { isLang, setLang } from "../i18n";
+import { switchLanguage } from "../knowledge/relocalize";
 
 /** Initialised by `initStore()` before the app renders (ES module live binding). */
 export let store: Store;
@@ -17,6 +19,10 @@ export async function initStore() {
     console.warn("Lab: IndexedDB unavailable, using localStorage", e);
     store = new Store(localStorageAdapter());
   }
+  // `?lang=tr` / `?lang=en` in the URL switches the language (used by links and tests).
+  const asked = new URLSearchParams(window.location.search).get("lang");
+  if (isLang(asked) && asked !== store.state.preferences.language) store.update((db) => switchLanguage(db, asked));
+  setLang(store.state.preferences.language);
   // Statuses are derived; refresh them on load in case time-based facts changed.
   store.update((db) => {
     closeStaleSessions(db);

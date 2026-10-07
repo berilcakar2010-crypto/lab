@@ -11,7 +11,7 @@
  * Interdisciplinary links are "target.id:ilişki".
  */
 import {
-  CURRICULUM_VERSION, EVIDENCE_LABEL, EVIDENCE_TYPES, LO_MILESTONE_TYPES,
+  CURRICULUM_VERSION, EVIDENCE_LABEL, EVIDENCE_LABEL_EN, EVIDENCE_TYPES, LO_MILESTONE_TYPES,
   type Domain, type EvidenceType, type LearningObject, type LOMilestoneType, type LOStatus,
   type Prerequisite, type PrereqStrength, type ReviewStatus, type Scope,
 } from "./schema";
@@ -100,9 +100,30 @@ const EVIDENCE_CRITERION: Record<EvidenceType, string> = {
   ARASTIRMA_UYGULAMASI: "Fikri küçük bir araştırma sorusuna uygular ve bulguyu kaynaklarıyla yazar.",
 };
 
+const EVIDENCE_CRITERION_EN: Record<EvidenceType, string> = {
+  HATIRLAMA: "Recalls the key terms and results correctly without help.",
+  ACIKLAMA: "Explains the idea in their own words, with one example and one counter-example.",
+  HESAPLAMA: "Does at least three calculations with new numbers correctly and without hints.",
+  PROBLEM_COZME: "Solves an unseen multi-step problem and justifies the strategy.",
+  TURETME: "Derives the main result from first principles, justifying every step.",
+  ISPAT: "Writes a proof of the main result and says why each logical step is valid.",
+  MODELLEME: "Turns a real situation into a model, stating its assumptions and where it breaks down.",
+  TAHMIN: "Predicts the outcome before calculating, then compares and explains the difference.",
+  YORUMLAMA: "Reads a graph, table or text and draws a correct, justified interpretation.",
+  KODLAMA: "Writes working, readable code and shows it is correct with a test case.",
+  SIMULASYON: "Builds or uses a simulation and predicts what changing a parameter will do.",
+  DIAGRAM: "Represents the situation with a correct diagram (forces, flow, circuit, concept map…).",
+  DENEY: "Designs an experiment or observation, isolates variables and reports the result with its uncertainty.",
+  VERI_ANALIZI: "Analyses a real or realistic data set and states how reliable the conclusion is.",
+  TRANSFER: "Uses the idea correctly in a different field or an unexpected context.",
+  ARASTIRMA_UYGULAMASI: "Applies the idea to a small research question and writes up the finding with sources.",
+};
+
 /** Mastery is evidence, not a feeling: one concrete criterion per evidence type. */
-export function generateMasteryCriteria(evidence: EvidenceType[]): string[] {
-  return evidence.map((e) => `${EVIDENCE_LABEL[e]}: ${EVIDENCE_CRITERION[e]}`);
+export function generateMasteryCriteria(evidence: EvidenceType[], lang: "tr" | "en" = "tr"): string[] {
+  return lang === "en"
+    ? evidence.map((e) => `${EVIDENCE_LABEL_EN[e]}: ${EVIDENCE_CRITERION_EN[e]}`)
+    : evidence.map((e) => `${EVIDENCE_LABEL[e]}: ${EVIDENCE_CRITERION[e]}`);
 }
 
 export interface Builder {
@@ -145,6 +166,7 @@ export function builder(domain: Domain): Builder {
         coreQuestions: s.cq ?? [],
         learningObjectives: s.obj,
         masteryCriteria: s.mc ?? generateMasteryCriteria(evidence),
+        masteryFromEvidence: !s.mc,
         evidenceTypes: evidence,
         difficulty: s.lv,
         estimatedScope: s.sc,

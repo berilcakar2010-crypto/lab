@@ -277,3 +277,5 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .chip.map-BILINMIYOR { color: var(--muted); }
 ul.tight { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
 @media (max-width: 420px) { .nav a { font-size: 0.64rem; } .nav a svg { width: 20px; height: 20px; } }
+.lang-toggle { display: inline-flex; gap: 4px; padding: 3px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.lang-toggle .btn { min-height: 32px; padding: 0 10px; }

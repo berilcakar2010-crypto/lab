@@ -11,6 +11,8 @@ import { getGraph } from "../../knowledge/graph";
 import { personalGraph, recommendObjects } from "../../knowledge/state";
 import { LEARNING_PATHS } from "../../knowledge/paths";
 import type { LabDB } from "../../domain/types";
+import { L, fmtDate } from "../../i18n";
+import { LanguageToggle } from "../components/LanguageToggle";
 
 /** A small entry into the knowledge graph: one suggestion, never the whole list. */
 function GraphCard({ db }: { db: LabDB }) {
@@ -23,14 +25,14 @@ function GraphCard({ db }: { db: LabDB }) {
   return (
     <button className="card clickable stack graph-card" style={{ textAlign: "left", color: "inherit", font: "inherit", gap: 6 }}
       onClick={() => navigate(rec ? `/graph?lo=${encodeURIComponent(rec.id)}` : "/graph")}>
-      <span className="eyebrow">Bilgi grafiği · {g.name} v{g.version}</span>
+      <span className="eyebrow">{L("Knowledge graph", "Bilgi grafiği")} · {g.name} v{g.version}</span>
       {rec ? (
         <>
           <span className="serif" style={{ fontSize: "1.1rem" }}>{g.objects[rec.id].title}</span>
           <span className="tiny muted">{rec.reasons.slice(0, 2).join(" · ")}</span>
         </>
-      ) : <span className="small text-2">Fikirlerin birbirine nasıl dayandığını gör.</span>}
-      <span className="row small" style={{ color: "var(--accent)", gap: 6 }}>{known ? `${known} nesneyi biliyorsun · ` : ""}Grafiği aç <Icon.arrow /></span>
+      ) : <span className="small text-2">{L("See how the ideas build on each other.", "Fikirlerin birbirine nasıl dayandığını gör.")}</span>}
+      <span className="row small" style={{ color: "var(--accent)", gap: 6 }}>{known ? L(`You know ${known} objects · `, `${known} nesneyi biliyorsun · `) : ""}{L("Open the graph", "Grafiği aç")} <Icon.arrow /></span>
     </button>
   );
 }
@@ -51,13 +53,13 @@ export function HomePage() {
     return (
       <div className="stack-lg rise">
         <header className="stack" style={{ gap: 4 }}>
-          <span className="eyebrow">Lab · araştırma defteri</span>
-          <h1>Sırada ne var?</h1>
+          <div className="row between nowrap"><span className="eyebrow">{L("Lab · research notebook", "Lab · araştırma defteri")}</span><LanguageToggle compact /></div>
+          <h1>{L("What's next?", "Sırada ne var?")}</h1>
         </header>
         <div className="card stack">
-          <h2>Büyük bir hedefle başla</h2>
-          <p className="text-2">Bir ders adı yaz ya da müfredat yapıştır. Lab bunu şu an gerçekten yapabileceğin bir sonraki anlamlı adıma dönüştürür — sen dener, geri bildirim alır, ustalaşır ve ilerlediğini görürsün.</p>
-          <button className="btn primary" onClick={() => navigate("/build")}><Icon.plus /> Yeni ders</button>
+          <h2>{L("Start with a big goal", "Büyük bir hedefle başla")}</h2>
+          <p className="text-2">{L("Name a course or paste a syllabus. Lab turns it into the next meaningful thing you can actually do — then you attempt it, get feedback, master it, and see yourself move forward.", "Bir ders adı yaz ya da müfredat yapıştır. Lab bunu şu an gerçekten yapabileceğin bir sonraki anlamlı adıma dönüştürür — sen dener, geri bildirim alır, ustalaşır ve ilerlediğini görürsün.")}</p>
+          <button className="btn primary" onClick={() => navigate("/build")}><Icon.plus /> {L("New course", "Yeni ders")}</button>
         </div>
         <GraphCard db={db} />
       </div>
@@ -83,32 +85,32 @@ export function HomePage() {
   return (
     <div className="stack-lg rise">
       <header className="stack" style={{ gap: 6 }}>
-        <span className="eyebrow">{new Date().toLocaleDateString("tr-TR", { day: "numeric", month: "long" })} · {focus.title}</span>
-        <h1>Sırada ne var?</h1>
+        <div className="row between nowrap"><span className="eyebrow">{fmtDate(Date.now(), { day: "numeric", month: "long" })} · {focus.title}</span><LanguageToggle compact /></div>
+        <h1>{L("What's next?", "Sırada ne var?")}</h1>
         <p className="text-2">{focus.goal}</p>
         <Bar value={fp.requiredTotal ? fp.requiredMastered / fp.requiredTotal : 0} mastered />
-        <span className="small muted">{fp.requiredTotal} temel adımın {fp.requiredMastered} tanesinde ustalaşıldı</span>
+        <span className="small muted">{L(`${fp.requiredMastered} of ${fp.requiredTotal} core milestones mastered`, `${fp.requiredTotal} temel adımın ${fp.requiredMastered} tanesinde ustalaşıldı`)}</span>
       </header>
 
       {inProgress && (
         <button className="card accent clickable stack" style={{ textAlign: "left", color: "inherit", font: "inherit", gap: 6 }} onClick={() => open(inProgress.id)}>
-          <span className="eyebrow">Devam eden</span>
+          <span className="eyebrow">{L("In progress", "Devam eden")}</span>
           <span className="serif" style={{ fontSize: "1.2rem" }}>{inProgress.title}</span>
           <span className="small text-2">{inProgress.learningObjective}</span>
-          <span className="row small" style={{ color: "var(--accent)", gap: 6 }}>Devam et <Icon.arrow /></span>
+          <span className="row small" style={{ color: "var(--accent)", gap: 6 }}>{L("Continue", "Devam et")} <Icon.arrow /></span>
         </button>
       )}
 
       {due.length > 0 && (
         <button className="banner warn row between" style={{ textAlign: "left", color: "inherit", font: "inherit", cursor: "pointer" }} onClick={() => navigate("/retention")}>
-          <span>{due.length} kalıcılık kontrolü bekliyor — neyin aklında kaldığını görmek birkaç dakika sürer.</span>
+          <span>{L(`${due.length} retention check${due.length > 1 ? "s" : ""} due — a few minutes to see what stuck.`, `${due.length} kalıcılık kontrolü bekliyor — neyin aklında kaldığını görmek birkaç dakika sürer.`)}</span>
           <Icon.arrow />
         </button>
       )}
 
       {picks.length > 0 && (
         <section className="stack" style={{ gap: 10 }}>
-          <h2>{inProgress ? "Ya da seç" : "Önerilenler"}</h2>
+          <h2>{inProgress ? L("Or choose", "Ya da seç") : L("Recommended", "Önerilenler")}</h2>
           {picks.map((r, i) => {
             const m = db.milestones[r.milestoneId];
             return (
@@ -119,14 +121,14 @@ export function HomePage() {
               </button>
             );
           })}
-          <button className="btn ghost small" style={{ alignSelf: "flex-start" }} onClick={() => navigate(`/course/${focus.id}?tab=map`)}>Haritayı aç <Icon.arrow /></button>
+          <button className="btn ghost small" style={{ alignSelf: "flex-start" }} onClick={() => navigate(`/course/${focus.id}?tab=map`)}>{L("Open the map", "Haritayı aç")} <Icon.arrow /></button>
         </section>
       )}
 
       <GraphCard db={db} />
 
       <section className="stack" style={{ gap: 10 }}>
-        <div className="row between"><h2>Dersler</h2><button className="btn small" onClick={() => navigate("/build")}><Icon.plus /> Yeni</button></div>
+        <div className="row between"><h2>{L("Courses", "Dersler")}</h2><button className="btn small" onClick={() => navigate("/build")}><Icon.plus /> {L("New", "Yeni")}</button></div>
         {courses.map((c) => {
           const p = courseProgress(db, c.id);
           return (
@@ -140,12 +142,12 @@ export function HomePage() {
 
       {recent.length > 0 && (
         <section className="stack" style={{ gap: 6 }}>
-          <h2>Son ilerlemeler</h2>
+          <h2>{L("Recent progress", "Son ilerlemeler")}</h2>
           {recent.map((r) => (
             <div key={r.id} className="row small nowrap">
               <span style={{ color: "var(--mastered)" }}>✓</span>
               <span className="grow truncate">{db.milestones[r.milestoneId].title}</span>
-              <span className="muted">{r.selfAttested ? "kendi beyanın" : new Date(r.achievedAt).toLocaleDateString("tr-TR")}</span>
+              <span className="muted">{r.selfAttested ? L("self-attested", "kendi beyanın") : fmtDate(r.achievedAt)}</span>
             </div>
           ))}
         </section>

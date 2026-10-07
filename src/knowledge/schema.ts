@@ -9,12 +9,19 @@
  * change without touching the graph.
  */
 
-export const CURRICULUM_NAME = "Lab Müfredatı";
-export const CURRICULUM_VERSION = "2.0.0";
+import { L, pick } from "../i18n";
+
+export const CURRICULUM_NAME_TR = "Lab Müfredatı";
+export const CURRICULUM_NAME_EN = "Lab Curriculum";
+export const curriculumName = () => L(CURRICULUM_NAME_EN, CURRICULUM_NAME_TR);
+/** Kept for stored data and exports; the UI uses curriculumName(). */
+export const CURRICULUM_NAME = CURRICULUM_NAME_TR;
+export const CURRICULUM_VERSION = "2.1.0";
 
 export const DOMAINS = [
   "MATEMATIK", "FIZIK", "KIMYA", "BIYOLOJI", "NOROBILIM", "PROGRAMLAMA",
-  "ARASTIRMA", "YARISMA", "GENEL_KULTUR", "MEDYA", "INGILIZCE", "ALMANCA", "JAPONCA",
+  "ARASTIRMA", "YARISMA", "YER_UZAY", "CEVRE", "PSIKOLOJI", "EKONOMI", "GENEL_KULTUR", "YAZIM", "SANAT_MUZIK",
+  "MEDYA", "INGILIZCE", "ALMANCA", "JAPONCA",
 ] as const;
 export type Domain = (typeof DOMAINS)[number];
 
@@ -27,6 +34,12 @@ export const DOMAIN_LABEL: Record<Domain, string> = {
   PROGRAMLAMA: "Programlama ve hesaplama",
   ARASTIRMA: "Araştırma becerileri",
   YARISMA: "Yarışma ve meta beceriler",
+  YER_UZAY: "Yer ve uzay bilimleri",
+  CEVRE: "Çevre bilimi",
+  PSIKOLOJI: "Psikoloji",
+  EKONOMI: "Ekonomi",
+  YAZIM: "Yazım ve retorik",
+  SANAT_MUZIK: "Sanat ve müzik",
   GENEL_KULTUR: "Genel kültür",
   MEDYA: "Medya okuryazarlığı",
   INGILIZCE: "İngilizce",
@@ -175,6 +188,8 @@ export interface LearningObject {
   requiresSources: boolean;
   /** For deprecated/split/merged objects: the ids that replace this one. */
   supersededBy?: string[];
+  /** Mastery criteria were generated from evidence types (so they can be generated in any language). */
+  masteryFromEvidence?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -234,4 +249,73 @@ export interface KnowledgeGraph {
   order: string[];
   mappings: Record<string, Mapping>;
   resources: Record<string, Resource>;
+}
+
+// ---------------------------------------------------------------------------
+// English labels and language-aware getters (the *_LABEL maps above are Turkish)
+// ---------------------------------------------------------------------------
+
+export const DOMAIN_LABEL_EN: Record<Domain, string> = {
+  MATEMATIK: "Mathematics", FIZIK: "Physics", KIMYA: "Chemistry", BIYOLOJI: "Biology", NOROBILIM: "Neuroscience",
+  PROGRAMLAMA: "Programming & computing", ARASTIRMA: "Research skills", YARISMA: "Competitions & meta-skills",
+  YER_UZAY: "Earth & space science", CEVRE: "Environmental science", PSIKOLOJI: "Psychology", EKONOMI: "Economics",
+  GENEL_KULTUR: "General knowledge", YAZIM: "Writing & rhetoric", SANAT_MUZIK: "Art & music",
+  MEDYA: "Media literacy", INGILIZCE: "English", ALMANCA: "German", JAPONCA: "Japanese",
+};
+const STRENGTH_LABEL_EN: Record<PrereqStrength, string> = {
+  ZORUNLU: "Required", YUMUSAK: "Soft", BAGLAMSAL: "Contextual", ONERILEN_HAZIRLIK: "Recommended prep",
+};
+const STRENGTH_HELP_EN: Record<PrereqStrength, string> = {
+  ZORUNLU: "This object cannot be learned meaningfully without it.",
+  YUMUSAK: "Knowing it makes things much easier; gaps can be filled along the way.",
+  BAGLAMSAL: "Needed only for some applications or paths.",
+  ONERILEN_HAZIRLIK: "Suggested as a warm-up; can be skipped.",
+};
+export const EVIDENCE_LABEL_EN: Record<EvidenceType, string> = {
+  HATIRLAMA: "Recall", ACIKLAMA: "Explanation", HESAPLAMA: "Calculation", PROBLEM_COZME: "Problem solving",
+  TURETME: "Derivation", ISPAT: "Proof", MODELLEME: "Modelling", TAHMIN: "Prediction", YORUMLAMA: "Interpretation",
+  KODLAMA: "Coding", SIMULASYON: "Simulation", DIAGRAM: "Diagram", DENEY: "Experiment", VERI_ANALIZI: "Data analysis",
+  TRANSFER: "Transfer", ARASTIRMA_UYGULAMASI: "Research application",
+};
+const LO_TYPE_LABEL_EN: Record<LOMilestoneType, string> = {
+  KAVRAM: "Concept", BECERI: "Skill", PRATIK: "Practice", UYGULAMA: "Application", TURETME: "Derivation",
+  ISPAT: "Proof", MODELLEME: "Modelling", VERI_ANALIZI: "Data analysis", KODLAMA: "Coding", DENEY: "Experiment",
+  TEKRAR: "Review", TRANSFER: "Transfer", CHALLENGE: "Challenge", BOSS: "Boss", PROJE: "Project", ARASTIRMA: "Research",
+};
+const SCOPE_LABEL_EN: Record<Scope, string> = {
+  XS: "very small (one session)", S: "small (1–2 sessions)", M: "medium (a few sessions)",
+  L: "large (a week or two)", XL: "very large (several weeks)",
+};
+const REVIEW_LABEL_EN: Record<ReviewStatus, string> = {
+  GOZDEN_GECIRILDI: "Reviewed", TASLAK: "Draft", KAYNAK_GEREKLI: "Needs source check",
+};
+const MAPPING_STATUS_LABEL_EN: Record<MappingStatus, string> = {
+  DOGRULANMIS: "Verified", GECICI: "Provisional", BILINMIYOR: "Unknown",
+};
+
+export const domainLabel = (d: Domain) => pick(DOMAIN_LABEL_EN, DOMAIN_LABEL)[d] ?? d;
+export const strengthLabel = (s: PrereqStrength) => pick(STRENGTH_LABEL_EN, STRENGTH_LABEL)[s];
+export const strengthHelp = (s: PrereqStrength) => pick(STRENGTH_HELP_EN, STRENGTH_HELP)[s];
+export const evidenceLabel = (e: EvidenceType) => pick(EVIDENCE_LABEL_EN, EVIDENCE_LABEL)[e];
+export const loTypeLabel = (t: LOMilestoneType) => pick(LO_TYPE_LABEL_EN, LO_TYPE_LABEL)[t];
+export const scopeLabel = (s: Scope) => pick(SCOPE_LABEL_EN, SCOPE_LABEL)[s];
+export const reviewLabel = (r: ReviewStatus) => pick(REVIEW_LABEL_EN, REVIEW_LABEL)[r];
+export const mappingStatusLabel = (m: MappingStatus) => pick(MAPPING_STATUS_LABEL_EN, MAPPING_STATUS_LABEL)[m];
+
+/** English text for one object. Turkish is the authored base; English is an overlay by id. */
+export interface LOText {
+  title: string;
+  description: string;
+  whyItMatters: string;
+  entryQuestions: string[];
+  coreQuestions: string[];
+  learningObjectives: string[];
+  commonMisconceptions?: string[];
+  researchApplications?: string[];
+  competitionApplications?: string[];
+  /** Only when the Turkish object has explicit (not evidence-generated) mastery criteria. */
+  masteryCriteria?: string[];
+  /** Interdisciplinary relation text by target id. */
+  links?: Record<string, string>;
+  notes?: string[];
 }

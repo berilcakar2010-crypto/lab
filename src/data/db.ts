@@ -1,5 +1,6 @@
 import { SCHEMA_VERSION, type KnowledgeState, type LabDB } from "../domain/types";
 import { newId } from "./ids";
+import { DEFAULT_LANG, isLang } from "../i18n";
 import { runKnowledgeMigrations } from "../knowledge/migrate";
 
 export function createEmptyDB(now = Date.now()): LabDB {
@@ -16,6 +17,7 @@ export function createEmptyDB(now = Date.now()): LabDB {
       reduceMotion: false,
       experimentsEnabled: true,
       retentionDelayDays: 3,
+      language: DEFAULT_LANG,
     },
     subjects: {},
     curricula: {},
@@ -94,6 +96,7 @@ export function hydrateDB(raw: unknown): LabDB {
     (db as unknown as Record<string, unknown>)[k] = t && typeof t === "object" && !Array.isArray(t) ? t : {};
   }
   db.preferences.userId = db.user.id;
+  if (!isLang(db.preferences.language)) db.preferences.language = DEFAULT_LANG;
   runKnowledgeMigrations(db);
   return db;
 }

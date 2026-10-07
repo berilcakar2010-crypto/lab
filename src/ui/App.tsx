@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { useDB, useRoute } from "./state";
+import { setLang } from "../i18n";
 import { Icon, Toasts } from "./components/common";
 import { HomePage } from "./pages/HomePage";
 import { BuilderPage } from "./pages/BuilderPage";
@@ -25,6 +26,7 @@ const NAV: { path: string; label: string; icon: () => ReactNode; match: string[]
 export function App() {
   const route = useRoute();
   const db = useDB();
+  setLang(db.preferences.language);
   const [head, a] = route;
   const inSession = head === "session" || head === "summary";
 
