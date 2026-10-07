@@ -50,7 +50,8 @@ export function recommendNext(db: LabDB, courseId: ID, opts: RecommendOptions = 
   const ms = courseMilestones(db, courseId);
   const perf = recentPerformance(db, courseId);
   const target = clamp(perf.targetDifficulty + (opts.difficultyOffset ?? 0), 1, 5);
-  const due = new Set(dueRetentionChecks(db, now).map((r) => r.milestoneId));
+  // Immediate checks are offered on the completion screen, not as later reviews.
+  const due = new Set(dueRetentionChecks(db, now).filter((r) => r.kind !== "IMMEDIATE").map((r) => r.milestoneId));
   const recentTopics = new Set(perf.recentlyMastered.map((m) => m.topicId));
   const recentUnits = new Set(perf.recentlyMastered.map((m) => m.unitId));
   const just = opts.justCompletedId ? db.milestones[opts.justCompletedId] : undefined;

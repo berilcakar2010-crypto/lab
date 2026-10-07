@@ -1,8 +1,9 @@
 import { useEffect, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import type { MilestoneStatus, MilestoneType, RecommendationKind } from "../../domain/types";
 import { useToasts } from "../state";
 
-const P = { fill: "none", stroke: "currentColor", strokeWidth: 1.7, strokeLinecap: "round", strokeLinejoin: "round" } as const;
+const P = { width: 20, height: 20, fill: "none", stroke: "currentColor", strokeWidth: 1.7, strokeLinecap: "round", strokeLinejoin: "round" } as const;
 
 export const Icon = {
   home: () => <svg viewBox="0 0 24 24" {...P}><path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z" /></svg>,
@@ -30,7 +31,8 @@ export function Sheet({ title, onClose, children, wide }: { title: string; onClo
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
-  return (
+  // Portal to <body> so animated (transformed) ancestors can't offset the fixed overlay.
+  return createPortal(
     <div className="sheet-backdrop" onClick={onClose} role="presentation">
       <div className="sheet" style={wide ? { maxWidth: 860 } : undefined} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={title}>
         <div className="row between nowrap" style={{ marginBottom: 16 }}>
@@ -39,7 +41,8 @@ export function Sheet({ title, onClose, children, wide }: { title: string; onClo
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

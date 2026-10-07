@@ -10,6 +10,7 @@ import { StatisticsPage } from "./pages/StatisticsPage";
 import { FocusLabPage } from "./pages/FocusLabPage";
 import { RetentionPage } from "./pages/RetentionPage";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { SummaryPage } from "./pages/SummaryPage";
 
 const NAV: { path: string; label: string; icon: () => ReactNode; match: string[] }[] = [
   { path: "/", label: "Home", icon: Icon.home, match: ["", "course", "build"] },
@@ -23,7 +24,7 @@ export function App() {
   const route = useRoute();
   const db = useDB();
   const [head, a] = route;
-  const inSession = head === "session";
+  const inSession = head === "session" || head === "summary";
 
   let page: ReactNode;
   switch (head) {
@@ -35,6 +36,7 @@ export function App() {
     case "stats": page = <StatisticsPage />; break;
     case "focus": page = <FocusLabPage />; break;
     case "retention": page = <RetentionPage />; break;
+    case "summary": page = <SummaryPage sessionId={a} />; break;
     default: page = <HomePage />;
   }
 
