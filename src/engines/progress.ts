@@ -200,7 +200,7 @@ export function recordAttempt(db: LabDB, input: AttemptInput): { attempt: Attemp
   if (m && !m.masteredAt && (attempt.purpose === "PRACTICE" || attempt.purpose === "MASTERY")) {
     const progress = masteryProgress(db, m.id);
     if (progress.met) {
-      grantMastery(db, m.id, progress.evidence, progress.assisted, false, attempt.sessionId);
+      grantMastery(db, m.id, progress.evidence, progress.assisted, false, attempt.sessionId, attempt.createdAt);
       masteredNow = true;
     }
   }
@@ -240,9 +240,9 @@ export function grantMastery(
   assisted: boolean,
   selfAttested: boolean,
   sessionId?: ID,
+  now = Date.now(),
 ): MasteryRecord {
   const m = db.milestones[milestoneId];
-  const now = Date.now();
   m.masteredAt = now;
   m.skippedAt = undefined;
   m.manuallyUnlocked = undefined;
@@ -256,7 +256,7 @@ export function grantMastery(
     selfAttested,
   };
   db.mastery[rec.id] = rec;
-  logEvent(db, "MILESTONE_COMPLETE", { sessionId, milestoneId }, { assisted, selfAttested, level: rec.level });
+  logEvent(db, "MILESTONE_COMPLETE", { sessionId, milestoneId, at: now }, { assisted, selfAttested, level: rec.level });
   scheduleRetention(db, milestoneId, now);
   recomputeStatuses(db, m.courseId);
   return rec;

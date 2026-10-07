@@ -174,6 +174,22 @@ export default async function flows({ page, step, shot, click, BASE }) {
     await page.getByText("Session saved").waitFor();
   });
 
+  await step("statistics render from events with insufficient-data states", async () => {
+    await page.goto(`${BASE}#/stats`);
+    await page.getByRole("heading", { name: "Statistics" }).waitFor();
+    await page.getByText("Engagement is not evidence of learning").waitFor();
+    await page.getByText("Not enough data").first().waitFor();
+    await page.getByRole("button", { name: "Stylus", exact: true }).click();
+    await shot("14-stats");
+  });
+
+  await step("focus lab shows hypothesis and refuses to over-claim", async () => {
+    await page.goto(`${BASE}#/focus`);
+    await page.getByRole("heading", { name: "What seems to help you?" }).waitFor();
+    await page.getByText(/Insufficient data|No clear patterns yet/).first().waitFor();
+    await shot("15-focus");
+  });
+
   const spec = {
     title: "Theoretical Neuroscience", subject: "Neuroscience", goal: "Model neurons and networks mathematically.",
     units: [{ title: "Single neurons", topics: [{ title: "Membrane", milestones: [
