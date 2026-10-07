@@ -48,3 +48,15 @@ export function milestoneSessionState(db: LabDB, milestoneId: ID) {
     exhausted: !m.masteredAt && qs.length > 0 && nextQuestion(db, milestoneId) === null,
   };
 }
+
+/**
+ * A question for reviewing a milestone that needs review (or is practised again
+ * after mastery): prefer retention questions, then the least recently answered.
+ */
+export function reviewQuestion(db: LabDB, milestoneId: ID, exclude: ID[] = []): Question | null {
+  const qs = milestoneQuestions(db, milestoneId).filter((q) => q.purpose !== "TRANSFER" && !exclude.includes(q.id));
+  if (!qs.length) return null;
+  const lastAnswered = new Map<ID, number>();
+  for (const a of attemptsFor(db, milestoneId)) lastAnswered.set(a.questionId, a.createdAt);
+  return [...qs].sort((a, b) => (lastAnswered.get(a.id) ?? 0) - (lastAnswered.get(b.id) ?? 0) || (a.purpose === "RETENTION" ? -1 : 1))[0];
+}

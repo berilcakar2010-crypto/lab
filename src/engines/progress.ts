@@ -318,7 +318,7 @@ export function dueRetentionChecks(db: LabDB, now = Date.now()): RetentionCheck[
 
 export function completeRetentionCheck(db: LabDB, checkId: ID, attempt: Attempt) {
   const r = db.retention[checkId];
-  if (!r) return;
+  if (!r || r.completedAt) return; // a check counts once: the first answer is the measurement
   r.completedAt = attempt.createdAt;
   r.attemptId = attempt.id;
   r.correct = !!attempt.correct;

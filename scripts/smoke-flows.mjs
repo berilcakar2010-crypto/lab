@@ -115,6 +115,14 @@ export default async function flows({ page, step, shot, click, BASE }) {
     await shot("09-complete");
   });
 
+  await step("immediate retention check after mastery", async () => {
+    await click("Check now");
+    await page.getByText("Retention check · numeric").waitFor();
+    await page.getByLabel("Numeric answer").fill("10.39");
+    await click("Check");
+    await page.getByText("Immediate check passed").waitFor();
+  });
+
   await step("continue to the next milestone", async () => {
     await page.getByText("suggested").first().click();
     await page.getByText("After this, you can").waitFor();
@@ -188,6 +196,22 @@ export default async function flows({ page, step, shot, click, BASE }) {
     await page.getByRole("heading", { name: "What seems to help you?" }).waitFor();
     await page.getByText(/Insufficient data|No clear patterns yet/).first().waitFor();
     await shot("15-focus");
+  });
+
+  await step("retention page shows schedule and learned-vs-done", async () => {
+    await page.goto(`${BASE}#/retention`);
+    await page.getByRole("heading", { name: "Did it stick?" }).waitFor();
+    await page.getByText("Coming up").waitFor();
+    await shot("16-retention");
+  });
+
+  await step("start a personal experiment", async () => {
+    await page.goto(`${BASE}#/focus`);
+    await click("New experiment");
+    await page.getByRole("button", { name: /Long tasks vs micro-milestones/ }).click();
+    await page.getByText("Running", { exact: true }).waitFor();
+    await page.getByText(/Too early to compare/).waitFor();
+    await shot("17-experiment");
   });
 
   const spec = {

@@ -4,7 +4,8 @@ import { courseMilestones, milestoneQuestions, addQuestion } from "../../engines
 import { sanitizeQuestion } from "../../engines/curriculumSpec";
 import { ensureSession } from "../../engines/sessions";
 import { grantMastery, leaveMilestone, openMilestone, skipMilestone, endSession } from "../../engines/progress";
-import { milestoneSessionState, nextQuestion } from "../../engines/sessionPlan";
+import { milestoneSessionState, nextQuestion, reviewQuestion } from "../../engines/sessionPlan";
+import { sessionConditions } from "../../engines/experiments";
 import { logEvent } from "../../engines/analytics";
 import { generateQuestionsAI } from "../../ai/curriculumAI";
 import { act, aiHost, navigate, store, toast, useAsync, useDB } from "../state";
@@ -106,6 +107,9 @@ export function SessionPage({ milestoneId }: { milestoneId: ID }) {
   return (
     <div className="stack-lg rise">
       <TopBar title={course?.title ?? ""} onBack={exit} onEnd={finishSession} />
+      {sessionConditions(db, sessionId).armLabel && (
+        <div className="tiny muted">Experiment running · this session: {sessionConditions(db, sessionId).armLabel}</div>
+      )}
       <ObjectiveHeader milestoneId={milestoneId} />
       <ContextPanel milestoneId={milestoneId} />
       <WorkArea milestoneId={milestoneId} sessionId={sessionId} onComplete={toComplete} />
@@ -120,10 +124,16 @@ export function SessionPage({ milestoneId }: { milestoneId: ID }) {
 function WorkArea({ milestoneId, sessionId, onComplete }: { milestoneId: ID; sessionId: ID; onComplete: () => void }) {
   const db = useDB();
   const m = db.milestones[milestoneId];
-  const [currentQ, setCurrentQ] = useState<ID | null>(() => nextQuestion(store.state, milestoneId)?.id ?? null);
+  // Mastered (or fading) milestones can be practised again; that is review mode.
+  const reviewMode = () => !!store.state.milestones[milestoneId]?.masteredAt;
+  const pick = (exclude: ID[] = []) =>
+    (reviewMode() ? reviewQuestion(store.state, milestoneId, exclude) : nextQuestion(store.state, milestoneId, { exclude }))?.id ?? null;
+  const [currentQ, setCurrentQ] = useState<ID | null>(() => (store.state.milestones[milestoneId]?.status === "NEEDS_REVIEW" ? pick() : nextQuestion(store.state, milestoneId)?.id ?? null));
+  const [practising, setPractising] = useState(false);
   const [qKey, setQKey] = useState(0);
   const state = milestoneSessionState(db, milestoneId);
   const q = currentQ ? db.questions[currentQ] : undefined;
+  const conditions = sessionConditions(db, sessionId);
 
   useEffect(() => {
     // Questions can be generated while the page is open; pick one up when none is held.
@@ -134,7 +144,7 @@ function WorkArea({ milestoneId, sessionId, onComplete }: { milestoneId: ID; ses
   }, [db, currentQ, milestoneId, db.events.length]);
 
   const advance = (exclude: ID[] = []) => {
-    setCurrentQ(nextQuestion(store.state, milestoneId, { exclude })?.id ?? null);
+    setCurrentQ(pick(exclude));
     setQKey((k) => k + 1);
   };
 
@@ -142,13 +152,19 @@ function WorkArea({ milestoneId, sessionId, onComplete }: { milestoneId: ID; ses
     <>
       {state.mastered && (
         <div className="card stack">
-          <div className="banner ok">You have mastered this milestone{m.status === "NEEDS_REVIEW" ? ", but a retention check suggests it has faded. Practise below to restore it." : "."}</div>
-          {!q && <button className="btn primary" onClick={onComplete}>What's next?</button>}
+          <div className={`banner ${m.status === "NEEDS_REVIEW" ? "warn" : "ok"}`}>
+            {m.status === "NEEDS_REVIEW" ? "A retention check suggests this has faded. One correct answer below restores it." : "You have mastered this milestone."}
+          </div>
+          <div className="row">
+            {!q && !practising && <button className="btn" onClick={() => { setPractising(true); advance(); }}>Practise again</button>}
+            <button className="btn primary" onClick={onComplete}>What's next?</button>
+          </div>
         </div>
       )}
       {q ? (
-        <QuestionCard key={`${q.id}-${qKey}`} question={q} sessionId={sessionId}
-          onNext={() => advance()} onMastered={onComplete} onDifferent={() => advance([q.id])} />
+        <QuestionCard key={`${q.id}-${qKey}`} question={q} sessionId={sessionId} conditions={conditions}
+          purposeOverride={state.mastered ? "MASTERY" : undefined}
+          onNext={() => advance([q.id])} onMastered={onComplete} onDifferent={() => advance([q.id])} />
       ) : !state.mastered ? (
         <NoQuestions milestoneId={milestoneId} sessionId={sessionId} onMastered={onComplete} exhausted={state.exhausted} />
       ) : null}

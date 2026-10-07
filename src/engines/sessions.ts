@@ -4,6 +4,7 @@
  */
 import type { ID, LabDB, Session } from "../domain/types";
 import { endSession, startSession } from "./progress";
+import { assignArms } from "./experiments";
 
 export const SESSION_IDLE_LIMIT_MS = 30 * 60_000;
 
@@ -40,5 +41,7 @@ export function ensureSession(db: LabDB, courseId: ID | undefined, now = Date.no
     if (!open.courseId && courseId) open.courseId = courseId;
     return open;
   }
-  return startSession(db, courseId, now);
+  const s = startSession(db, courseId, now);
+  assignArms(db, s);
+  return s;
 }

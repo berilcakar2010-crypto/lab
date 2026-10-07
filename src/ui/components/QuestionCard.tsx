@@ -6,6 +6,7 @@ import { recordAttempt } from "../../engines/progress";
 import { logEvent } from "../../engines/analytics";
 import { act, aiHost, useDB } from "../state";
 import { generateHints } from "../../ai/tutor";
+import type { Conditions } from "../../engines/experiments";
 import { AnswerInput } from "./AnswerInput";
 import { CodeEditor, GraphPlot, SimulationPanel } from "./Widgets";
 import { DrawingCanvas, type DrawingStats } from "./DrawingCanvas";
@@ -30,7 +31,7 @@ export interface QuestionOutcome {
 }
 
 export function QuestionCard({
-  question: q, sessionId, onNext, onMastered, onDifferent, purposeOverride, hideHelp, onRecorded,
+  question: q, sessionId, onNext, onMastered, onDifferent, purposeOverride, hideHelp, onRecorded, conditions = {},
 }: {
   question: Question;
   sessionId: string;
@@ -41,17 +42,21 @@ export function QuestionCard({
   /** Retention checks hide hints by design. */
   hideHelp?: boolean;
   onRecorded?: (attemptId: string, correct: boolean | null) => void;
+  /** Experiment conditions in force for this session. */
+  conditions?: Conditions;
 }) {
   const db = useDB();
   const m = db.milestones[q.milestoneId];
   const prefs = db.preferences;
+  const hintCap = (conditions.hintCap ?? prefs.hintCap) as HintLevel;
+  const minimalFeedback = conditions.feedbackDetail === "minimal";
   const [answer, setAnswer] = useState<Answer | null>(null);
   const [code, setCode] = useState("");
   const [hintLevel, setHintLevel] = useState<HintLevel>(0);
   const [result, setResult] = useState<(Evaluation & { masteredNow: boolean; by: "auto" | "ai" | "self" }) | null>(null);
   const [rubricStep, setRubricStep] = useState<null | { met: boolean[]; ai?: AIEvalResult | null; aiBusy?: boolean }>(null);
   const [confidence, setConfidence] = useState<number | undefined>();
-  const [showWorkspace, setShowWorkspace] = useState(WORKSPACE_KINDS.has(q.kind));
+  const [showWorkspace, setShowWorkspace] = useState(conditions.workspaceOpen ?? WORKSPACE_KINDS.has(q.kind));
   const [drawing, setDrawing] = useState<{ stats: DrawingStats; image: () => string } | null>(null);
   const [showSolution, setShowSolution] = useState(false);
   const [attempts, setAttempts] = useState(0);
@@ -135,7 +140,7 @@ export function QuestionCard({
 
   const [hintBusy, setHintBusy] = useState(false);
   const requestHint = async (level: HintLevel) => {
-    if (level > prefs.hintCap && !confirm(`This goes past your usual help limit (level ${prefs.hintCap}). Struggling a little longer often helps learning stick. Show it anyway?`)) return;
+    if (level > hintCap && !confirm(`This goes past your usual help limit (level ${hintCap}). Struggling a little longer often helps learning stick. Show it anyway?`)) return;
     if (level === 5 && attempts === 0 && !confirm("You haven't attempted this yet. Reveal the full solution anyway? Answers after seeing the solution won't count toward mastery.")) return;
     let source = "authored";
     if (level <= 4 && !q.hints[level - 1]) {
@@ -229,7 +234,7 @@ export function QuestionCard({
         </div>
       )}
 
-      {result && <FeedbackPanel result={result} />}
+      {result && <FeedbackPanel result={result} minimal={minimalFeedback} />}
 
       {result && (
         <div className="row">
@@ -248,9 +253,9 @@ export function QuestionCard({
       )}
 
       {!hideHelp && (
-        <HelpLadder q={q} level={hintLevel} cap={prefs.hintCap} onRequest={requestHint} attempts={attempts} busy={hintBusy} />
+        <HelpLadder q={q} level={hintLevel} cap={hintCap} onRequest={requestHint} attempts={attempts} busy={hintBusy} />
       )}
-      {!hideHelp && <AIHelp question={q} sessionId={sessionId} answerText={effectiveAnswer()?.kind === "text" ? (effectiveAnswer() as { text: string }).text : JSON.stringify(effectiveAnswer() ?? "")} attempts={attempts} lastFeedback={result?.feedback} />}
+      {!hideHelp && conditions.guide !== false && <AIHelp question={q} sessionId={sessionId} answerText={effectiveAnswer()?.kind === "text" ? (effectiveAnswer() as { text: string }).text : JSON.stringify(effectiveAnswer() ?? "")} attempts={attempts} lastFeedback={result?.feedback} />}
 
       {showSolution && q.solution && (
         <div className="card raised rise">
@@ -262,8 +267,16 @@ export function QuestionCard({
   );
 }
 
-function FeedbackPanel({ result }: { result: Evaluation & { by: string } }) {
+function FeedbackPanel({ result, minimal }: { result: Evaluation & { by: string }; minimal?: boolean }) {
   const f = result.feedback;
+  if (minimal) {
+    // Experiment condition: correctness only, no explanation or error classification.
+    return (
+      <div className={`banner ${result.correct ? "ok" : "error"} rise`} role="status" aria-live="polite">
+        <strong>{result.correct ? "Correct" : "Not yet"}</strong>
+      </div>
+    );
+  }
   const tone = f.correctness === "CORRECT" ? "ok" : f.correctness === "PARTIAL" ? "warn" : f.correctness === "UNGRADED" ? "info" : "error";
   const title = f.correctness === "CORRECT" ? "Correct" : f.correctness === "PARTIAL" ? (result.correct ? "Good enough to count — with gaps" : "Partly there") : f.correctness === "UNGRADED" ? "Recorded" : "Not yet";
   return (

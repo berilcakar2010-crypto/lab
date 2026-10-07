@@ -5,6 +5,7 @@ import { logEvent } from "../../engines/analytics";
 import { act, useDB } from "../state";
 import { Difficulty, Icon, KindChip, TYPE_LABEL, minutes } from "./common";
 import { engagementLift } from "../../engines/statistics";
+import { sessionConditions } from "../../engines/experiments";
 
 /**
  * "What's next?" — ranked options with reasons. The user always chooses;
@@ -23,8 +24,11 @@ export function NextOptions({
   const db = useDB();
   const [showAll, setShowAll] = useState(false);
   // The store mutates in place, so recompute on every render (cheap: one pass over the course).
-  const recs = recommendNext(db, courseId, { justCompletedId, engagementLift: engagementLift(db) });
-  const picks = topPicks(recs, limit);
+  const cond = sessionConditions(db, sessionId);
+  const recs = recommendNext(db, courseId, { justCompletedId, engagementLift: engagementLift(db), preferScope: cond.preferScope, difficultyOffset: cond.difficultyOffset });
+  // Experiment condition "assigned": one suggestion up front; choosing differently stays one tap away.
+  const assigned = cond.choiceMode === "assigned";
+  const picks = topPicks(recs, assigned ? 1 : limit);
   const list = showAll ? recs : picks;
 
   // Raw record of what was offered, so choices can be analysed against offers.
@@ -66,7 +70,7 @@ export function NextOptions({
       })}
       {recs.length > picks.length && (
         <button className="btn ghost small" onClick={() => setShowAll(!showAll)} style={{ alignSelf: "flex-start" }}>
-          {showAll ? "Show suggestions only" : `See all ${recs.length} open milestones`} <Icon.arrow />
+          {showAll ? "Show suggestions only" : assigned ? "Choose differently" : `See all ${recs.length} open milestones`} <Icon.arrow />
         </button>
       )}
     </div>
