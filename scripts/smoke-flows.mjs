@@ -279,6 +279,67 @@ export default async function flows({ page, step, shot, click, BASE }) {
     await shot("21-boss");
   });
 
+  await step("knowledge graph: contextual view, search and object sheet", async () => {
+    await page.goto(`${BASE}#/graph`);
+    await page.getByRole("heading", { name: "Bilginin yapısı" }).waitFor();
+    await page.getByRole("heading", { name: "Önerilen sonraki" }).waitFor();
+    await page.getByLabel("Grafikte ara").fill("Hodgkin");
+    await page.getByRole("button", { name: /Hodgkin–Huxley modeli/ }).first().click();
+    const sheet = page.getByRole("dialog", { name: "Hodgkin–Huxley modeli" });
+    await sheet.waitFor();
+    await sheet.getByText("Önce düşün").waitFor();
+    await sheet.getByText(/Buradan başlaman öneriliyor/).first().waitFor();
+    if (/zorundasın/.test(await sheet.textContent())) throw new Error("graph must never force the learner");
+    await shot("21-graph-sheet");
+    await sheet.getByRole("button", { name: "Hedef yap" }).click();
+    await page.getByText("Hedeflerine eklendi.").waitFor();
+    await page.keyboard.press("Escape");
+    await page.getByRole("heading", { name: "Hedeflerin" }).waitFor();
+  });
+
+  await step("knowledge graph: paths, mappings and validator views", async () => {
+    await page.getByRole("tab", { name: "Yollar" }).click();
+    await click("Hesaplamalı Nörobilim");
+    await page.getByText("Bu ayrı bir müfredat değil").waitFor();
+    await page.getByRole("tab", { name: "Eşlemeler" }).click();
+    await page.getByRole("button", { name: /AP Calculus AB\/BC/ }).click();
+    await page.getByText("Doğrulanmış").first().waitFor();
+    await page.getByRole("tab", { name: "Doğrulama" }).click();
+    await page.getByText("Grafik döngüsüz").waitFor();
+    await shot("22-graph-validator");
+  });
+
+  await step("knowledge graph: update is previewed as a plan before it is applied", async () => {
+    await page.getByRole("tab", { name: "Sürüm" }).click();
+    await page.locator("textarea").fill(JSON.stringify({ version: "2.0.1", summary: "Duman testi", objects: [{ id: "math.calc.limits", entryQuestions: ["0/0 her zaman tanımsız mıdır? Bir örnekle sına."] }], remove: ["math.calc.ftc"] }));
+    await click("Farkları göster");
+    await page.getByText("Silme yapılmaz", { exact: false }).waitFor();
+    await page.locator("textarea").fill(JSON.stringify({ version: "2.0.1", summary: "Duman testi", objects: [{ id: "math.calc.limits", entryQuestions: ["0/0 her zaman tanımsız mıdır? Bir örnekle sına."] }] }));
+    await click("Farkları göster");
+    await page.getByText(/^Geçiş planı ·/).waitFor();
+    await click("Planı uygula");
+    await page.getByText("Grafik 2.0.1 sürümüne güncellendi.").waitFor();
+    await page.getByText(/Lab Müfredatı v2\.0\.1/).first().waitFor();
+  });
+
+  await step("knowledge graph: study an object creates a course of micro-milestones", async () => {
+    await page.getByRole("tab", { name: "Bağlam" }).click();
+    await page.getByLabel("Grafikte ara").fill("Almanca");
+    await page.getByRole("button", { name: /A1: Telaffuz/ }).first().click();
+    const sheet = page.getByRole("dialog");
+    await sheet.getByRole("button", { name: "Bunu çalış" }).click();
+    await page.getByRole("tab", { name: "Sırada ne var" }).waitFor();
+    await page.getByText(/A1: Telaffuz/).first().waitFor();
+  });
+
+  await step("builder looks in the graph before creating an isolated course", async () => {
+    await page.goto(`${BASE}#/build`);
+    await page.getByLabel("Neyde ustalaşmak istiyorsun?").fill("Hesaplamalı nörobilim öğrenmek istiyorum");
+    await page.getByText("Bilgi grafiğinde zaten var").waitFor();
+    await page.getByText(/öğrenme yolu bu isteği karşılıyor/).waitFor();
+    await shot("23-builder-graph-check");
+  });
+
   await step("unknown and stale routes degrade gracefully", async () => {
     for (const r of ["#/nonsense", "#/course/missing", "#/session/missing", "#/summary/missing"]) {
       await page.goto(`${BASE}${r}`);
@@ -297,7 +358,7 @@ export default async function flows({ page, step, shot, click, BASE }) {
   for (const [w, h, label] of [[390, 844, "phone"], [1180, 820, "tablet-landscape"], [820, 1180, "tablet-portrait"]]) {
     await step(`no horizontal overflow at ${label} (${w}px)`, async () => {
       await page.setViewportSize({ width: w, height: h });
-      for (const r of ["#/", "#/stats", "#/focus", "#/retention", "#/settings", "#/build"]) {
+      for (const r of ["#/", "#/graph", "#/stats", "#/focus", "#/retention", "#/settings", "#/build"]) {
         await page.goto(`${BASE}${r}`);
         await page.waitForTimeout(250);
         const over = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);

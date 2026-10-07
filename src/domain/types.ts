@@ -6,6 +6,8 @@
  * Timestamps are epoch milliseconds.
  */
 
+import type { LearningObject } from "../knowledge/schema";
+
 export type ID = string;
 export type Millis = number;
 
@@ -249,6 +251,10 @@ export interface Milestone {
   manuallyUnlocked?: boolean;
   masteredAt?: Millis;
   skippedAt?: Millis;
+  /** Canonical knowledge-graph objects this milestone practises (Lab Müfredatı v2.0). */
+  learningObjectIds?: string[];
+  /** Stable key of the milestone inside its source pack, e.g. "mech:kin2". */
+  sourceKey?: string;
   createdAt: Millis;
   updatedAt: Millis;
 }
@@ -514,6 +520,41 @@ export interface LabDB {
   experimentResults: Table<ExperimentResult>;
   engagement: Table<EngagementRecord>;
   events: AnalyticsEvent[];
+  knowledge: KnowledgeState;
 }
 
-export const SCHEMA_VERSION = 1;
+// ---------------------------------------------------------------------------
+// Knowledge graph — personal layer
+// ---------------------------------------------------------------------------
+
+/** One applied update to the canonical graph (section 36: diff → plan → apply). */
+export interface GraphUpdateRecord {
+  id: ID;
+  at: Millis;
+  fromVersion: string;
+  toVersion: string;
+  summary: string;
+  added: string[];
+  modified: string[];
+  retired: { id: string; supersededBy: string[] }[];
+  /** Milestones whose links were extended so progress follows split/merged objects. */
+  relinkedMilestones: number;
+}
+
+export interface KnowledgeState {
+  /** "I already know this" — the learner's own claim, never shown as mastery. */
+  selfAttested: Record<string, { at: Millis; note?: string }>;
+  /** Learning objects the learner chose as goals. */
+  goals: string[];
+  /** Selected learning path id, if any. */
+  pathId?: string;
+  /** Objects added or changed by updates after v2.0; base content is never mutated. */
+  overlay: { version: string; objects: Record<string, LearningObject> };
+  history: GraphUpdateRecord[];
+  /** Applied one-off data migrations, e.g. "v2-link-milestones". */
+  migrations: { id: string; at: Millis; note: string }[];
+  /** Graph version the learner last saw (to announce updates). */
+  seenVersion?: string;
+}
+
+export const SCHEMA_VERSION = 2;

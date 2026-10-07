@@ -73,3 +73,10 @@ None existed; the repository was empty (see Phase 1).
   - The keyboard resizes the layout.
   - The status bar is themed.
 - **APK build verification:** the APK is built and verified only on GitHub Actions. This development environment cannot download the Android SDK.
+
+## Update: Lab Müfredatı v2.0 — canonical knowledge graph
+
+- A canonical, time-independent knowledge graph lives in `src/knowledge/`. It has 334 objects across 13 domains, permanent ids and four prerequisite strengths.
+- School, AP, competition and research mappings are kept in a separate layer, and each mapping has a status.
+- The graph has its own validator, and updates go through a safe diff → plan → apply flow.
+- A new Grafik screen shows the graph. The full Turkish report is in `MUFREDAT_V2_RAPORU.md`.

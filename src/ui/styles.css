@@ -263,3 +263,17 @@ button, input, textarea, select { font: inherit; color: inherit; }
 @keyframes burst { from { opacity: 0.9; transform: scale(1); } to { opacity: 0; transform: scale(2.6); } }
 @keyframes pop { from { transform: scale(0.4); opacity: 0.2; } 70% { transform: scale(1.12); } to { transform: scale(1); opacity: 1; } }
 @keyframes settle { from { transform: scale(0.85); } to { transform: scale(1); } }
+
+/* Knowledge graph */
+.chip-scroll { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.chip-scroll::-webkit-scrollbar { display: none; }
+.chip-scroll .btn { flex: 0 0 auto; white-space: nowrap; }
+.lo-row { width: 100%; background: transparent; border: 0; border-bottom: 1px solid var(--border); color: inherit; font: inherit; cursor: pointer; text-align: left; }
+.lo-row:disabled { cursor: default; }
+.lo-row:hover:not(:disabled) { background: var(--raised); }
+.collapse-head { width: 100%; background: transparent; border: 0; color: inherit; font: inherit; cursor: pointer; padding: 0; min-height: 32px; }
+.chip.map-DOGRULANMIS { color: var(--mastered); background: var(--mastered-soft); border-color: transparent; }
+.chip.map-GECICI { color: var(--review); background: var(--review-soft); border-color: transparent; }
+.chip.map-BILINMIYOR { color: var(--muted); }
+ul.tight { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+@media (max-width: 420px) { .nav a { font-size: 0.64rem; } .nav a svg { width: 20px; height: 20px; } }

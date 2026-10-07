@@ -29,6 +29,34 @@ APK ayrıca **Actions** sekmesindeki her çalıştırmada artifact olarak da bul
 - Uygulamada Android geri tuşu açık pencereyi kapatır ya da bir önceki ekrana döner.
   Yedekler ve CSV dışa aktarımları Android paylaşım menüsüyle kaydedilir.
 
+## Bilgi grafiği — Lab Müfredatı v2.0
+
+Lab'in merkezinde zamandan bağımsız, yaşayan bir **bilgi grafiği** vardır (`src/knowledge/`).
+Matematik, fizik, kimya, biyoloji, nörobilim, programlama, araştırma, yarışma ve
+meta beceriler, genel kültür, medya okuryazarlığı, İngilizce, Almanca ve Japonca
+alanlarında 300'ü aşkın öğrenme nesnesi içerir.
+
+- **Kalıcı ID'ler.** Her nesnenin değişmez bir ID'si vardır (`math.calc.limits`).
+  ID'ler `ledger.ts` defterinde tutulur; silinmez, yeniden kullanılmaz.
+  Bölünen ya da birleşen nesneler "kullanım dışı" olarak kalır.
+- **Önkoşul güçleri.** Önkoşullar dört güçte olabilir: zorunlu, yumuşak, bağlamsal
+  ve önerilen hazırlık. Yalnızca zorunlu önkoşullar hazır olmayı etkiler. Lab
+  yalnızca "Buradan başlaman öneriliyor" der, seni hiçbir zaman geriye zorlamaz.
+- **Ayrı katmanlar.** Okul, AP, yarışma ve araştırma eşlemeleri (`mappings.ts`)
+  ve kaynaklar (`resources.ts`) grafikten ayrı tutulur. Her eşlemenin bir durumu
+  vardır: doğrulanmış, geçici ya da bilinmiyor.
+- **Doğrulayıcı.** `validate.ts`; döngüleri, eksik önkoşulları, bağlantısız
+  nesneleri, belirsiz ustalık ölçütlerini ve eskimiş eşlemeleri raporlar. Hiçbir
+  şeyi kendiliğinden silmez.
+- **Güvenli güncelleme.** `planner.ts`; önce farkları bulur, sonra bir plan çıkarır,
+  ancak ondan sonra uygular. Yeni hata getiren bir güncelleme uygulanamaz.
+  İlerleme her zaman korunur.
+- **Yollar ve mikro adımlar.** Fizik Olimpiyatı, Hesaplamalı Nörobilim ve Araştırma
+  yolları aynı grafiğin görünümleridir. *Bunu çalış* dediğinde nesne, her biri yeni
+  bir yetenek kazandıran mikro adımlara bölünür (`generate.ts`).
+
+Yeni içerik ekledikten sonra `node scripts/ledger.mjs` ile ID defterini güncelle.
+
 ## Geliştirme
 
 ```bash
@@ -58,6 +86,7 @@ davranışa geçer ve bunu kaydeder. YZ çıktıları varsayılan olarak Türkç
 | Depolama (IndexedDB, işlemsel düzenlemeler) | `src/data/` |
 | Müfredat, ilerleme, değerlendirme, analitik, istatistik, Odak Lab, deneyler, bütünlük | `src/engines/` |
 | YZ katmanı (sağlayıcı soyutlaması + 10 rol) | `src/ai/` |
+| Bilgi grafiği, eşlemeler, doğrulayıcı, güncelleme planlayıcı | `src/knowledge/` |
 | Arayüz (bordo araştırma defteri teması) | `src/ui/` |
 | Android kabuğu (Capacitor) | `android/`, `capacitor.config.ts`, `src/ui/native.ts` |
 

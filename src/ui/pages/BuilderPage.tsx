@@ -6,6 +6,10 @@ import { assertValidCourse } from "../../engines/curriculum";
 import { logEvent } from "../../engines/analytics";
 import { aiHost, navigate, store, toast, useAsync, useDB } from "../state";
 import { Icon, TYPE_LABEL, minutes } from "../components/common";
+import { getGraph } from "../../knowledge/graph";
+import { matchRequest } from "../../knowledge/search";
+import { personalGraph, readiness } from "../../knowledge/state";
+import { setPath, studyObjects, toggleGoal } from "../../knowledge/actions";
 
 const EXAMPLES = ["TÜBİTAK Fizik Olimpiyatı Mekanik", "Kalkülüs 1", "Kuramsal Sinirbilim"];
 
@@ -108,6 +112,7 @@ export function BuilderPage() {
             </label>
           </div>
         )}
+        <GraphCheck request={request} />
         <div className={`banner ${providerReady ? "info" : "warn"}`}>
           {providerReady
             ? `YZ sağlayıcısı: ${provider === "gemini" ? "Gemini" : "Groq"}. Başarısız olursa Lab çevrimdışı oluşturucuya geçer.`
@@ -162,6 +167,55 @@ function DraftPreview({ draft, onAccept, onBack, onRegenerate, busy }: { draft: 
         <button className="btn" onClick={onBack} disabled={busy}>Geri</button>
         <button className="btn" onClick={onRegenerate} disabled={busy}>{busy ? <span className="spinner" /> : "Yeniden oluştur"}</button>
         <button className="btn primary grow" onClick={onAccept} disabled={busy}>Kabul et ve başlangıç noktamı bul</button>
+      </div>
+    </div>
+  );
+}
+
+/** Section 37: look in the existing graph first; never force the learner backward. */
+function GraphCheck({ request }: { request: string }) {
+  const db = useDB();
+  if (request.trim().length < 3) return null;
+  const g = getGraph(db.knowledge);
+  const match = matchRequest(g, request);
+  const targets = match.path ? match.path.targets : match.objects.slice(0, 3);
+  if (!targets.length) return null;
+  const pg = personalGraph(db, g);
+  const ready = readiness(pg, targets);
+  const known = ready.known.length;
+  const gaps = ready.requiredGaps.length;
+  const createFromGraph = () => {
+    try {
+      const courseId = store.transact((d) => {
+        for (const t of targets) if (!d.knowledge.goals.includes(t)) toggleGoal(d, t);
+        return studyObjects(d, g, targets, request.trim());
+      });
+      navigate(`/course/${courseId}`);
+    } catch (e) {
+      toast(e instanceof Error ? e.message : String(e), "error");
+    }
+  };
+  return (
+    <div className="card stack graph-check" style={{ gap: 8 }}>
+      <span className="eyebrow">Bilgi grafiğinde zaten var</span>
+      {match.path ? (
+        <p className="small text-2"><strong>{match.path.title}</strong> öğrenme yolu bu isteği karşılıyor. Ayrı bir ders kurmak yerine aynı grafiği bu yoldan görebilirsin.</p>
+      ) : (
+        <p className="small text-2">İlgili nesneler: {targets.map((t) => g.objects[t].title).join(", ")}.</p>
+      )}
+      <p className="small">
+        {known > 0 && gaps === 0 ? "Bu alanların çoğunda yeterli altyapın var. " : ""}
+        {gaps > 0 ? `${gaps} zorunlu önkoşulda eksik görünüyorsun${known ? `; ${known} tanesini zaten biliyorsun` : ""}. ` : ""}
+        {gaps > 0 && ready.startHere.length ? `Buradan başlaman öneriliyor: ${ready.startHere.slice(0, 3).map((id) => g.objects[id].title).join(", ")}. Zorunlu değil.` : ""}
+        {gaps === 0 && known === 0 ? "Zorunlu önkoşulların tamam; doğrudan başlayabilirsin." : ""}
+      </p>
+      <div className="row">
+        {match.path ? (
+          <button className="btn small" onClick={() => { store.transact((d) => setPath(d, match.path!.id)); navigate("/graph?view=yollar"); }}>Yolu grafikte aç</button>
+        ) : (
+          <button className="btn small" onClick={createFromGraph}>Grafikten ders oluştur</button>
+        )}
+        <button className="btn small ghost" onClick={() => navigate(`/graph?lo=${encodeURIComponent(targets[0])}`)}>Ayrıntılar</button>
       </div>
     </div>
   );

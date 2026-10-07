@@ -10,10 +10,12 @@ import { StatisticsPage } from "./pages/StatisticsPage";
 import { FocusLabPage } from "./pages/FocusLabPage";
 import { RetentionPage } from "./pages/RetentionPage";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { KnowledgePage } from "./pages/KnowledgePage";
 import { SummaryPage } from "./pages/SummaryPage";
 
 const NAV: { path: string; label: string; icon: () => ReactNode; match: string[] }[] = [
   { path: "/", label: "Ana sayfa", icon: Icon.home, match: ["", "course", "build"] },
+  { path: "/graph", label: "Grafik", icon: Icon.atlas, match: ["graph"] },
   { path: "/retention", label: "Kalıcılık", icon: Icon.memory, match: ["retention"] },
   { path: "/stats", label: "İstatistik", icon: Icon.stats, match: ["stats"] },
   { path: "/focus", label: "Odak Lab", icon: Icon.flask, match: ["focus"] },
@@ -35,6 +37,7 @@ export function App() {
     case "settings": page = <SettingsPage />; break;
     case "stats": page = <StatisticsPage />; break;
     case "focus": page = <FocusLabPage />; break;
+    case "graph": page = <KnowledgePage />; break;
     case "retention": page = <RetentionPage />; break;
     case "summary": page = <SummaryPage sessionId={a} />; break;
     default: page = <HomePage />;

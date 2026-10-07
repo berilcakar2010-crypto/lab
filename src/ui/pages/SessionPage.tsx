@@ -1,3 +1,4 @@
+import { getGraph } from "../../knowledge/graph";
 import { useEffect, useRef, useState } from "react";
 import type { ID } from "../../domain/types";
 import { courseMilestones, milestoneQuestions, addQuestion } from "../../engines/curriculum";
@@ -206,6 +207,15 @@ function ObjectiveHeader({ milestoneId }: { milestoneId: ID }) {
           <span className="tiny muted mono" style={{ marginLeft: 6 }}>{progress.achieved}/{progress.required}</span>
         </div>
       </div>
+      {!!m.learningObjectIds?.length && (
+        <div className="row tiny muted" style={{ gap: 6 }}>
+          <span>Bilgi grafiğinde:</span>
+          {m.learningObjectIds.map((id) => {
+            const o = getGraph(db.knowledge).objects[id];
+            return o ? <a key={id} href={`#/graph?lo=${encodeURIComponent(id)}`} style={{ color: "var(--accent)" }}>{o.title}</a> : null;
+          })}
+        </div>
+      )}
     </header>
   );
 }

@@ -1,5 +1,6 @@
-import { SCHEMA_VERSION, type LabDB } from "../domain/types";
+import { SCHEMA_VERSION, type KnowledgeState, type LabDB } from "../domain/types";
 import { newId } from "./ids";
+import { runKnowledgeMigrations } from "../knowledge/migrate";
 
 export function createEmptyDB(now = Date.now()): LabDB {
   const userId = newId("user");
@@ -33,6 +34,30 @@ export function createEmptyDB(now = Date.now()): LabDB {
     experimentResults: {},
     engagement: {},
     events: [],
+    knowledge: emptyKnowledge(),
+  };
+}
+
+export function emptyKnowledge(): KnowledgeState {
+  return { selfAttested: {}, goals: [], overlay: { version: "", objects: {} }, history: [], migrations: [] };
+}
+
+function hydrateKnowledge(raw: unknown): KnowledgeState {
+  const base = emptyKnowledge();
+  if (!raw || typeof raw !== "object") return base;
+  const k = raw as Partial<KnowledgeState>;
+  const obj = (x: unknown) => (x && typeof x === "object" && !Array.isArray(x) ? x : {});
+  return {
+    ...base,
+    ...k,
+    selfAttested: obj(k.selfAttested) as KnowledgeState["selfAttested"],
+    goals: Array.isArray(k.goals) ? k.goals.filter((g) => typeof g === "string") : [],
+    overlay: {
+      version: typeof k.overlay?.version === "string" ? k.overlay.version : "",
+      objects: obj(k.overlay?.objects) as KnowledgeState["overlay"]["objects"],
+    },
+    history: Array.isArray(k.history) ? k.history : [],
+    migrations: Array.isArray(k.migrations) ? k.migrations : [],
   };
 }
 
@@ -62,11 +87,13 @@ export function hydrateDB(raw: unknown): LabDB {
       apiKeys: { ...(r.preferences?.apiKeys ?? {}) },
     },
     events: Array.isArray(r.events) ? r.events : [],
+    knowledge: hydrateKnowledge(r.knowledge),
   };
   for (const k of TABLE_KEYS) {
     const t = (r as Record<string, unknown>)[k];
     (db as unknown as Record<string, unknown>)[k] = t && typeof t === "object" && !Array.isArray(t) ? t : {};
   }
   db.preferences.userId = db.user.id;
+  runKnowledgeMigrations(db);
   return db;
 }

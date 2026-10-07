@@ -7,6 +7,33 @@ import { logEvent } from "../../engines/analytics";
 import { act, navigate, useDB } from "../state";
 import { Bar, Icon, KindChip, TYPE_LABEL, minutes } from "../components/common";
 import { courseProgress } from "./CoursePage";
+import { getGraph } from "../../knowledge/graph";
+import { personalGraph, recommendObjects } from "../../knowledge/state";
+import { LEARNING_PATHS } from "../../knowledge/paths";
+import type { LabDB } from "../../domain/types";
+
+/** A small entry into the knowledge graph: one suggestion, never the whole list. */
+function GraphCard({ db }: { db: LabDB }) {
+  const g = getGraph(db.knowledge);
+  const pg = personalGraph(db, g);
+  const path = LEARNING_PATHS.find((p) => p.id === db.knowledge.pathId);
+  const targets = db.knowledge.goals.length ? db.knowledge.goals : path?.targets ?? [];
+  const rec = recommendObjects(pg, targets, 1)[0];
+  const known = g.order.filter((id) => pg.satisfied(id)).length;
+  return (
+    <button className="card clickable stack graph-card" style={{ textAlign: "left", color: "inherit", font: "inherit", gap: 6 }}
+      onClick={() => navigate(rec ? `/graph?lo=${encodeURIComponent(rec.id)}` : "/graph")}>
+      <span className="eyebrow">Bilgi grafiği · {g.name} v{g.version}</span>
+      {rec ? (
+        <>
+          <span className="serif" style={{ fontSize: "1.1rem" }}>{g.objects[rec.id].title}</span>
+          <span className="tiny muted">{rec.reasons.slice(0, 2).join(" · ")}</span>
+        </>
+      ) : <span className="small text-2">Fikirlerin birbirine nasıl dayandığını gör.</span>}
+      <span className="row small" style={{ color: "var(--accent)", gap: 6 }}>{known ? `${known} nesneyi biliyorsun · ` : ""}Grafiği aç <Icon.arrow /></span>
+    </button>
+  );
+}
 
 /** Home: the current objective, the one thing in progress, what's next. Not a dashboard. */
 export function HomePage() {
@@ -32,6 +59,7 @@ export function HomePage() {
           <p className="text-2">Bir ders adı yaz ya da müfredat yapıştır. Lab bunu şu an gerçekten yapabileceğin bir sonraki anlamlı adıma dönüştürür — sen dener, geri bildirim alır, ustalaşır ve ilerlediğini görürsün.</p>
           <button className="btn primary" onClick={() => navigate("/build")}><Icon.plus /> Yeni ders</button>
         </div>
+        <GraphCard db={db} />
       </div>
     );
   }
@@ -94,6 +122,8 @@ export function HomePage() {
           <button className="btn ghost small" style={{ alignSelf: "flex-start" }} onClick={() => navigate(`/course/${focus.id}?tab=map`)}>Haritayı aç <Icon.arrow /></button>
         </section>
       )}
+
+      <GraphCard db={db} />
 
       <section className="stack" style={{ gap: 10 }}>
         <div className="row between"><h2>Dersler</h2><button className="btn small" onClick={() => navigate("/build")}><Icon.plus /> Yeni</button></div>

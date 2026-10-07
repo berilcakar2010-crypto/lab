@@ -14,6 +14,7 @@ import {
 } from "./curriculum";
 import { breakCycles, type PrereqMap } from "./graph";
 import { recomputeStatuses } from "./progress";
+import { PACK_LO, packPrefix } from "../knowledge/packLinks";
 
 export interface QuestionSpec {
   kind?: string;
@@ -50,6 +51,8 @@ export interface MilestoneSpec {
   tags?: string[];
   conceptKeys?: string[];
   questions?: QuestionSpec[];
+  /** Canonical knowledge-graph objects this milestone practises. */
+  lo?: string[];
 }
 
 export interface TopicSpec {
@@ -196,6 +199,7 @@ export function importCurriculum(
     generatedBy: meta.generatedBy,
   });
 
+  const pack = packPrefix(spec);
   const keyToId = new Map<string, ID>();
   const pendingPrereqs: { id: ID; keys: string[] }[] = [];
   let questionCount = 0;
@@ -239,6 +243,10 @@ export function importCurriculum(
         });
         if (!m.conceptIds.length && conceptIds.size) m.conceptIds = [...conceptIds.values()].slice(0, 1);
         const key = str(ms.key) || m.id;
+        const packKey = pack && str(ms.key) ? `${pack}:${str(ms.key)}` : undefined;
+        const lo = strs(ms.lo).length ? strs(ms.lo) : packKey ? PACK_LO[packKey] ?? [] : [];
+        if (lo.length) m.learningObjectIds = [...new Set(lo)];
+        if (packKey) m.sourceKey = packKey;
         if (keyToId.has(key)) repairs.push(`Tekrarlanan adım anahtarı "${key}"`);
         keyToId.set(key, m.id);
         pendingPrereqs.push({ id: m.id, keys: strs(ms.prerequisites) });

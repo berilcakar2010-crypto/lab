@@ -22,6 +22,7 @@ export const Icon = {
   spark: () => <svg viewBox="0 0 24 24" {...P}><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M6 18l2.5-2.5M15.5 8.5L18 6" /></svg>,
   bulb: () => <svg viewBox="0 0 24 24" {...P}><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.4 1 1.1 1 1.8V16h5v-.3c0-.7.4-1.4 1-1.8A6 6 0 0 0 12 3z" /></svg>,
   up: () => <svg viewBox="0 0 24 24" {...P}><path d="M6 15l6-6 6 6" /></svg>,
+  atlas: () => <svg viewBox="0 0 24 24" {...P}><circle cx="12" cy="5" r="2" /><circle cx="5" cy="12" r="2" /><circle cx="19" cy="12" r="2" /><circle cx="12" cy="19" r="2" /><path d="M10.6 6.4L6.4 10.6M13.4 6.4l4.2 4.2M6.4 13.4l4.2 4.2M17.6 13.4l-4.2 4.2M7 12h10" /></svg>,
   down: () => <svg viewBox="0 0 24 24" {...P}><path d="M6 9l6 6 6-6" /></svg>,
 };
 
