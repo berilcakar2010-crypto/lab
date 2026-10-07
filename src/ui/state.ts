@@ -1,17 +1,30 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import type { LabDB } from "../domain/types";
-import { localStorageAdapter, Store } from "../data/store";
+import { indexedDBAdapter, localStorageAdapter, Store } from "../data/store";
 import type { AIHost } from "../ai/engine";
 import { recomputeAll } from "../engines/progress";
+import { closeStaleSessions } from "../engines/sessions";
 
-export const store = new Store(localStorageAdapter());
-// Statuses are derived; refresh them on load in case time-based facts changed.
-store.update(recomputeAll);
+/** Initialised by `initStore()` before the app renders (ES module live binding). */
+export let store: Store;
 
-if (typeof window !== "undefined") {
-  window.addEventListener("pagehide", () => store.flush());
+export async function initStore() {
+  try {
+    if (typeof indexedDB === "undefined") throw new Error("no IndexedDB");
+    const adapter = indexedDBAdapter();
+    store = new Store(adapter, true, await adapter.load());
+  } catch (e) {
+    console.warn("Lab: IndexedDB unavailable, using localStorage", e);
+    store = new Store(localStorageAdapter());
+  }
+  // Statuses are derived; refresh them on load in case time-based facts changed.
+  store.update((db) => {
+    closeStaleSessions(db);
+    recomputeAll(db);
+  });
+  window.addEventListener("pagehide", () => void store.flush());
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") store.flush();
+    if (document.visibilityState === "hidden") void store.flush();
   });
 }
 

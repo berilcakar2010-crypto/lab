@@ -162,10 +162,11 @@ describe("Phase 2 — core data model", () => {
     expect(courseMilestones(db, course.id)[1].id).toBe(a.id);
   });
 
-  it("persists and hydrates through the store, rejecting invalid transactions", () => {
+  it("persists and hydrates through the store, rejecting invalid transactions", async () => {
     const adapter = memoryAdapter();
     const store = new Store(adapter, false);
     store.update((db) => createSubject(db, { name: "Math" }));
+    await store.flush();
     const reloaded = new Store(adapter, false);
     expect(Object.values(reloaded.state.subjects)[0].name).toBe("Math");
     expect(() =>

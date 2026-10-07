@@ -39,6 +39,21 @@ export function SettingsPage() {
     URL.revokeObjectURL(a.href);
   };
 
+  const exportEvents = () => {
+    const cols = ["at", "type", "sessionId", "subjectId", "courseId", "unitId", "topicId", "milestoneId", "questionId", "data"];
+    const esc = (v: unknown) => {
+      const t = v === undefined ? "" : typeof v === "string" ? v : JSON.stringify(v);
+      return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
+    };
+    const rows = store.state.events.map((e) => cols.map((c) => esc(c === "at" ? new Date(e.at).toISOString() : (e as unknown as Record<string, unknown>)[c])).join(","));
+    const blob = new Blob([[cols.join(","), ...rows].join("\n")], { type: "text/csv" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `lab-events-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
   const importData = async (file: File) => {
     try {
       const parsed = JSON.parse(await file.text());
@@ -97,10 +112,11 @@ export function SettingsPage() {
       <section className="card stack">
         <h2>Your data</h2>
         <p className="small text-2">Everything lives on this device. Export a backup regularly; raw events are included so statistics can be recalculated.</p>
-        <div className="small muted">{Object.keys(db.milestones).length} milestones · {Object.keys(db.attempts).length} attempts · {db.events.length} raw events</div>
+        <div className="small muted">{Object.keys(db.milestones).length} milestones · {Object.keys(db.attempts).length} attempts · {db.events.length} raw events · stored in {store.backend}</div>
         {store.lastSaveError && <div className="banner error">Last save failed: {store.lastSaveError}. Export a backup now.</div>}
         <div className="row">
           <button className="btn" onClick={exportData}>Export backup</button>
+          <button className="btn" onClick={exportEvents}>Export raw events (CSV)</button>
           <label className="btn" style={{ cursor: "pointer" }}>Restore backup<input type="file" accept="application/json,.json" hidden onChange={(e) => e.target.files?.[0] && importData(e.target.files[0])} /></label>
         </div>
       </section>

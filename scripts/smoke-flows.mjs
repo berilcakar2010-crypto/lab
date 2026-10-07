@@ -36,6 +36,18 @@ export default async function flows({ page, step, shot, click, BASE }) {
     await shot("04-next");
   });
 
+  await step("data persists across a reload (IndexedDB)", async () => {
+    await page.waitForTimeout(600);
+    await page.reload();
+    await page.getByRole("heading", { name: "Calculus 1" }).waitFor();
+    const backend = await page.evaluate(() => new Promise((resolve) => {
+      const req = indexedDB.open("lab");
+      req.onsuccess = () => resolve(req.result.objectStoreNames.contains("kv"));
+      req.onerror = () => resolve(false);
+    }));
+    if (!backend) throw new Error("IndexedDB store missing");
+  });
+
   await step("curriculum editor: open, edit and save a milestone", async () => {
     await page.getByRole("tab", { name: "Curriculum" }).click();
     await page.getByRole("button", { name: /Estimate a limit/ }).first().click();

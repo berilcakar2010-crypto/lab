@@ -66,9 +66,15 @@ export function QuestionCard({
     act((d) => logEvent(d, "QUESTION_SHOWN", { sessionId, milestoneId: q.milestoneId, questionId: q.id }, { kind: q.kind, purpose: purposeOverride ?? q.purpose }));
   }, [q.id, q.kind, q.milestoneId, q.purpose, purposeOverride, sessionId]);
 
+  const seenMethods = useRef(new Set<InputMethod>());
   const noteInput = (mth: InputMethod) => {
     input.current = mth;
     if (mth === "pen") usedStylus.current = true;
+    if (!seenMethods.current.has(mth) && mth !== "unknown") {
+      // First use of each input method per question is a raw event (stylus/touch/keyboard analysis).
+      seenMethods.current.add(mth);
+      act((d) => logEvent(d, "INPUT", { sessionId, milestoneId: q.milestoneId, questionId: q.id }, { method: mth }));
+    }
   };
 
   const effectiveAnswer = (): Answer | null => {

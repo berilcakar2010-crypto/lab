@@ -10,7 +10,7 @@ import type {
 } from "../domain/types";
 import { newId } from "../data/ids";
 import { courseMilestones, milestoneQuestions } from "./curriculum";
-import { logEvent } from "./analytics";
+import { computeSessionTimes, logEvent, sessionEvents } from "./analytics";
 
 const DAY = 86_400_000;
 
@@ -107,7 +107,13 @@ export function endSession(db: LabDB, sessionId: ID, reason: SessionEndReason, a
   if (!s || s.endedAt) return;
   s.endedAt = at;
   s.endReason = reason;
-  logEvent(db, "SESSION_END", { sessionId, courseId: s.courseId, at }, { reason, activeMs: s.activeMs, idleMs: s.idleMs });
+  logEvent(db, "SESSION_END", { sessionId, courseId: s.courseId, at }, { reason });
+  // Cached for convenience only; the source of truth is the event log.
+  const times = computeSessionTimes(sessionEvents(db, sessionId));
+  if (times) {
+    s.activeMs = times.activeMs;
+    s.idleMs = times.idleMs + times.hiddenMs;
+  }
 }
 
 /** Opening a milestone makes it the course's single ACTIVE milestone. */

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ID } from "../../domain/types";
 import { recommendNext, topPicks, type Recommendation } from "../../engines/progression";
 import { logEvent } from "../../engines/analytics";
@@ -26,6 +26,15 @@ export function NextOptions({
   const recs = recommendNext(db, courseId, { justCompletedId, engagementLift: engagementLift(db) });
   const picks = topPicks(recs, limit);
   const list = showAll ? recs : picks;
+
+  // Raw record of what was offered, so choices can be analysed against offers.
+  useEffect(() => {
+    if (!picks.length) return;
+    act((d) => logEvent(d, "RECOMMENDATION_SHOWN", { sessionId, courseId }, {
+      after: justCompletedId,
+      offered: picks.map((p, i) => ({ id: p.milestoneId, kind: p.kind, rank: i, score: p.score })),
+    }));
+  }, [courseId, justCompletedId]); // once per screen, not on every re-render
 
   if (!recs.length) {
     return <div className="card"><p className="text-2">Nothing is open right now. Every remaining milestone is locked or done — open the map to choose one anyway, or add new milestones.</p></div>;
