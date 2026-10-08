@@ -13,6 +13,22 @@ import { LEARNING_PATHS } from "../../knowledge/paths";
 import type { LabDB } from "../../domain/types";
 import { L, fmtDate } from "../../i18n";
 import { LanguageToggle } from "../components/LanguageToggle";
+import { cardStats } from "../../study/flashcards";
+
+/** Due flashcards: a two-minute habit that keeps what you learned. */
+function StudyCard({ db }: { db: LabDB }) {
+  const s = cardStats(db);
+  if (!s.total) return null;
+  return (
+    <button className="card clickable row between nowrap" style={{ textAlign: "left", color: "inherit", font: "inherit" }} onClick={() => navigate("/study")}>
+      <span className="stack" style={{ gap: 2 }}>
+        <span className="eyebrow">{L("Flashcards", "Kartlar")}</span>
+        <span className="small">{s.due ? L(`${s.due} cards are due — a few minutes keeps them.`, `${s.due} kart sırada — birkaç dakika onları kalıcı yapar.`) : L("All cards are up to date.", "Tüm kartlar güncel.")}</span>
+      </span>
+      <Icon.arrow />
+    </button>
+  );
+}
 
 /** A small entry into the knowledge graph: one suggestion, never the whole list. */
 function GraphCard({ db }: { db: LabDB }) {
@@ -126,6 +142,7 @@ export function HomePage() {
       )}
 
       <GraphCard db={db} />
+      <StudyCard db={db} />
 
       <section className="stack" style={{ gap: 10 }}>
         <div className="row between"><h2>{L("Courses", "Dersler")}</h2><button className="btn small" onClick={() => navigate("/build")}><Icon.plus /> {L("New", "Yeni")}</button></div>

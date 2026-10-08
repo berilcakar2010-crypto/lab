@@ -158,7 +158,7 @@ function MediaPlayer({ e }: { e: Explanation }) {
   return e.mode === "VIDEO" ? <video src={url} controls playsInline className="rec-preview" /> : <audio src={url} controls style={{ width: "100%" }} />;
 }
 
-function ExplanationCard({ e, o }: { e: Explanation; o: LearningObject }) {
+function ExplanationCard({ e, o, open }: { e: Explanation; o: LearningObject; open: boolean }) {
   const ev = e.evaluation;
   const download = async () => {
     const b = e.mediaId ? await media.get(e.mediaId) : undefined;
@@ -170,7 +170,7 @@ function ExplanationCard({ e, o }: { e: Explanation; o: LearningObject }) {
     store.transact((d) => deleteExplanation(d, e.id));
   };
   return (
-    <details className="card" open={!ev}>
+    <details className="card" open={open || !ev}>
       <summary className="row between nowrap" style={{ cursor: "pointer" }}>
         <span className="small">{fmtDate(e.createdAt, { day: "numeric", month: "short" })} · {e.mode === "TEXT" ? L("text", "metin") : e.mode === "AUDIO" ? L("audio", "ses") : L("video", "video")}{e.durationSec ? ` · ${e.durationSec}s` : ""}</span>
         {ev && <span className={`chip ${ev.score >= 0.75 ? "s-MASTERED" : ev.score >= 0.4 ? "s-ATTEMPTED" : "s-NEEDS_REVIEW"}`}>{Math.round(ev.score * 100)}% · {ev.by === "ai" ? ev.provider : L("self", "kendi")}</span>}
@@ -262,7 +262,7 @@ export function ExplainPanel({ db, g, loId }: { db: LabDB; g: KnowledgeGraph; lo
       )}
       {busy && mode !== "TEXT" && <p className="small muted"><span className="spinner" /> {L("Saving and evaluating…", "Kaydediliyor ve değerlendiriliyor…")}</p>}
       <p className="tiny muted">{L("Recordings stay on this device. Gemini can listen to audio and video; Groq transcribes speech first; without a key you tick the criteria yourself.", "Kayıtlar bu cihazda kalır. Gemini sesi ve videoyu dinleyebilir; Groq önce konuşmayı yazıya döker; anahtar yoksa ölçütleri kendin işaretlersin.")}</p>
-      {list.map((e) => <ExplanationCard key={e.id} e={e} o={o} />)}
+      {list.map((e, i) => <ExplanationCard key={e.id} e={e} o={o} open={i === 0} />)}
     </div>
   );
 }

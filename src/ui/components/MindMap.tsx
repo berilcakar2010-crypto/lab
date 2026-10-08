@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { L } from "../../i18n";
-import { mindMapMarkdown, radialLayout, type MindNode, type PlacedNode } from "../../study/mindmap";
+import { mindLayout, mindMapMarkdown, type MindNode, type PlacedNode } from "../../study/mindmap";
 import { saveBlobFile, saveTextFile } from "../native";
 import { toast } from "../state";
 
@@ -29,7 +29,7 @@ function wrap(text: string, width: number, lines: number): string[] {
 function NodeBox({ p, onTap, selected }: { p: PlacedNode; onTap: () => void; selected: boolean }) {
   const n = p.node;
   const cls = n.kind === "root" ? "mm-root" : n.kind === "branch" ? "mm-branch" : "mm-leaf";
-  const [w, lines] = n.kind === "root" ? [190, wrap(n.label, 20, 3)] : n.kind === "branch" ? [128, wrap(n.label, 16, 2)] : [150, wrap(n.label, 22, 3)];
+  const [w, lines] = n.kind === "root" ? [200, wrap(n.label, 20, 3)] : n.kind === "branch" ? [140, wrap(n.label, 17, 2)] : [230, wrap(n.label, 32, 3)];
   const lh = n.kind === "root" ? 20 : 15;
   const h = lines.length * lh + 14;
   const color = TONE[n.tone ?? ""] ?? "#e28a9a";
@@ -52,11 +52,11 @@ export function MindMapView({ root, onOpenObject, onAddItem, fileName }: {
   onAddItem?: (text: string) => void;
   fileName: string;
 }) {
-  const placed = useMemo(() => radialLayout(root), [root]);
+  const placed = useMemo(() => mindLayout(root), [root]);
   const [sel, setSel] = useState<PlacedNode | null>(null);
   const [add, setAdd] = useState("");
   const svgRef = useRef<SVGSVGElement>(null);
-  const pad = 110;
+  const pad = 130;
   const xs = placed.map((p) => p.x), ys = placed.map((p) => p.y);
   const vb = { x: Math.min(...xs) - pad, y: Math.min(...ys) - pad, w: Math.max(...xs) - Math.min(...xs) + 2 * pad, h: Math.max(...ys) - Math.min(...ys) + 2 * pad };
   const [zoom, setZoom] = useState(1);
@@ -119,8 +119,10 @@ export function MindMapView({ root, onOpenObject, onAddItem, fileName }: {
           onWheel={(e) => setZoom((z) => Math.min(4, Math.max(0.5, z * (e.deltaY > 0 ? 0.9 : 1.1))))}>
           {placed.filter((p) => p.parent).map((p) => {
             const a = p.parent!;
-            const mx = (a.x + p.x) / 2, my = (a.y + p.y) / 2;
-            return <path key={`l-${p.node.id}`} className="mm-line" d={`M${a.x},${a.y} Q${mx + (a.y - p.y) * 0.08},${my - (a.x - p.x) * 0.08} ${p.x},${p.y}`}
+            // Horizontal S-curves from the parent's edge to the child's edge.
+            const x1 = a.x + p.side * (a.depth === 0 ? 100 : 70), x2 = p.x - p.side * (p.depth === 1 ? 70 : 115);
+            const mx = (x1 + x2) / 2;
+            return <path key={`l-${p.node.id}`} className="mm-line" d={`M${x1},${a.y} C${mx},${a.y} ${mx},${p.y} ${x2},${p.y}`}
               style={p.depth === 1 ? { stroke: TONE[p.node.tone ?? ""] ?? undefined, strokeOpacity: 0.6 } : undefined} />;
           })}
           {[...placed].reverse().map((p) => <NodeBox key={p.node.id} p={p} selected={sel?.node.id === p.node.id} onTap={() => setSel(p)} />)}

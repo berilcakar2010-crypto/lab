@@ -19,6 +19,19 @@ const STATE_RING: Partial<Record<LOState, string>> = {
 interface Node { id: string; x: number; y: number; label: string; color: string; ring?: string; dim?: boolean; focus?: boolean; r: number }
 interface Edge { from: string; to: string; kind: "pre" | "soft" | "link"; w?: number }
 
+/** Up to two short lines, so neighbouring labels don't run into each other. */
+function labelLines(label: string, width = 18): string[] {
+  const words = label.split(/\s+/);
+  const lines: string[] = [""];
+  for (const w of words) {
+    const cur = lines[lines.length - 1];
+    if ((cur + " " + w).trim().length <= width) lines[lines.length - 1] = (cur + " " + w).trim();
+    else if (lines.length < 2) lines.push(w);
+    else { lines[1] = `${lines[1]}…`; break; }
+  }
+  return lines.map((l) => (l.length > width + 2 ? `${l.slice(0, width)}…` : l));
+}
+
 /** Pan (drag) and zoom (wheel, pinch or buttons) over an SVG viewBox. */
 function usePanZoom(initial: { x: number; y: number; w: number; h: number }) {
   const [vb, setVb] = useState(initial);
@@ -93,7 +106,9 @@ function MapFrame({ nodes, edges, onTap, height = 420, legend }: { nodes: Node[]
             onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onTap(n.id)}>
             {n.ring && <circle r={n.r + 5} fill="none" stroke={n.ring} strokeWidth={2.5} />}
             <circle r={n.r} fill={n.color} fillOpacity={n.focus ? 0.95 : 0.8} />
-            <text y={n.r + 15} textAnchor="middle" className="gm-label">{n.label.length > 26 ? `${n.label.slice(0, 25)}…` : n.label}</text>
+            <text y={n.r + 15} textAnchor="middle" className="gm-label">
+              {labelLines(n.label).map((l, i) => <tspan key={i} x={0} dy={i ? 14 : 0}>{l}</tspan>)}
+            </text>
           </g>
         ))}
       </svg>
@@ -135,12 +150,12 @@ export function NeighbourhoodMap({ pg, focus, onFocus, onOpen }: { pg: PersonalG
       const st = pg.progress.get(id)?.state;
       nodes.push({ id, x, y, label: g.objects[id].title, color: DOMAIN_COLOR[g.objects[id].domain], ring: st ? STATE_RING[st] : undefined, r: 14, ...extra });
     };
-    const row = (ids: string[], y: number, gap = 150) => ids.forEach((id, i) => mk(id, (i - (ids.length - 1) / 2) * gap, y));
+    const row = (ids: string[], y: number, gap = 175) => ids.forEach((id, i) => mk(id, (i - (ids.length - 1) / 2) * gap, y));
     mk(focus, 0, 0, { focus: true, r: 22 });
     const pre1 = o.prerequisites.map((p) => p.id).filter((id) => g.objects[id]);
     row(pre1, -150);
     const pre2 = [...new Set(pre1.flatMap((id) => g.objects[id].prerequisites.filter((p) => p.strength === "ZORUNLU").map((p) => p.id)))].filter((id) => g.objects[id] && !pre1.includes(id) && id !== focus).slice(0, 8);
-    row(pre2, -290, 130);
+    row(pre2, -300, 165);
     for (const p of o.prerequisites) edges.push({ from: p.id, to: focus, kind: p.strength === "ZORUNLU" ? "pre" : "soft" });
     for (const id of pre1) for (const p of g.objects[id].prerequisites) if (pre2.includes(p.id)) edges.push({ from: p.id, to: id, kind: p.strength === "ZORUNLU" ? "pre" : "soft" });
     const un = o.unlocks.slice(0, 8);
@@ -151,7 +166,7 @@ export function NeighbourhoodMap({ pg, focus, onFocus, onOpen }: { pg: PersonalG
     links.forEach((id, i) => {
       const side = i % 2 ? 1 : -1;
       const k = Math.floor(i / 2);
-      mk(id, side * (240 + k * 40), -60 + k * 75);
+      mk(id, side * (300 + k * 30), -70 + k * 85);
       edges.push({ from: focus, to: id, kind: "link" });
     });
     return { nodes, edges };
@@ -182,7 +197,7 @@ export function DomainMap({ pg, domain, onOpen }: { pg: PersonalGraph; domain: D
     for (const [k, list] of cols) {
       list.forEach((id, i) => {
         const st = pg.progress.get(id)?.state;
-        nodes.push({ id, x: k * 190, y: (i - (list.length - 1) / 2) * 70, label: g.objects[id].title, color: DOMAIN_COLOR[domain], ring: st ? STATE_RING[st] : undefined, dim: st === "ONKOSUL_EKSIK", r: 11 });
+        nodes.push({ id, x: k * 210, y: (i - (list.length - 1) / 2) * 78, label: g.objects[id].title, color: DOMAIN_COLOR[domain], ring: st ? STATE_RING[st] : undefined, dim: st === "ONKOSUL_EKSIK", r: 11 });
       });
     }
     const edges: Edge[] = ids.flatMap((id) => g.objects[id].prerequisites.filter((p) => set.has(p.id)).map((p) => ({ from: p.id, to: id, kind: p.strength === "ZORUNLU" ? ("pre" as const) : ("soft" as const) })));

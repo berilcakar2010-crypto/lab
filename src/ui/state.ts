@@ -22,6 +22,13 @@ export async function initStore() {
   // `?lang=tr` / `?lang=en` in the URL switches the language (used by links and tests).
   const asked = new URLSearchParams(window.location.search).get("lang");
   if (isLang(asked) && asked !== store.state.preferences.language) store.update((db) => switchLanguage(db, asked));
+  // v2.1: English became the main language. Move older (Turkish) data once, translating built-in content.
+  if (!store.state.knowledge.migrations.some((m) => m.id === "v21-english-default")) {
+    store.update((db) => {
+      if (!isLang(asked)) switchLanguage(db, "en");
+      db.knowledge.migrations.push({ id: "v21-english-default", at: Date.now(), note: "Ana dil İngilizce oldu; hazır içerik çevrildi. | English became the main language; built-in content was translated." });
+    });
+  }
   setLang(store.state.preferences.language);
   // Statuses are derived; refresh them on load in case time-based facts changed.
   store.update((db) => {

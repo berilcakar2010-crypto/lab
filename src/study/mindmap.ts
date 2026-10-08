@@ -86,7 +86,7 @@ export function mindMapMarkdown(root: MindNode): string {
 }
 
 // ---------------------------------------------------------------------------
-// Radial layout
+// Layout: classic two-sided mind map (no overlaps by construction)
 // ---------------------------------------------------------------------------
 
 export interface PlacedNode {
@@ -94,34 +94,36 @@ export interface PlacedNode {
   x: number;
   y: number;
   depth: number;
-  angle: number;
+  /** -1 left side, 1 right side, 0 root. */
+  side: number;
   parent?: PlacedNode;
 }
 
+export const LEAF_H = 62;
+const GROUP_GAP = 26;
+
 /**
- * Places branches around the root and leaves fanned out beyond their branch.
- * Angular space is shared in proportion to each branch's leaf count so dense
- * branches do not overlap sparse ones.
+ * The root sits in the middle; branches alternate right and left; each
+ * branch's leaves are stacked beside it. Heights are computed from the number
+ * of leaves, so nothing can overlap however many branches there are.
  */
-export function radialLayout(root: MindNode, r1 = 150, r2 = 290): PlacedNode[] {
-  const out: PlacedNode[] = [];
-  const center: PlacedNode = { node: root, x: 0, y: 0, depth: 0, angle: 0 };
-  out.push(center);
-  const weights = root.children.map((b) => Math.max(1, b.children.length));
-  const total = weights.reduce((a, b) => a + b, 0) || 1;
-  let a0 = -Math.PI / 2;
-  root.children.forEach((b, i) => {
-    const span = (2 * Math.PI * weights[i]) / total;
-    const mid = a0 + span / 2;
-    const bp: PlacedNode = { node: b, x: Math.cos(mid) * r1, y: Math.sin(mid) * r1, depth: 1, angle: mid, parent: center };
-    out.push(bp);
-    const n = b.children.length;
-    b.children.forEach((c, j) => {
-      const a = n === 1 ? mid : a0 + (span * (j + 0.5)) / n;
-      const r = r2 + (n > 3 && j % 2 ? 46 : 0);
-      out.push({ node: c, x: Math.cos(a) * r, y: Math.sin(a) * r, depth: 2, angle: a, parent: bp });
+export function mindLayout(root: MindNode, branchX = 250, leafX = 500): PlacedNode[] {
+  const center: PlacedNode = { node: root, x: 0, y: 0, depth: 0, side: 0 };
+  const out: PlacedNode[] = [center];
+  const sides: MindNode[][] = [[], []];
+  root.children.forEach((b, i) => sides[i % 2].push(b));
+  sides.forEach((branches, si) => {
+    const side = si === 0 ? 1 : -1;
+    const heights = branches.map((b) => Math.max(1, b.children.length) * LEAF_H);
+    const total = heights.reduce((a, b) => a + b, 0) + GROUP_GAP * Math.max(0, branches.length - 1);
+    let y = -total / 2;
+    branches.forEach((b, i) => {
+      const h = heights[i];
+      const bp: PlacedNode = { node: b, x: side * branchX, y: y + h / 2, depth: 1, side, parent: center };
+      out.push(bp);
+      b.children.forEach((c, j) => out.push({ node: c, x: side * leafX, y: y + LEAF_H * (j + 0.5), depth: 2, side, parent: bp }));
+      y += h + GROUP_GAP;
     });
-    a0 += span;
   });
   return out;
 }

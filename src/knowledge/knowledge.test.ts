@@ -15,17 +15,16 @@ import { LEARNING_PATHS, pathObjects } from "./paths";
 import { MAPPINGS } from "./mappings";
 import { matchRequest } from "./search";
 import { setSelfAttested, studyObjects } from "./actions";
-import { SCOPE_MILESTONES } from "./schema";
+import { DOMAINS, SCOPE_MILESTONES } from "./schema";
+import { setLang } from "../i18n";
 
 const g = getGraph();
 
 describe("Lab Müfredatı v2.0 — canonical graph", () => {
   it("has the expected size and every domain, and no extra-language placeholder", () => {
-    expect(g.order.length).toBeGreaterThanOrEqual(300);
+    expect(g.order.length).toBeGreaterThanOrEqual(480);
     const domains = new Set(g.order.map((id) => g.objects[id].domain));
-    for (const d of ["MATEMATIK", "FIZIK", "KIMYA", "BIYOLOJI", "NOROBILIM", "PROGRAMLAMA", "ARASTIRMA", "YARISMA", "GENEL_KULTUR", "MEDYA", "INGILIZCE", "ALMANCA", "JAPONCA"]) {
-      expect(domains.has(d as never), d).toBe(true);
-    }
+    for (const d of DOMAINS) expect(domains.has(d), d).toBe(true);
     expect(g.order.filter((id) => g.objects[id].status === "YER_TUTUCU")).toEqual([]);
   });
 
@@ -110,7 +109,7 @@ describe("micro-milestones (sections 41–42)", () => {
     const courseId = studyObjects(db, g, ids);
     const ms = Object.values(db.milestones).filter((m) => m.courseId === courseId);
     expect(ms.length).toBeGreaterThanOrEqual(3);
-    const first = (lo: string) => ms.find((m) => m.learningObjectIds?.includes(lo) && m.sourceKey === undefined && m.title === objectMilestones(g.objects[lo])[0].title)!;
+    const first = (lo: string) => ms.find((m) => m.sourceKey === `lo:${lo}#1`)!;
     expect(first("math.calc.limits").prerequisites.length).toBe(1);
     expect(courseSpecFor(g, ids, "x", "y").units.length).toBeGreaterThan(0);
   });
@@ -122,8 +121,16 @@ describe("personal state, readiness and recommendations", () => {
     const pg = personalGraph(db, g);
     const r = readiness(pg, ["neuro.comp.hh-model"]);
     expect(r.requiredGaps.length).toBeGreaterThan(5);
-    expect(r.message).toContain("Buradan başlaman öneriliyor");
-    expect(r.message).not.toMatch(/zorundasın/);
+    expect(r.message).toContain("Suggested starting point");
+    expect(r.message).toContain("not required");
+    setLang("tr");
+    try {
+      const tr = readiness(personalGraph(db, getGraph(db.knowledge, "tr")), ["neuro.comp.hh-model"]);
+      expect(tr.message).toContain("Buradan başlaman öneriliyor");
+      expect(tr.message).not.toMatch(/zorundasın/);
+    } finally {
+      setLang("en");
+    }
     for (const s of r.startHere) expect(pg.progress.get(s)!.missingRequired).toEqual([]);
   });
 
@@ -168,15 +175,15 @@ describe("safe updates (section 36)", () => {
   it("refuses id reuse, deletion, an old version and cycles; applies a clean diff as an overlay", () => {
     const db = createEmptyDB();
     expect(diffUpdate(g, { version: "1.0.0", objects: [{ id: "math.calc.limits", title: "x" }] }, db).ok).toBe(false);
-    const del = diffUpdate(g, { version: "2.1.0", remove: ["math.calc.limits"] }, db);
+    const del = diffUpdate(g, { version: "2.2.0", remove: ["math.calc.limits"] }, db);
     expect(del.ok).toBe(false);
     expect(del.changes[0].kind).toBe("REDDEDILDI");
-    const cyc = diffUpdate(g, { version: "2.1.0", objects: [{ id: "math.found.arithmetic", prerequisites: [{ id: "math.calc.limits", strength: "ZORUNLU" }] }] }, db);
+    const cyc = diffUpdate(g, { version: "2.2.0", objects: [{ id: "math.found.arithmetic", prerequisites: [{ id: "math.calc.limits", strength: "ZORUNLU" }] }] }, db);
     expect(cyc.ok).toBe(false);
     expect(cyc.newErrors.some((e) => e.code === "DONGU")).toBe(true);
 
     const plan = diffUpdate(g, {
-      version: "2.1.0",
+      version: "2.2.0",
       summary: "Giriş sorusu düzeltmesi",
       objects: [{ id: "math.calc.limits", entryQuestions: ["0/0 her zaman tanımsız mıdır? Bir örnekle sına."] }],
     }, db);
@@ -184,7 +191,7 @@ describe("safe updates (section 36)", () => {
     expect(plan.changes.map((c) => c.kind)).toEqual(["DEGISTIR"]);
     applyPlan(db, plan);
     const g2 = getGraph(db.knowledge);
-    expect(g2.version).toBe("2.1.0");
+    expect(g2.version).toBe("2.2.0");
     expect(g2.objects["math.calc.limits"].entryQuestions[0]).toMatch(/^0\/0/);
     expect(g.objects["math.calc.limits"].entryQuestions[0]).not.toMatch(/^0\/0/);
   });
@@ -194,7 +201,7 @@ describe("safe updates (section 36)", () => {
     const courseId = studyObjects(db, g, ["math.found.inequalities"]);
     setSelfAttested(db, "math.found.inequalities", true);
     const plan = diffUpdate(g, {
-      version: "2.1.0",
+      version: "2.2.0",
       objects: [
         { id: "math.found.inequalities-linear", title: "Doğrusal eşitsizlikler", domain: "MATEMATIK", field: "Temeller", unit: "Sayılar ve cebir",
           description: "Doğrusal eşitsizlikleri çözer.", whyItMatters: "Optimizasyonun temeli.", prerequisites: [{ id: "math.found.algebra", strength: "ZORUNLU" }],
@@ -213,7 +220,7 @@ describe("safe updates (section 36)", () => {
     expect(ms.every((m) => m.learningObjectIds!.includes("math.found.inequalities") && m.learningObjectIds!.includes("math.found.inequalities-linear"))).toBe(true);
     expect(db.knowledge.selfAttested["math.found.inequalities-linear"]).toBeDefined();
     // The retired id can never be issued again.
-    expect(diffUpdate(g2, { version: "2.2.0", objects: [{ id: "math.found.inequalities-linear", title: "x" }] }, db).changes.some((c) => c.kind === "DEGISTIR")).toBe(true);
+    expect(diffUpdate(g2, { version: "2.3.0", objects: [{ id: "math.found.inequalities-linear", title: "x" }] }, db).changes.some((c) => c.kind === "DEGISTIR")).toBe(true);
   });
 });
 

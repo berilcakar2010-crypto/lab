@@ -18,10 +18,10 @@ const BAD_PATTERNS: [RegExp, string, string][] = [
   [/(^|\s)\d+\s*(dk|dakika|saat)(\s|$).*(^|\s)(çalış|çalışır|çalışmak)(\s|\.|$)/i, "filling time is not an ability", "süre doldurmak bir yetenek değil"],
   [/(^|\s)(çalış|çalışır)\s*\.?\s*$/i, "\"study\" does not say what the learner can do", "\"çalış\" ne yapılabileceğini söylemiyor"],
   [/(^|\s)(anlar|bilir|kavrar|öğrenir)\s*\.?\s*$/i, "not an observable action", "gözlemlenebilir bir eylem değil"],
-  [/^\s*(read|reads)\b[^.]{0,40}\.?\s*$/i, "reading alone is not an ability", "yalnızca okumak bir yetenek değil"],
+  [/^\s*(read|reads)(\s+\S+){0,3}\s*\.?\s*$/i, "reading alone is not an ability", "yalnızca okumak bir yetenek değil"],
   [/\b(watch|watches)\b.*\b(video|videos|lecture|lectures)\b/i, "watching videos is not an ability", "video izlemek bir yetenek değil"],
   [/\b(study|studies)\b.*\bfor\s+\d+\s*(min|minutes|hours?)\b|\b\d+\s*(min|minutes)\s+(of\s+)?study/i, "filling time is not an ability", "süre doldurmak bir yetenek değil"],
-  [/\b(understands?|knows?|learns?|is familiar with)\b[^.]{0,30}\.?\s*$/i, "not an observable action", "gözlemlenebilir bir eylem değil"],
+  [/^\s*(understands?|knows?|learns?|is familiar with)\b|\b(understands?|knows?|learns?)\s*\.?\s*$/i, "not an observable action", "gözlemlenebilir bir eylem değil"],
 ];
 
 /** Section 42: does completing this milestone give a new intellectual ability? */

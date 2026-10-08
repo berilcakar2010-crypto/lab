@@ -100,7 +100,8 @@ export function hydrateDB(raw: unknown): LabDB {
     (db as unknown as Record<string, unknown>)[k] = t && typeof t === "object" && !Array.isArray(t) ? t : {};
   }
   db.preferences.userId = db.user.id;
-  if (!isLang(db.preferences.language)) db.preferences.language = DEFAULT_LANG;
+  // Data saved before v2.1 has no language: it was written by the Turkish-only app.
+  if (!isLang(db.preferences.language)) db.preferences.language = r.preferences ? "tr" : DEFAULT_LANG;
   runKnowledgeMigrations(db);
   return db;
 }

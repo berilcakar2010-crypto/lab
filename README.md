@@ -29,12 +29,42 @@ APK ayrıca **Actions** sekmesindeki her çalıştırmada artifact olarak da bul
 - Uygulamada Android geri tuşu açık pencereyi kapatır ya da bir önceki ekrana döner.
   Yedekler ve CSV dışa aktarımları Android paylaşım menüsüyle kaydedilir.
 
-## Bilgi grafiği — Lab Müfredatı v2.0
+## Dil
+
+Lab'in ana dili **İngilizcedir**; **Türkçe** tam bir seçenek olarak gelir. Dil, Ana sayfanın
+sağ üstündeki EN/TR düğmesiyle ya da Ayarlar → Dil bölümünden değiştirilir. Arayüz, motor
+mesajları, YZ yanıtları, hazır ders paketleri ve bilgi grafiğinin tamamı iki dillidir.
+Dil değiştirince düzenlemediğin hazır ders içerikleri de çevrilir; kendi metinlerin ve
+ilerlemen olduğu gibi kalır.
+
+## Çalışma araçları
+
+- **Bilgi haritası:** Grafik → Harita. Önce tüm alanların atlası görünür, sonra seçilen
+  alanın önkoşul haritası, en sonda tek bir nesnenin komşuluğu: önkoşulları yukarıda, açtığı
+  konular aşağıda, disiplinlerarası bağlantıları yanlarda. Kaydırılabilir ve yakınlaştırılabilir.
+- **Zihin haritaları:** her nesne ve her alan için tek bakışta hatırlatan haritalar. Kendi
+  dallarını ekleyebilirsin. SVG, PNG ya da Markdown olarak dışa aktarılabilir.
+- **Kartlar:** grafikten otomatik, YZ ile ya da elle kart; boşluk doldurma kartları da var.
+  SM-2 aralıklı tekrar kullanılır. Kartlar Anki ve CSV olarak dışa aktarılabilir.
+- **YZ'ye sor:** her nesne için kayıtlı sohbet. Çevrimdışıyken yanıtlar grafikten gelir.
+- **Mantığını anlat:** konuyu yazılı, sesli ya da videolu anlatırsın. Kayıtlar cihazda kalır.
+  - Gemini sesi ve videoyu doğrudan değerlendirir.
+  - Groq önce Whisper ile konuşmayı yazıya döker.
+  - Anahtar yoksa ustalık ölçütlerini kendin işaretlersin.
+  - Kayıtlar, dökümler ve değerlendirmeler dışa aktarılabilir.
+- **Notlar** ve **sesli okuma** (cihazda ses varsa).
+
+## Bilgi grafiği — Lab Müfredatı v2.1
 
 Lab'in merkezinde zamandan bağımsız, yaşayan bir **bilgi grafiği** vardır (`src/knowledge/`).
-Matematik, fizik, kimya, biyoloji, nörobilim, programlama, araştırma, yarışma ve
-meta beceriler, genel kültür, medya okuryazarlığı, İngilizce, Almanca ve Japonca
-alanlarında 300'ü aşkın öğrenme nesnesi içerir.
+19 alanda 482 öğrenme nesnesi içerir:
+
+- **Bilimler:** matematik, fizik, kimya, biyoloji, nörobilim, yer ve uzay bilimleri, çevre bilimi.
+- **Hesaplama ve araştırma:** programlama ve bilgisayar bilimi, araştırma, yarışma ve meta beceriler.
+- **Sosyal bilimler ve sanat:** psikoloji, ekonomi, genel kültür, yazım ve retorik, sanat ve müzik.
+- **Diller ve medya:** medya okuryazarlığı, İngilizce, Almanca, Japonca.
+
+25 AP dersinin üniteleriyle eşleşir.
 
 - **Kalıcı ID'ler.** Her nesnenin değişmez bir ID'si vardır (`math.calc.limits`).
   ID'ler `ledger.ts` defterinde tutulur; silinmez, yeniden kullanılmaz.
@@ -55,7 +85,8 @@ alanlarında 300'ü aşkın öğrenme nesnesi içerir.
   yolları aynı grafiğin görünümleridir. *Bunu çalış* dediğinde nesne, her biri yeni
   bir yetenek kazandıran mikro adımlara bölünür (`generate.ts`).
 
-Yeni içerik ekledikten sonra `node scripts/ledger.mjs` ile ID defterini güncelle.
+Yeni içerik ekledikten sonra `node scripts/content-index.mjs && node scripts/ledger.mjs`
+ile içerik dizinini ve ID defterini güncelle.
 
 ## Geliştirme
 
@@ -87,6 +118,8 @@ davranışa geçer ve bunu kaydeder. YZ çıktıları varsayılan olarak Türkç
 | Müfredat, ilerleme, değerlendirme, analitik, istatistik, Odak Lab, deneyler, bütünlük | `src/engines/` |
 | YZ katmanı (sağlayıcı soyutlaması + 10 rol) | `src/ai/` |
 | Bilgi grafiği, eşlemeler, doğrulayıcı, güncelleme planlayıcı | `src/knowledge/` |
+| Kartlar, zihin haritaları, notlar, anlatımlar | `src/study/` |
+| Dil altyapısı | `src/i18n.ts` |
 | Arayüz (bordo araştırma defteri teması) | `src/ui/` |
 | Android kabuğu (Capacitor) | `android/`, `capacitor.config.ts`, `src/ui/native.ts` |
 

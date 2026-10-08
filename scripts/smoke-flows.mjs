@@ -1,7 +1,15 @@
 /** User flows exercised by scripts/smoke.mjs. Each phase adds to this file. */
 export default async function flows({ page, step, shot, click, BASE }) {
-  await step("home renders with empty state", async () => {
+  await step("English is the default language", async () => {
     await page.goto(BASE);
+    await page.getByRole("heading", { name: "What's next?" }).waitFor();
+    await page.getByRole("link", { name: "Study" }).waitFor();
+    await shot("00-home-english");
+  });
+
+  await step("home renders with empty state", async () => {
+    // The rest of the flows run in Turkish (the option); ?lang=tr switches and persists.
+    await page.goto(`${BASE}?lang=tr`);
     await page.getByRole("heading", { name: "Sırada ne var?" }).waitFor();
     await shot("01-home-empty");
   });
@@ -311,15 +319,15 @@ export default async function flows({ page, step, shot, click, BASE }) {
 
   await step("knowledge graph: update is previewed as a plan before it is applied", async () => {
     await page.getByRole("tab", { name: "Sürüm" }).click();
-    await page.locator("textarea").fill(JSON.stringify({ version: "2.0.1", summary: "Duman testi", objects: [{ id: "math.calc.limits", entryQuestions: ["0/0 her zaman tanımsız mıdır? Bir örnekle sına."] }], remove: ["math.calc.ftc"] }));
+    await page.locator("textarea").fill(JSON.stringify({ version: "2.1.1", summary: "Duman testi", objects: [{ id: "math.calc.limits", entryQuestions: ["0/0 her zaman tanımsız mıdır? Bir örnekle sına."] }], remove: ["math.calc.ftc"] }));
     await click("Farkları göster");
     await page.getByText("Silme yapılmaz", { exact: false }).waitFor();
-    await page.locator("textarea").fill(JSON.stringify({ version: "2.0.1", summary: "Duman testi", objects: [{ id: "math.calc.limits", entryQuestions: ["0/0 her zaman tanımsız mıdır? Bir örnekle sına."] }] }));
+    await page.locator("textarea").fill(JSON.stringify({ version: "2.1.1", summary: "Duman testi", objects: [{ id: "math.calc.limits", entryQuestions: ["0/0 her zaman tanımsız mıdır? Bir örnekle sına."] }] }));
     await click("Farkları göster");
     await page.getByText(/^Geçiş planı ·/).waitFor();
     await click("Planı uygula");
-    await page.getByText("Grafik 2.0.1 sürümüne güncellendi.").waitFor();
-    await page.getByText(/Lab Müfredatı v2\.0\.1/).first().waitFor();
+    await page.getByText("Grafik 2.1.1 sürümüne güncellendi.").waitFor();
+    await page.getByText(/Lab Müfredatı v2\.1\.1/).first().waitFor();
   });
 
   await step("knowledge graph: study an object creates a course of micro-milestones", async () => {
@@ -340,6 +348,72 @@ export default async function flows({ page, step, shot, click, BASE }) {
     await shot("23-builder-graph-check");
   });
 
+  await step("knowledge map: atlas of fields, a field, an object's neighbourhood", async () => {
+    await page.goto(`${BASE}#/graph?view=harita`);
+    await page.getByRole("img", { name: "Bilgi haritası" }).waitFor();
+    await page.getByRole("button", { name: /^Nörobilim \(/ }).click();
+    await page.getByRole("button", { name: "Zihin haritası" }).waitFor();
+    await page.getByRole("button", { name: "Hodgkin–Huxley modeli" }).first().click();
+    await page.getByText("Haritayı oraya taşımak için").waitFor();
+    await shot("24-graph-map");
+  });
+
+  await step("object tools: mind map, flashcards with review, ask AI offline, explain and self-assess", async () => {
+    await page.goto(`${BASE}#/graph?lo=phys.mech.newton`);
+    const sheet = page.getByRole("dialog");
+    await sheet.getByRole("tab", { name: "Zihin haritası" }).click();
+    await sheet.getByRole("img", { name: /Zihin haritası:/ }).waitFor();
+    await shot("25-mind-map");
+    await sheet.getByRole("tab", { name: /^Kartlar/ }).click();
+    await sheet.getByRole("button", { name: "Grafikten kart yap" }).click();
+    await page.getByText(/kart eklendi/).first().waitFor();
+    await sheet.getByRole("button", { name: /kartı tekrar et/ }).click();
+    await sheet.getByRole("button", { name: "Cevabı göster" }).click();
+    await sheet.getByRole("button", { name: /^İyi/ }).click();
+    await sheet.getByText(/kaldı/).waitFor();
+    await shot("26-flashcard");
+    await sheet.getByRole("tab", { name: "YZ'ye sor" }).click();
+    await sheet.getByLabel("Sorun").fill("Serbest cisim diyagramı neden önemli?");
+    await sheet.getByRole("button", { name: "Sor", exact: true }).click();
+    await sheet.getByText(/Bilgi grafiğinden çevrimdışı yanıt/).waitFor();
+    await sheet.getByRole("tab", { name: "Anlat" }).click();
+    await sheet.getByLabel("Anlatımın").fill("Newton'un ikinci yasası net kuvvetin kütle çarpı ivmeye eşit olduğunu söyler. Önce cismi yalıtır, serbest cisim diyagramında tüm kuvvetleri çizerim; sonra eksen seçip bileşenleri toplarım. Sık hata: normal kuvveti her zaman ağırlığa eşit sanmak.");
+    await sheet.getByRole("button", { name: "Kaydet ve değerlendir" }).click();
+    await page.getByText(/Kaydedildi/).first().waitFor();
+    await sheet.locator("input[type=checkbox]").first().check();
+    await sheet.getByText(/% · kendi/).first().waitFor();
+    await shot("27-explain");
+    await page.keyboard.press("Escape");
+  });
+
+  await step("study page: review queue, cards and exports", async () => {
+    await page.goto(`${BASE}#/study`);
+    await page.getByRole("heading", { name: "Öğrendiğini kalıcı yap" }).waitFor();
+    await page.getByRole("tab", { name: "Kartlar" }).click();
+    await page.getByText(/sonraki/).first().waitFor();
+    await page.getByRole("tab", { name: "Anlatımlar" }).click();
+    await page.getByText(/Newton yasaları/).first().waitFor();
+    await page.getByRole("tab", { name: "Dışa aktar" }).click();
+    await page.getByRole("button", { name: "Anki için kartlar (.txt)" }).waitFor();
+    await shot("28-study");
+  });
+
+  await step("switching language translates the interface and untouched built-in courses", async () => {
+    await page.goto(`${BASE}#/settings`);
+    await page.getByRole("button", { name: "English" }).first().click();
+    await page.getByRole("heading", { name: "Settings" }).waitFor();
+    await page.goto(`${BASE}#/`);
+    await page.getByRole("heading", { name: "What's next?" }).waitFor();
+    await page.getByText("Mechanics — Physics Olympiad Track").first().waitFor();
+    await shot("29-english-home");
+    await page.goto(`${BASE}#/graph?lo=neuro.comp.hh-model`);
+    await page.getByRole("dialog", { name: "Hodgkin–Huxley model" }).waitFor();
+    await page.keyboard.press("Escape");
+    await page.goto(`${BASE}#/settings`);
+    await page.getByRole("button", { name: "Türkçe" }).first().click();
+    await page.getByRole("heading", { name: "Ayarlar" }).waitFor();
+  });
+
   await step("unknown and stale routes degrade gracefully", async () => {
     for (const r of ["#/nonsense", "#/course/missing", "#/session/missing", "#/summary/missing"]) {
       await page.goto(`${BASE}${r}`);
@@ -358,7 +432,7 @@ export default async function flows({ page, step, shot, click, BASE }) {
   for (const [w, h, label] of [[390, 844, "phone"], [1180, 820, "tablet-landscape"], [820, 1180, "tablet-portrait"]]) {
     await step(`no horizontal overflow at ${label} (${w}px)`, async () => {
       await page.setViewportSize({ width: w, height: h });
-      for (const r of ["#/", "#/graph", "#/stats", "#/focus", "#/retention", "#/settings", "#/build"]) {
+      for (const r of ["#/", "#/graph", "#/graph?view=harita", "#/study", "#/stats", "#/focus", "#/retention", "#/settings", "#/build"]) {
         await page.goto(`${BASE}${r}`);
         await page.waitForTimeout(250);
         const over = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
