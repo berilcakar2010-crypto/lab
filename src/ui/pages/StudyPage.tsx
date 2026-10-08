@@ -12,16 +12,20 @@ import { navigate, store, toast, useDB } from "../state";
 import { Icon } from "../components/common";
 import { ReviewSession, exportCards } from "../components/Flashcards";
 import { MathText } from "../components/MathText";
+import { ExamsPanel } from "../components/Exams";
+import { upcomingExams } from "../../study/exams";
 import { saveTextFile } from "../native";
 import { fmtNum } from "../../i18n";
 
-type Tab = "topics" | "review" | "calendar" | "cards" | "explain" | "chats" | "export";
+type Tab = "topics" | "exams" | "review" | "calendar" | "cards" | "explain" | "chats" | "export";
 
 /** Everything you study with: spaced-repetition cards, your explanations, AI conversations and exports. */
 export function StudyPage() {
   const db = useDB();
   const g = getGraph(db.knowledge);
-  const [tab, setTab] = useState<Tab>("topics");
+  const query = new URLSearchParams(window.location.hash.split("?")[1] ?? "");
+  const [tab, setTab] = useState<Tab>(query.get("tab") === "exams" ? "exams" : "topics");
+  const examsSoon = upcomingExams(db).length;
   const [topicReview, setTopicReview] = useState(false);
   // Pick up study done elsewhere (sessions, explanations, AI questions) into the topic schedule.
   useEffect(() => {
@@ -49,6 +53,7 @@ export function StudyPage() {
 
   const TABS: [Tab, string][] = [
     ["topics", L(`Topics${topicsDue ? ` · ${topicsDue}` : ""}`, `Konular${topicsDue ? ` · ${topicsDue}` : ""}`)],
+    ["exams", L(`Exams${examsSoon ? ` · ${examsSoon}` : ""}`, `Sınavlar${examsSoon ? ` · ${examsSoon}` : ""}`)],
     ["review", L(`Card review${stats.due ? ` · ${stats.due}` : ""}`, `Kart tekrarı${stats.due ? ` · ${stats.due}` : ""}`)],
     ["calendar", L("Calendar", "Takvim")],
     ["cards", L("Cards", "Kartlar")],
@@ -93,6 +98,8 @@ export function StudyPage() {
           </details>
         </div>
       ))}
+
+      {tab === "exams" && <ExamsPanel db={db} g={g} initial={query.get("exam") ?? undefined} />}
 
       {tab === "calendar" && <StudyCalendar db={db} g={g} />}
 

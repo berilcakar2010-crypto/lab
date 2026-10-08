@@ -15,6 +15,8 @@ import { L, fmtDate } from "../../i18n";
 import { LanguageToggle } from "../components/LanguageToggle";
 import { cardStats } from "../../study/flashcards";
 import { dueTopics } from "../../study/topics";
+import { daysUntil, examReadiness, upcomingExams } from "../../study/exams";
+import { countdown, TodayForExams } from "../components/Exams";
 
 /** Due flashcards: a two-minute habit that keeps what you learned. */
 function StudyCard({ db }: { db: LabDB }) {
@@ -30,6 +32,29 @@ function StudyCard({ db }: { db: LabDB }) {
       </span>
       <Icon.arrow />
     </button>
+  );
+}
+
+/** The next exam with a countdown, and today's plan for the exams coming up. */
+function ExamsCard({ db }: { db: LabDB }) {
+  const next = upcomingExams(db)[0];
+  if (!next) return null;
+  const g = getGraph(db.knowledge);
+  const left = daysUntil(next);
+  const ready = examReadiness(db, g, next);
+  return (
+    <div className="stack" style={{ gap: 8 }}>
+      <button className={`card clickable exam-card ${left <= 3 ? "soon" : ""}`} onClick={() => navigate(`/study?tab=exams&exam=${next.id}`)}>
+        <span className="exam-count"><span className="serif">{left <= 0 ? "!" : left}</span><span className="tiny">{left <= 0 ? L("today", "bugün") : L("days", "gün")}</span></span>
+        <span className="stack grow" style={{ gap: 4, minWidth: 0 }}>
+          <span className="eyebrow">{L("Next exam", "Sıradaki sınav")} · {countdown(left)}</span>
+          <strong className="truncate">{next.subject ? `${next.subject} · ` : ""}{next.title}</strong>
+          <Bar value={ready.score} mastered={ready.score >= 0.78} />
+          <span className="tiny muted">{L(`Ready ${Math.round(ready.score * 100)}%`, `Hazırlık %${Math.round(ready.score * 100)}`)} · {fmtDate(next.date, { weekday: "short", day: "numeric", month: "short" })}</span>
+        </span>
+      </button>
+      <TodayForExams db={db} g={g} compact />
+    </div>
   );
 }
 
@@ -80,6 +105,7 @@ export function HomePage() {
           <p className="text-2">{L("Name a course or paste a syllabus. Lab turns it into the next meaningful thing you can actually do — then you attempt it, get feedback, master it, and see yourself move forward.", "Bir ders adı yaz ya da müfredat yapıştır. Lab bunu şu an gerçekten yapabileceğin bir sonraki anlamlı adıma dönüştürür — sen dener, geri bildirim alır, ustalaşır ve ilerlediğini görürsün.")}</p>
           <button className="btn primary" onClick={() => navigate("/build")}><Icon.plus /> {L("New course", "Yeni ders")}</button>
         </div>
+        <ExamsCard db={db} />
         <GraphCard db={db} />
       </div>
     );
@@ -144,6 +170,7 @@ export function HomePage() {
         </section>
       )}
 
+      <ExamsCard db={db} />
       <GraphCard db={db} />
       <StudyCard db={db} />
 

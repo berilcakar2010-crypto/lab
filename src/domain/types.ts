@@ -152,7 +152,7 @@ export interface UserPreference {
   /** Interface and content language. English is the default. */
   language: Lang;
   /** Daily spaced-repetition reminder (local notification). */
-  reminders: { enabled: boolean; hour: number; minute: number };
+  reminders: { enabled: boolean; hour: number; minute: number; /** Notifications before school exams and deadlines. */ exams: boolean };
 }
 
 export interface Subject {
@@ -546,6 +546,28 @@ export interface LabDB {
   notes: Table<StudyNote>;
   /** Spaced repetition of whole topics (graph objects), keyed by object id. */
   topicReviews: Table<TopicReview>;
+  /** School exams, quizzes and deadlines with the graph topics they cover. */
+  exams: Table<Exam>;
+}
+
+export type ExamKind = "EXAM" | "QUIZ" | "ASSIGNMENT" | "PRESENTATION";
+
+export interface Exam {
+  id: ID;
+  title: string;
+  kind: ExamKind;
+  /** School subject as the learner calls it, e.g. "Physics". */
+  subject: string;
+  /** Start time of the exam (or deadline). */
+  date: Millis;
+  /** Graph objects the exam covers. */
+  loIds: string[];
+  notes: string;
+  /** Days before the exam to send a reminder; 0 = the morning of the exam. */
+  remindDays: number[];
+  createdAt: Millis;
+  /** Filled in afterwards. */
+  result?: { score?: number; outOf?: number; note?: string; at: Millis };
 }
 
 /** 0 forgot, 1 hard, 2 good, 3 easy — how well the topic came back when reviewed. */

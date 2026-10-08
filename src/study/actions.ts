@@ -104,5 +104,7 @@ export function studyExport(db: LabDB): string {
     chats: Object.values(db.chats),
     explanations: Object.values(db.explanations),
     notes: Object.values(db.notes),
+    topicReviews: Object.values(db.topicReviews),
+    exams: Object.values(db.exams),
   }, null, 2);
 }

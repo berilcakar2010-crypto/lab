@@ -486,3 +486,35 @@ h1 { background: linear-gradient(100deg, var(--text) 30%, #f2c2c9 70%, var(--acc
 /* Stat tiles: keep the eyebrow on one line. */
 .card.stat .eyebrow { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 420px) { .card.stat .eyebrow { font-size: 0.62rem; letter-spacing: 0.06em; } }
+
+/* ===========================================================================
+   Exams: countdown cards, the day-by-day plan, today's suggestions.
+   =========================================================================== */
+.exam-card { display: flex; gap: 14px; align-items: center; text-align: left; color: inherit; font: inherit; width: 100%; }
+.exam-count {
+  flex: 0 0 auto; width: 58px; height: 58px; border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: radial-gradient(100% 100% at 30% 20%, rgba(226, 138, 154, 0.22), rgba(142, 31, 54, 0.18)); border: 1px solid rgba(226, 138, 154, 0.25);
+  color: var(--accent);
+}
+.exam-count .serif { font-size: 1.55rem; line-height: 1; color: var(--text); }
+.exam-count .tiny { text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.6rem; }
+.exam-card.soon .exam-count { border-color: rgba(224, 180, 106, 0.55); background: radial-gradient(100% 100% at 30% 20%, rgba(224, 180, 106, 0.28), rgba(142, 31, 54, 0.2)); animation: exam-pulse 2.4s ease-in-out infinite; }
+@keyframes exam-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(224, 180, 106, 0); } 50% { box-shadow: 0 0 0 6px rgba(224, 180, 106, 0.12); } }
+
+.exam-plan { display: flex; flex-direction: column; gap: 0; position: relative; }
+.plan-day { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 10px; padding: 10px 0; border-top: 1px dashed var(--border); }
+.plan-day:first-child { border-top: 0; }
+.plan-day.today .plan-date strong { color: var(--accent); }
+.plan-date { display: flex; flex-direction: column; gap: 2px; font-size: 0.85rem; }
+.plan-item { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 4px 0; background: none; border: 0; color: inherit; font: inherit; font-size: 0.9rem; text-align: left; cursor: pointer; width: 100%; }
+.plan-item:hover .truncate { color: var(--accent); }
+.plan-act { flex: 0 0 auto; font-size: 0.68rem; letter-spacing: 0.04em; padding: 2px 7px; border-radius: 999px; background: var(--raised); color: var(--text-2); border: 1px solid var(--border); white-space: nowrap; }
+.plan-act.a-prereq { color: var(--review); background: var(--review-soft); border-color: transparent; }
+.plan-act.a-learn { color: var(--accent-ink); background: var(--bordo); border-color: transparent; }
+.plan-act.a-strengthen { color: #f0b9c3; background: rgba(240, 185, 195, 0.12); border-color: transparent; }
+.plan-act.a-review { color: var(--accent); background: var(--accent-soft); border-color: transparent; }
+.plan-act.a-test { color: var(--boss); background: var(--boss-soft); border-color: transparent; }
+.plan-act.a-glance { color: var(--mastered); background: var(--mastered-soft); border-color: transparent; }
+.today-exams { background-image: linear-gradient(90deg, transparent 9px, var(--margin-rule) 9px, var(--margin-rule) 10px, transparent 10px), radial-gradient(120% 90% at 100% 0%, rgba(224, 180, 106, 0.1), transparent 60%); }
+@media (prefers-reduced-motion: reduce) { .exam-card.soon .exam-count { animation: none; } }
+.reduce-motion .exam-card.soon .exam-count { animation: none; }

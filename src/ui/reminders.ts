@@ -7,16 +7,23 @@
  * change, so they always follow the current schedule. In a browser, a
  * notification is shown on opening the app when something is due (browsers
  * cannot schedule notifications while the page is closed).
+ *
+ * Exams have their own reminders (ids 7100+): on the chosen days before each
+ * exam at the same time, and on the morning of the exam.
  */
 import type { LabDB } from "../domain/types";
 import { L } from "../i18n";
 import { dueCards } from "../study/flashcards";
 import { dueTopics, reminderForecast, reminderText } from "../study/topics";
+import { examReminders } from "../study/exams";
+import { getGraph } from "../knowledge/graph";
 import { isNative } from "./native";
 
 const BASE_ID = 7000;
 const DAYS = 14;
 const CHANNEL = "lab-review";
+const EXAM_ID = 7100;
+const EXAM_CHANNEL = "lab-exams";
 
 export type PermissionState = "granted" | "denied" | "prompt" | "unsupported";
 
@@ -36,25 +43,30 @@ export async function refreshReminders(db: LabDB): Promise<number> {
   if (!isNative()) return 0;
   const { LocalNotifications } = await import("@capacitor/local-notifications");
   const pending = await LocalNotifications.getPending();
-  const ours = pending.notifications.filter((n) => n.id >= BASE_ID && n.id < BASE_ID + 100);
+  const ours = pending.notifications.filter((n) => n.id >= BASE_ID && n.id < BASE_ID + 200);
   if (ours.length) await LocalNotifications.cancel({ notifications: ours.map((n) => ({ id: n.id })) });
-  const { enabled, hour, minute } = db.preferences.reminders;
-  if (!enabled) return 0;
+  const { enabled, hour, minute, exams } = db.preferences.reminders;
+  if (!enabled && !exams) return 0;
   if ((await notificationPermission()) !== "granted") return 0;
   try {
     await LocalNotifications.createChannel({ id: CHANNEL, name: L("Review reminders", "Tekrar hatırlatmaları"), importance: 4, description: L("Daily spaced-repetition reminder", "Günlük aralıklı tekrar hatırlatması") });
+    await LocalNotifications.createChannel({ id: EXAM_CHANNEL, name: L("Exam reminders", "Sınav hatırlatmaları"), importance: 4, description: L("Upcoming exams and deadlines", "Yaklaşan sınavlar ve teslimler") });
   } catch {
     /* channels exist only on Android 8+ */
   }
-  const slots = reminderForecast(db, hour, minute, Date.now(), DAYS).filter((s) => s.cards + s.topics > 0);
-  if (!slots.length) return 0;
+  const slots = enabled ? reminderForecast(db, hour, minute, Date.now(), DAYS).filter((s) => s.cards + s.topics > 0) : [];
+  const examSlots = exams ? examReminders(db, getGraph(db.knowledge), hour, minute).slice(0, 100) : [];
+  if (!slots.length && !examSlots.length) return 0;
   await LocalNotifications.schedule({
-    notifications: slots.map((s, i) => {
-      const t = reminderText(s);
-      return { id: BASE_ID + i, title: t.title, body: t.body, schedule: { at: new Date(s.at), allowWhileIdle: true }, channelId: CHANNEL, extra: { route: "/study" } };
-    }),
+    notifications: [
+      ...slots.map((s, i) => {
+        const t = reminderText(s);
+        return { id: BASE_ID + i, title: t.title, body: t.body, schedule: { at: new Date(s.at), allowWhileIdle: true }, channelId: CHANNEL, extra: { route: "/study" } };
+      }),
+      ...examSlots.map((r, i) => ({ id: EXAM_ID + i, title: r.title, body: r.body, schedule: { at: new Date(r.at), allowWhileIdle: true }, channelId: EXAM_CHANNEL, extra: { route: `/study?tab=exams&exam=${r.examId}` } })),
+    ],
   });
-  return slots.length;
+  return slots.length + examSlots.length;
 }
 
 /** Open the Study page when a reminder is tapped (native). */
@@ -69,20 +81,32 @@ export async function listenForReminderTaps(): Promise<void> {
 
 const WEB_KEY = "lab-last-web-reminder";
 
-/** Browser: one notification per day on opening the app, if something is due. */
+/** Browser: one notification per day on opening the app, if something is due or an exam reminder day has come. */
 export function webReminderOnOpen(db: LabDB): void {
-  if (isNative() || !db.preferences.reminders.enabled || typeof Notification === "undefined" || Notification.permission !== "granted") return;
+  if (isNative() || typeof Notification === "undefined" || Notification.permission !== "granted") return;
+  const { enabled, exams } = db.preferences.reminders;
+  if (!enabled && !exams) return;
   const today = new Date().toDateString();
   try {
     if (localStorage.getItem(WEB_KEY) === today) return;
   } catch {
     return;
   }
-  const slot = { at: Date.now(), cards: dueCards(db).length, topics: dueTopics(db).length };
-  if (!slot.cards && !slot.topics) return;
-  const t = reminderText(slot);
+  const notes: { title: string; body: string; tag: string }[] = [];
+  if (exams) {
+    // Any reminder whose day is today (time already passed or later today).
+    const start = new Date(); start.setHours(0, 0, 0, 0);
+    const r = examReminders(db, getGraph(db.knowledge), db.preferences.reminders.hour, db.preferences.reminders.minute, start.getTime())
+      .find((x) => new Date(x.at).toDateString() === today);
+    if (r) notes.push({ title: r.title, body: r.body, tag: "lab-exam" });
+  }
+  if (enabled) {
+    const slot = { at: Date.now(), cards: dueCards(db).length, topics: dueTopics(db).length };
+    if (slot.cards || slot.topics) notes.push({ ...reminderText(slot), tag: "lab-review" });
+  }
+  if (!notes.length) return;
   try {
-    new Notification(t.title, { body: t.body, tag: "lab-review" });
+    for (const n of notes) new Notification(n.title, { body: n.body, tag: n.tag });
     localStorage.setItem(WEB_KEY, today);
   } catch {
     /* some browsers only allow notifications from a service worker */

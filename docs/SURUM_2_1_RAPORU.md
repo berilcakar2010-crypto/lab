@@ -125,6 +125,17 @@ Hepsi bir nesneyi açınca sekme olarak gelir; ayrıca yeni **Çalış** sayfas�
 - **Notlar** ve cihazda varsa **sesli okuma** (Dinle).
 - **Android:** mikrofon ve kamera izinleri eklendi. İzin yalnızca kayıt başlatılınca istenir.
 
+- **Sınav takvimi ve sınava göre çalışma önerileri** (Çalış → Sınavlar):
+  - Sınav, quiz, ödev ve sunum; ders, başlık, tarih-saat, kapsadığı konular, notlar.
+  - Hazırlık: ustalık, kendi beyanın, konu tekrar basamağı, son çalışma tarihi ve kart
+    sonuçlarından hesaplanır. Eksik zorunlu önkoşullar ayrıca gösterilir.
+  - Günlük plan: eksikleri tamamla → öğren/güçlendir → aralıklı tekrar → bir gün önce
+    kendini sına → sınav sabahı kısa göz at. Tempo notu (rahat, yoğun, sıkışık).
+  - Ana sayfada geri sayım ve bugünün önerileri; zayıf konular için tek dokunuşla kart.
+  - Bildirimler: seçilen günlerde günlük hatırlatma saatinde, sınav günü sabah
+    (sınavdan 90 dk önce, en erken 06:30). Ayrı bildirim kanalı, kimlikler 7100+.
+  - .ics dışa aktarma (alarmlarıyla), sınav sonucu kaydı; JSON dışa aktarmaya eklendi.
+
 **Gezinme:** alt menü artık Ana sayfa · Grafik · Çalış · İstatistik · Ayarlar.
 
 - Kalıcılık kontrolleri Çalış sayfasından açılıyor.

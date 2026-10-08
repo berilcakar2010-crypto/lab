@@ -40,7 +40,7 @@ export function App() {
     case "stats": page = <StatisticsPage />; break;
     case "focus": page = <FocusLabPage />; break;
     case "graph": page = <KnowledgePage key={window.location.hash} />; break;
-    case "study": page = <StudyPage />; break;
+    case "study": page = <StudyPage key={window.location.hash} />; break;
     case "retention": page = <RetentionPage />; break;
     case "summary": page = <SummaryPage sessionId={a} />; break;
     default: page = <HomePage />;

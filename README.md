@@ -60,6 +60,17 @@ ilerlemen olduğu gibi kalır.
 - **Hatırlatma bildirimleri:** Android'de seçtiğin saatte, o gün tekrar edilecek konu ve kart
   sayısını söyleyen günlük yerel bildirim. Bildirime dokununca Çalış sayfası açılır.
   Tarayıcıda bildirim yalnızca Lab açıldığında gelir.
+- **Sınav takvimi:** Çalış → Sınavlar. Okul sınavlarını, quizleri, ödev ve sunum teslimlerini
+  kapsadıkları grafik konularıyla eklersin (ders ve başlıktan konu önerilir).
+  - Her sınav için hazırlık yüzdesi ve konu konu durum gösterilir (yeni, zayıf, orta, güçlü),
+    eksik önkoşullar da listelenir.
+  - Sınava kadar günlük plan çıkarılır: önce eksik önkoşullar, sonra yeni ve zayıf konular,
+    ardından 1 ve 3 gün sonra tekrarlar, sınavdan önceki gün kendini sınama, sınav sabahı
+    kısa bir göz atma. Plan, sıkışık ya da rahat olduğunu da söyler.
+  - Ana sayfada sıradaki sınavın geri sayımı ve "Bugün, sınavların için" önerileri görünür.
+  - Hatırlatmalar sınavdan 2 hafta, 1 hafta, 3 gün, 1 gün önce ve sınav sabahı seçilebilir.
+    Android'de bildirim olarak planlanır; bildirime dokununca sınavın planı açılır.
+  - Sınavlar .ics olarak telefon takvimine aktarılabilir. Sınavdan sonra notunu girersin.
 - **Notlar** ve **sesli okuma** (cihazda ses varsa).
 
 ## Bilgi grafiği — Lab Müfredatı v2.1

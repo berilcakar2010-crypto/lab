@@ -160,18 +160,20 @@ export function ReminderSettings({ db }: { db: LabDB }) {
   useEffect(() => { void notificationPermission().then(setPerm).catch(() => setPerm("unsupported")); }, []);
   const save = async (next: Partial<LabDB["preferences"]["reminders"]>) => {
     let enabled = next.enabled ?? r.enabled;
-    if (next.enabled) {
+    let exams = next.exams ?? r.exams;
+    if (next.enabled || next.exams) {
       const p = await notificationPermission(true).catch(() => "unsupported" as PermissionState);
       setPerm(p);
       if (p !== "granted") {
         toast(p === "unsupported" ? L("Notifications are not available here.", "Burada bildirim kullanılamıyor.") : L("Notifications are not allowed. Allow them in the system settings.", "Bildirimlere izin verilmedi. Sistem ayarlarından izin ver."), "error");
-        enabled = false;
+        if (next.enabled) enabled = false;
+        if (next.exams) exams = false;
       }
     }
-    store.transact((d) => { d.preferences.reminders = { ...d.preferences.reminders, ...next, enabled }; });
+    store.transact((d) => { d.preferences.reminders = { ...d.preferences.reminders, ...next, enabled, exams }; });
     const n = await refreshReminders(store.state).catch(() => 0);
     setPlanned(n);
-    if (enabled) toast(isNative() ? L(`Reminders on — ${n} planned for the next two weeks.`, `Hatırlatmalar açık — önümüzdeki iki hafta için ${n} tane planlandı.`) : L("Reminders on — you'll be notified when you open Lab and something is due.", "Hatırlatmalar açık — Lab'i açtığında tekrar edilecek bir şey varsa bildirim gelir."));
+    if (next.enabled) toast(isNative() ? L(`Reminders on — ${n} planned for the next two weeks.`, `Hatırlatmalar açık — önümüzdeki iki hafta için ${n} tane planlandı.`) : L("Reminders on — you'll be notified when you open Lab and something is due.", "Hatırlatmalar açık — Lab'i açtığında tekrar edilecek bir şey varsa bildirim gelir."));
   };
   const time = `${String(r.hour).padStart(2, "0")}:${String(r.minute).padStart(2, "0")}`;
   return (
@@ -179,6 +181,10 @@ export function ReminderSettings({ db }: { db: LabDB }) {
       <label className="row nowrap" style={{ gap: 10 }}>
         <input type="checkbox" checked={r.enabled} onChange={(e) => void save({ enabled: e.target.checked })} />
         <span>{L("Daily review reminder", "Günlük tekrar hatırlatması")}</span>
+      </label>
+      <label className="row nowrap" style={{ gap: 10 }}>
+        <input type="checkbox" checked={r.exams} onChange={(e) => void save({ exams: e.target.checked })} />
+        <span>{L("Exam reminders (on the days you choose for each exam)", "Sınav hatırlatmaları (her sınav için seçtiğin günlerde)")}</span>
       </label>
       <label className="row nowrap small" style={{ gap: 10 }}>
         <span>{L("Time", "Saat")}</span>
@@ -192,7 +198,7 @@ export function ReminderSettings({ db }: { db: LabDB }) {
           ? L("Lab plans a notification for each of the next 14 days on which topics or cards will be due, and re-plans whenever you leave the app.", "Lab, önümüzdeki 14 günün konu ya da kart tekrarı olan her günü için bir bildirim planlar ve uygulamadan her çıktığında planı günceller.")
           : L("In a browser Lab can only notify you when you open it; the Android app sends reminders at the chosen time.", "Tarayıcıda Lab yalnızca açıldığında bildirim gösterebilir; Android uygulaması seçtiğin saatte hatırlatır.")}
         {perm === "denied" ? L(" Notifications are blocked in the system settings.", " Bildirimler sistem ayarlarında engellenmiş.") : ""}
-        {planned !== null && isNative() && r.enabled ? L(` ${planned} reminders planned.`, ` ${planned} hatırlatma planlandı.`) : ""}
+        {planned !== null && isNative() && (r.enabled || r.exams) ? L(` ${planned} reminders planned.`, ` ${planned} hatırlatma planlandı.`) : ""}
       </p>
     </div>
   );

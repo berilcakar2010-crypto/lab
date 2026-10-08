@@ -446,6 +446,34 @@ export default async function flows({ page, step, shot, click, BASE }) {
     await page.getByText("Yaklaşan tekrarlar").waitFor();
   });
 
+  await step("exams: add a school exam with topics, see readiness, the plan and today's suggestions", async () => {
+    await page.goto(`${BASE}#/study?tab=exams`);
+    await page.getByRole("button", { name: "Sınav ya da teslim ekle" }).click();
+    const dlg = page.getByRole("dialog", { name: "Yeni sınav" });
+    await dlg.getByLabel("Ders", { exact: true }).fill("Fizik");
+    await dlg.getByLabel("Başlık", { exact: true }).fill("1. yazılı — Newton yasaları");
+    await dlg.getByRole("button", { name: /Newton yasaları ve serbest cisim/ }).first().click();
+    await dlg.getByLabel("Konu ara").fill("momentum");
+    await dlg.getByRole("button", { name: /[Mm]omentum/ }).first().click();
+    await dlg.getByText(/Kapsadığı konular \(2\)/).waitFor();
+    await shot("32-exam-editor");
+    await dlg.getByRole("button", { name: "Sınavı ekle" }).click();
+    await page.getByText(/Sınav eklendi/).waitFor();
+    await page.getByRole("button", { name: /Fizik · 1\. yazılı/ }).click();
+    const det = page.getByRole("dialog", { name: /Fizik · 1\. yazılı/ });
+    await det.getByRole("heading", { name: "Çalışma planı" }).waitFor();
+    await det.getByText("Bugün", { exact: true }).waitFor();
+    await det.getByText("Kendini sına").first().waitFor();
+    await shot("33-exam-plan");
+    await det.getByRole("button", { name: "Zayıf konular için kart yap" }).click();
+    await page.getByText(/kart eklendi/).waitFor();
+    await page.keyboard.press("Escape");
+    await page.goto(`${BASE}#/`);
+    await page.getByText(/Sıradaki sınav/).waitFor();
+    await page.getByText("Bugün, sınavların için").waitFor();
+    await shot("34-home-exam");
+  });
+
   await step("unknown and stale routes degrade gracefully", async () => {
     for (const r of ["#/nonsense", "#/course/missing", "#/session/missing", "#/summary/missing"]) {
       await page.goto(`${BASE}${r}`);
@@ -464,7 +492,7 @@ export default async function flows({ page, step, shot, click, BASE }) {
   for (const [w, h, label] of [[390, 844, "phone"], [1180, 820, "tablet-landscape"], [820, 1180, "tablet-portrait"]]) {
     await step(`no horizontal overflow at ${label} (${w}px)`, async () => {
       await page.setViewportSize({ width: w, height: h });
-      for (const r of ["#/", "#/graph", "#/graph?view=harita", "#/study", "#/stats", "#/focus", "#/retention", "#/settings", "#/build"]) {
+      for (const r of ["#/", "#/graph", "#/graph?view=harita", "#/study", "#/study?tab=exams", "#/stats", "#/focus", "#/retention", "#/settings", "#/build"]) {
         await page.goto(`${BASE}${r}`);
         await page.waitForTimeout(250);
         const over = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
