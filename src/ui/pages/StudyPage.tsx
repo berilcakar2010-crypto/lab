@@ -1,3 +1,4 @@
+import { CountUp } from "../components/Effects";
 import { useEffect, useMemo, useState } from "react";
 import { dueTopics, syncTopicSchedule } from "../../study/topics";
 import { ReminderSettings, StudyCalendar, TopicReviewSession } from "../components/TopicReview";
@@ -65,9 +66,9 @@ export function StudyPage() {
       </header>
 
       <div className="grid-3">
-        <div className="card stat"><span className="eyebrow">{L("Topics due", "Tekrarı gelen konu")}</span><span className="serif stat-n">{topicsDue}</span></div>
-        <div className="card stat"><span className="eyebrow">{L("Cards due", "Sıradaki kart")}</span><span className="serif stat-n">{stats.due}</span></div>
-        <div className="card stat"><span className="eyebrow">{L("Recall (30 d)", "Hatırlama (30 g)")}</span><span className="serif stat-n">{stats.retention === null ? "—" : `${fmtNum(stats.retention * 100, 0)}%`}</span></div>
+        <div className="card stat"><span className="eyebrow">{L("Topics due", "Sıradaki konu")}</span><span className="serif stat-n"><CountUp value={topicsDue} /></span></div>
+        <div className="card stat"><span className="eyebrow">{L("Cards due", "Sıradaki kart")}</span><span className="serif stat-n"><CountUp value={stats.due} /></span></div>
+        <div className="card stat"><span className="eyebrow">{L("Recall (30 d)", "Hatırlama 30g")}</span><span className="serif stat-n">{stats.retention === null ? "—" : `${fmtNum(stats.retention * 100, 0)}%`}</span></div>
       </div>
 
       {retentionDue > 0 && (

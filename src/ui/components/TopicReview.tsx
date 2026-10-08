@@ -1,3 +1,4 @@
+import { Celebrate, CountUp } from "./Effects";
 import { useEffect, useState } from "react";
 import type { LabDB, TopicGrade } from "../../domain/types";
 import { fmtDate, L } from "../../i18n";
@@ -26,6 +27,7 @@ export function TopicReviewSession({ db, g, onDone }: { db: LabDB; g: KnowledgeG
   if (!id) {
     return (
       <div className="card stack" style={{ alignItems: "flex-start" }}>
+        {done > 0 && <Celebrate />}
         <strong>{done ? L(`Done — ${done} topics reviewed.`, `Bitti — ${done} konu tekrar edildi.`) : L("No topic is due for review.", "Tekrarı gelen konu yok.")}</strong>
         <span className="small muted">{L("Topics come back on an expanding schedule: 1, 3, 7, 14, 30, 60, 120 days.", "Konular giderek uzayan aralıklarla geri gelir: 1, 3, 7, 14, 30, 60, 120 gün.")}</span>
         {onDone && <button className="btn small" onClick={onDone}>{L("Close", "Kapat")}</button>}
@@ -101,8 +103,8 @@ export function StudyCalendar({ db, g }: { db: LabDB; g: KnowledgeGraph }) {
   return (
     <div className="stack">
       <div className="grid-3">
-        <div className="card stat"><span className="eyebrow">{L("Streak", "Seri")}</span><span className="serif stat-n">{streak(log)}</span><span className="tiny muted">{L("days", "gün")}</span></div>
-        <div className="card stat"><span className="eyebrow">{L("Topics studied", "Çalışılan konu")}</span><span className="serif stat-n">{Object.keys(db.topicReviews).length}</span></div>
+        <div className="card stat"><span className="eyebrow">{L("Streak", "Seri")}</span><span className="serif stat-n"><CountUp value={streak(log)} /></span><span className="tiny muted">{L("days", "gün")}</span></div>
+        <div className="card stat"><span className="eyebrow">{L("Topics studied", "Çalışılan konu")}</span><span className="serif stat-n"><CountUp value={Object.keys(db.topicReviews).length} /></span></div>
         <div className="card stat"><span className="eyebrow">{L("Study days (35)", "Çalışılan gün (35)")}</span><span className="serif stat-n">{cells.filter((c) => byDay.has(dayKey(c))).length}</span></div>
       </div>
       <div className="study-cal" role="grid" aria-label={L("Study calendar", "Çalışma takvimi")}>

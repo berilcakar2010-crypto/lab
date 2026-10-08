@@ -1,3 +1,4 @@
+import { Celebrate } from "../components/Effects";
 import { getGraph } from "../../knowledge/graph";
 import { useEffect, useRef, useState } from "react";
 import type { ID } from "../../domain/types";
@@ -295,6 +296,7 @@ function CompletionView({ milestoneId, sessionId, before, onChoose, onFinish, on
       </div>
       <div className="card stack rise" style={{ alignItems: "center", textAlign: "center", padding: "28px 16px", gap: 10 }}>
         <MasteryMark />
+        <Celebrate count={24} />
         <span className="eyebrow" style={{ color: "var(--mastered)" }}>{L("Mastered", "Ustalaştın")}</span>
         <h1>{m.title}</h1>
         <p className="text-2" style={{ maxWidth: 520 }}>{L("You can now: ", "Artık yapabildiğin: ")}{m.learningObjective}</p>

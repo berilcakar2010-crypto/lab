@@ -26,7 +26,7 @@ function wrap(text: string, width: number, lines: number): string[] {
   return out;
 }
 
-function NodeBox({ p, onTap, selected }: { p: PlacedNode; onTap: () => void; selected: boolean }) {
+function NodeBox({ p, onTap, selected, delay }: { p: PlacedNode; onTap: () => void; selected: boolean; delay: number }) {
   const n = p.node;
   const cls = n.kind === "root" ? "mm-root" : n.kind === "branch" ? "mm-branch" : "mm-leaf";
   const [w, lines] = n.kind === "root" ? [200, wrap(n.label, 20, 3)] : n.kind === "branch" ? [140, wrap(n.label, 17, 2)] : [230, wrap(n.label, 32, 3)];
@@ -34,7 +34,7 @@ function NodeBox({ p, onTap, selected }: { p: PlacedNode; onTap: () => void; sel
   const h = lines.length * lh + 14;
   const color = TONE[n.tone ?? ""] ?? "#e28a9a";
   return (
-    <g className={`mm-node ${cls}`} transform={`translate(${p.x},${p.y})`} onClick={onTap} role="button" tabIndex={0} aria-label={n.detail ?? n.label}
+    <g className={`mm-node ${cls}`} transform={`translate(${p.x},${p.y})`} style={{ animationDelay: `${delay}s` }} onClick={onTap} role="button" tabIndex={0} aria-label={n.detail ?? n.label}
       onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onTap()}>
       <rect x={-w / 2} y={-h / 2} width={w} height={h} rx={n.kind === "leaf" ? 8 : 12}
         style={n.kind === "branch" ? { stroke: color } : n.kind === "leaf" ? { stroke: selected ? color : undefined } : undefined} />
@@ -125,7 +125,7 @@ export function MindMapView({ root, onOpenObject, onAddItem, fileName }: {
             return <path key={`l-${p.node.id}`} className="mm-line" d={`M${x1},${a.y} C${mx},${a.y} ${mx},${p.y} ${x2},${p.y}`}
               style={p.depth === 1 ? { stroke: TONE[p.node.tone ?? ""] ?? undefined, strokeOpacity: 0.6 } : undefined} />;
           })}
-          {[...placed].reverse().map((p) => <NodeBox key={p.node.id} p={p} selected={sel?.node.id === p.node.id} onTap={() => setSel(p)} />)}
+          {[...placed].reverse().map((p, i, all) => <NodeBox key={p.node.id} p={p} delay={p.depth === 0 ? 0 : p.depth === 1 ? 0.08 + (all.length - i) * 0.004 : 0.25 + (all.length - i) * 0.008} selected={sel?.node.id === p.node.id} onTap={() => setSel(p)} />)}
         </svg>
         <div className="gm-tools">
           <button className="btn small" onClick={() => setZoom((z) => Math.min(4, z * 1.25))} aria-label={L("Zoom in", "Yakınlaştır")}>+</button>

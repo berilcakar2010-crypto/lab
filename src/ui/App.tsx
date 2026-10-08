@@ -48,6 +48,7 @@ export function App() {
 
   return (
     <div className={`app ${db.preferences.reduceMotion ? "reduce-motion" : ""}`}>
+      <div className="ambient" aria-hidden><span /><span /></div>
       <main className={`main ${inSession ? "focus" : ""}`}>
         <ErrorBoundary key={route.join("/")}>{page}</ErrorBoundary>
       </main>

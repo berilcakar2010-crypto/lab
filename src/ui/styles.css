@@ -337,3 +337,152 @@ ul.tight { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
 .cal-cell.today { border-color: var(--accent); }
 .cal-cell.sel { outline: 2px solid var(--accent-ink); }
 @media (max-width: 420px) { .grid-3 { gap: 6px; } .stat-n { font-size: 1.35rem; } .card.stat { padding: 10px 8px; } }
+
+/* ===========================================================================
+   Visual layer — depth, light and motion on top of the notebook theme.
+   Only transform/opacity are animated; everything stops under reduced motion.
+   =========================================================================== */
+
+:root {
+  --glow: rgba(226, 138, 154, 0.35);
+  --glow-soft: rgba(226, 138, 154, 0.14);
+  --spring: cubic-bezier(0.2, 1.3, 0.35, 1);
+  --card-top: rgba(255, 236, 228, 0.035);
+}
+::selection { background: rgba(226, 138, 154, 0.35); color: var(--accent-ink); }
+* { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
+
+/* Ambient light: two slow-drifting bordo glows, film grain and a vignette. */
+.ambient { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.ambient span { position: absolute; width: 70vmax; height: 70vmax; border-radius: 50%; will-change: transform; }
+.ambient span:nth-child(1) { top: -30vmax; left: -25vmax; background: radial-gradient(closest-side, rgba(142, 31, 54, 0.32), transparent); animation: drift-a 38s ease-in-out infinite alternate; }
+.ambient span:nth-child(2) { bottom: -35vmax; right: -30vmax; background: radial-gradient(closest-side, rgba(167, 80, 120, 0.18), transparent); animation: drift-b 46s ease-in-out infinite alternate; }
+.ambient::before { content: ""; position: absolute; inset: 0; opacity: 0.07; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
+.ambient::after { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 40%, transparent 55%, rgba(8, 3, 5, 0.55)); }
+@keyframes drift-a { to { transform: translate(18vmax, 12vmax) scale(1.08); } }
+@keyframes drift-b { to { transform: translate(-16vmax, -10vmax) scale(1.12); } }
+.main { position: relative; z-index: 1; }
+
+/* Headings: a quiet cream-to-rose ink. */
+h1 { background: linear-gradient(100deg, var(--text) 30%, #f2c2c9 70%, var(--accent)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+/* Cards: light from above, lift on hover, gradient rim on accent cards. */
+.card { background-image: linear-gradient(90deg, transparent 9px, var(--margin-rule) 9px, var(--margin-rule) 10px, transparent 10px), linear-gradient(180deg, var(--card-top), transparent 60%);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.02) inset, 0 8px 24px -16px rgba(0, 0, 0, 0.6);
+  transition: border-color 0.25s var(--ease), transform 0.25s var(--ease), box-shadow 0.25s var(--ease); }
+.card.accent { border: 1px solid transparent;
+  background: linear-gradient(90deg, transparent 9px, var(--margin-rule) 9px, var(--margin-rule) 10px, transparent 10px) padding-box,
+              linear-gradient(180deg, rgba(142, 31, 54, 0.16), transparent 70%) padding-box,
+              linear-gradient(var(--surface), var(--surface)) padding-box,
+              linear-gradient(135deg, rgba(226, 138, 154, 0.75), rgba(142, 31, 54, 0.25) 45%, rgba(226, 138, 154, 0.5)) border-box;
+  box-shadow: 0 10px 30px -18px var(--glow); }
+@media (hover: hover) {
+  .card.clickable:hover { transform: translateY(-2px); border-color: rgba(226, 138, 154, 0.45); box-shadow: 0 14px 30px -18px var(--glow); }
+  .list-item.lo-row:hover { background: linear-gradient(90deg, var(--glow-soft), transparent 70%); }
+}
+.card.clickable:active { transform: translateY(0) scale(0.99); }
+
+/* Buttons: gradient, sheen sweep and a springy press. */
+.btn { position: relative; overflow: hidden; transition: background 0.2s var(--ease), border-color 0.2s var(--ease), transform 0.15s var(--ease), box-shadow 0.25s var(--ease), opacity 0.15s; }
+.btn:active:not(:disabled) { transform: scale(0.96); }
+.btn.primary { background: linear-gradient(135deg, #a3263f, var(--bordo) 55%, #741629); border-color: rgba(226, 138, 154, 0.35); box-shadow: 0 6px 18px -8px rgba(142, 31, 54, 0.9), 0 1px 0 rgba(255, 255, 255, 0.12) inset; }
+.btn.primary::after { content: ""; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.22) 50%, transparent 70%); transform: translateX(-120%); pointer-events: none; }
+@media (hover: hover) {
+  .btn.primary:hover { background: linear-gradient(135deg, #b02d48, var(--bordo-hover) 55%, #82192f); box-shadow: 0 10px 24px -8px rgba(163, 42, 67, 0.95), 0 1px 0 rgba(255, 255, 255, 0.14) inset; }
+  .btn.primary:hover::after { transform: translateX(120%); transition: transform 0.7s var(--ease); }
+  .btn:not(.primary):not(.ghost):hover { border-color: rgba(226, 138, 154, 0.4); }
+}
+.btn.primary:disabled { box-shadow: none; }
+
+/* Inputs glow when focused. */
+.input:focus, .textarea:focus, .select:focus { box-shadow: 0 0 0 3px var(--accent-soft), 0 0 22px -6px var(--glow); }
+
+/* Chips and progress. */
+.chip.s-ACTIVE { box-shadow: 0 0 12px -2px rgba(142, 31, 54, 0.9); }
+.chip.s-MASTERED { box-shadow: 0 0 10px -4px var(--mastered); }
+.bar > span { background: linear-gradient(90deg, #7a1a2e, var(--bordo), var(--accent)); position: relative; overflow: hidden; }
+.bar.mastered > span { background: linear-gradient(90deg, #6f9a74, var(--mastered)); }
+.bar > span::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent); transform: translateX(-100%); animation: bar-sheen 2.8s ease-in-out 1s infinite; }
+@keyframes bar-sheen { 60%, 100% { transform: translateX(100%); } }
+
+/* Bottom navigation: frosted glass and a glowing active marker. */
+.nav { background: linear-gradient(180deg, rgba(31, 16, 21, 0.78), rgba(21, 10, 13, 0.92)); backdrop-filter: blur(14px) saturate(1.2); -webkit-backdrop-filter: blur(14px) saturate(1.2); border-top: 1px solid rgba(226, 138, 154, 0.14); }
+.nav a { position: relative; transition: color 0.2s var(--ease); }
+.nav a svg { transition: transform 0.3s var(--spring), color 0.2s; }
+.nav a.active svg { transform: translateY(-2px) scale(1.08); filter: drop-shadow(0 0 6px var(--glow)); }
+.nav a::before { content: ""; position: absolute; top: 0; left: 50%; width: 28px; height: 2px; border-radius: 2px; background: var(--accent); box-shadow: 0 0 12px 2px var(--glow); transform: translateX(-50%) scaleX(0); transition: transform 0.35s var(--spring); }
+.nav a.active::before { transform: translateX(-50%) scaleX(1); }
+
+/* Page entry: children rise one after another. */
+.stack-lg.rise { animation: none; }
+.stack-lg.rise > * { animation: rise 0.45s var(--ease) both; }
+.stack-lg.rise > *:nth-child(2) { animation-delay: 0.05s; }
+.stack-lg.rise > *:nth-child(3) { animation-delay: 0.1s; }
+.stack-lg.rise > *:nth-child(4) { animation-delay: 0.15s; }
+.stack-lg.rise > *:nth-child(5) { animation-delay: 0.2s; }
+.stack-lg.rise > *:nth-child(n+6) { animation-delay: 0.25s; }
+
+/* Sheets: blurred backdrop, springy entrance, a grab handle on phones. */
+.sheet-backdrop { background: rgba(8, 3, 5, 0.55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.sheet { animation: sheet-in 0.42s var(--spring); box-shadow: 0 -20px 60px -20px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(226, 138, 154, 0.08); background-image: linear-gradient(180deg, rgba(142, 31, 54, 0.1), transparent 140px); }
+@keyframes sheet-in { from { opacity: 0; transform: translateY(40px) scale(0.98); } to { opacity: 1; transform: none; } }
+@media (max-width: 699px) { .sheet::before { content: ""; display: block; width: 40px; height: 4px; border-radius: 4px; background: var(--border-strong); margin: -8px auto 12px; } }
+
+/* Toasts: glass with an accent edge. */
+.toast { background: rgba(51, 28, 36, 0.82); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-left: 3px solid var(--accent); animation: toast-in 0.4s var(--spring); }
+.toast.error { border-left-color: var(--danger); }
+@keyframes toast-in { from { opacity: 0; transform: translate(-50%, 18px) scale(0.96); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+/* Knowledge map: flowing prerequisite edges, breathing focus node. */
+.gm-edge.gm-pre { stroke-dasharray: 6 5; animation: flow 1.6s linear infinite; }
+@keyframes flow { to { stroke-dashoffset: -22; } }
+.gm-node circle { transition: transform 0.25s var(--spring); transform-box: fill-box; transform-origin: center; }
+@media (hover: hover) { .gm-node:hover circle { transform: scale(1.18); } }
+.gm-node.focus circle:last-of-type { animation: breathe 2.6s ease-in-out infinite; filter: drop-shadow(0 0 10px var(--glow)); }
+@keyframes breathe { 50% { transform: scale(1.12); } }
+.graph-map { box-shadow: 0 0 0 1px rgba(226, 138, 154, 0.05) inset, 0 20px 40px -30px rgba(0, 0, 0, 0.9); }
+
+/* Mind map: nodes fade in branch by branch. */
+.mm-node { animation: mm-in 0.5s var(--spring) both; transform-box: fill-box; transform-origin: center; }
+@keyframes mm-in { from { opacity: 0; transform: scale(0.85); } }
+.mm-root rect { filter: drop-shadow(0 0 14px rgba(142, 31, 54, 0.8)); }
+.mm-line { stroke-dasharray: 600; stroke-dashoffset: 600; animation: draw 0.9s var(--ease) 0.15s forwards; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+
+/* Flashcards: the answer unfolds like a turned page. */
+.flashcard { perspective: 900px; }
+.flashcard-back { transform-origin: top; animation: unfold 0.5s var(--spring); }
+@keyframes unfold { from { opacity: 0; transform: rotateX(-75deg); } to { opacity: 1; transform: none; } }
+.grade-row .btn { animation: rise 0.35s var(--ease) both; }
+.grade-row .btn:nth-child(2) { animation-delay: 0.04s; } .grade-row .btn:nth-child(3) { animation-delay: 0.08s; } .grade-row .btn:nth-child(4) { animation-delay: 0.12s; }
+
+/* Calendar: today breathes, study days glow. */
+.cal-cell { transition: transform 0.2s var(--spring); }
+@media (hover: hover) { .cal-cell:hover { transform: scale(1.08); } }
+.cal-cell.l3, .cal-cell.l4 { box-shadow: 0 0 12px -4px var(--glow); }
+.cal-cell.today { animation: today 2.4s ease-in-out infinite; }
+@keyframes today { 50% { box-shadow: 0 0 0 3px var(--glow-soft); } }
+
+/* Stats count up (see CountUp); tiles get a soft top light. */
+.card.stat { background-image: linear-gradient(90deg, transparent 9px, var(--margin-rule) 9px, var(--margin-rule) 10px, transparent 10px), radial-gradient(120% 80% at 50% 0%, rgba(142, 31, 54, 0.14), transparent 70%); }
+
+/* Celebration: a small burst of sparks when a review session ends. */
+.celebrate { position: relative; height: 0; }
+.celebrate i { position: absolute; left: 50%; top: 0; width: 7px; height: 7px; border-radius: 2px; opacity: 0; animation: spark 1.1s var(--ease) forwards; }
+@keyframes spark { 0% { opacity: 1; transform: translate(-50%, 0) rotate(0); } 100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), var(--dy)) rotate(var(--r)); } }
+
+.reduce-motion .ambient span, .reduce-motion .gm-edge.gm-pre, .reduce-motion .bar > span::after { animation: none !important; }
+@media (prefers-reduced-motion: reduce) { .ambient span, .gm-edge.gm-pre, .bar > span::after { animation: none !important; } }
+
+/* Sticky action footer inside a sheet: fades content out and covers the sheet's bottom padding. */
+.sheet-actions {
+  gap: 8px; position: sticky; z-index: 2;
+  bottom: calc(-1 * (24px + env(safe-area-inset-bottom, 0px)));
+  margin-bottom: calc(-1 * (24px + env(safe-area-inset-bottom, 0px)));
+  padding: 18px 0 calc(24px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(180deg, transparent, var(--surface) 18px);
+}
+/* Stat tiles: keep the eyebrow on one line. */
+.card.stat .eyebrow { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 420px) { .card.stat .eyebrow { font-size: 0.62rem; letter-spacing: 0.06em; } }

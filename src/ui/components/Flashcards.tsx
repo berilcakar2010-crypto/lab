@@ -1,3 +1,4 @@
+import { Celebrate, CountUp } from "./Effects";
 import { useMemo, useRef, useState } from "react";
 import type { CardGrade, Flashcard, LabDB } from "../../domain/types";
 import { fmtDate, L } from "../../i18n";
@@ -21,6 +22,7 @@ export function ReviewSession({ cards, g, onDone }: { cards: Flashcard[]; g: Kno
   if (!card) {
     return (
       <div className="card stack" style={{ alignItems: "flex-start" }}>
+        {done > 0 && <Celebrate />}
         <strong>{done ? L(`Done — ${done} reviews.`, `Bitti — ${done} tekrar.`) : L("Nothing is due right now.", "Şu an tekrar edilecek kart yok.")}</strong>
         <span className="small muted">{L("Cards come back when they are about to be forgotten.", "Kartlar unutulmak üzereyken geri gelir.")}</span>
         {onDone && <button className="btn small" onClick={onDone}>{L("Close", "Kapat")}</button>}
@@ -95,9 +97,9 @@ export function ObjectFlashcards({ db, g, loId }: { db: LabDB; g: KnowledgeGraph
   return (
     <div className="stack">
       <div className="grid-3">
-        <div className="card stat"><span className="eyebrow">{L("Cards", "Kart")}</span><span className="serif stat-n">{stats.total}</span></div>
-        <div className="card stat"><span className="eyebrow">{L("Due", "Sırada")}</span><span className="serif stat-n">{stats.due}</span></div>
-        <div className="card stat"><span className="eyebrow">{L("Learned", "Öğrenildi")}</span><span className="serif stat-n">{stats.learned}</span></div>
+        <div className="card stat"><span className="eyebrow">{L("Cards", "Kart")}</span><span className="serif stat-n"><CountUp value={stats.total} /></span></div>
+        <div className="card stat"><span className="eyebrow">{L("Due", "Sırada")}</span><span className="serif stat-n"><CountUp value={stats.due} /></span></div>
+        <div className="card stat"><span className="eyebrow">{L("Learned", "Öğrenildi")}</span><span className="serif stat-n"><CountUp value={stats.learned} /></span></div>
       </div>
       <div className="row">
         <button className="btn primary" disabled={!stats.due} onClick={() => setReviewing(true)}>{L(`Review ${stats.due}`, `${stats.due} kartı tekrar et`)}</button>

@@ -699,7 +699,7 @@ function Overview({ o, db, pg, onOpen }: { o: LearningObject; db: LabDB; pg: Per
         </Section>
       )}
 
-      <div className="stack" style={{ gap: 8, position: "sticky", bottom: 0, paddingTop: 8, background: "var(--surface)" }}>
+      <div className="stack sheet-actions">
         {existing ? (
           <button className="btn primary block" onClick={() => navigate(`/course/${existing}`)}>{L("Go to the course", "Derse git")} <Icon.arrow /></button>
         ) : (
