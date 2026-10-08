@@ -45,3 +45,38 @@ export async function saveTextFile(name: string, text: string, mime: string) {
   const res = await Filesystem.writeFile({ path: name, data: text, directory: Directory.Cache, encoding: Encoding.UTF8 });
   await Share.share({ title: name, files: [res.uri], dialogTitle: L("Save or share the file", "Dosyayı kaydet veya paylaş") });
 }
+
+/** Save a binary file (recording, image): download on the web, the Android share sheet in the app. */
+export async function saveBlobFile(name: string, blob: Blob) {
+  if (!isNative()) {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    return;
+  }
+  const dataUrl: string = await new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result));
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(blob);
+  });
+  const [{ Filesystem, Directory }, { Share }] = await Promise.all([import("@capacitor/filesystem"), import("@capacitor/share")]);
+  const res = await Filesystem.writeFile({ path: name, data: dataUrl.split(",")[1] ?? "", directory: Directory.Cache });
+  await Share.share({ title: name, files: [res.uri], dialogTitle: L("Save or share the file", "Dosyayı kaydet veya paylaş") });
+}
+
+/** Read text aloud with the platform voice, if there is one. */
+export function speak(text: string, lang: "en" | "tr"): boolean {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) return false;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = lang === "tr" ? "tr-TR" : "en-GB";
+  u.rate = 0.98;
+  window.speechSynthesis.speak(u);
+  return true;
+}
+
+export const canSpeak = () => typeof window !== "undefined" && "speechSynthesis" in window;
+export const stopSpeaking = () => canSpeak() && window.speechSynthesis.cancel();

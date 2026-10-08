@@ -118,7 +118,7 @@ export function reviewCard(db: LabDB, id: ID, grade: CardGrade, ms?: number, now
   const next = schedule(c, grade, now);
   next.history = [...c.history, { at: now, grade, ms }].slice(-50);
   db.flashcards[id] = next;
-  logEvent(db, "RETENTION_CHECK", {}, { kind: "FLASHCARD", cardId: id, lo: c.loId ?? null, grade, intervalDays: next.intervalDays });
+  logEvent(db, "FLASHCARD_REVIEW", {}, { cardId: id, lo: c.loId ?? null, grade, intervalDays: next.intervalDays });
   return next;
 }
 

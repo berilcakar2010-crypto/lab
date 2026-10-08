@@ -98,7 +98,7 @@ export async function askAboutObject(
 
 interface RawEval {
   score?: number;
-  criteria?: { criterion?: string; met?: boolean; comment?: string }[];
+  criteria?: { criterion: string; met: boolean; comment?: string }[];
   strengths?: string[];
   gaps?: string[];
   misconceptions?: string[];
@@ -112,10 +112,10 @@ export function validateEval(raw: unknown, o: LearningObject): RawEval {
   const r = (raw ?? {}) as RawEval;
   const score = Number(r.score);
   if (!Number.isFinite(score)) throw new Error("score missing");
-  const criteria = Array.isArray(r.criteria) ? r.criteria : [];
+  const criteria: { criterion?: string; met?: boolean; comment?: string }[] = Array.isArray(r.criteria) ? r.criteria : [];
   return {
     score: Math.max(0, Math.min(1, score > 1 ? score / 100 : score)),
-    criteria: (criteria.length ? criteria : o.masteryCriteria.map((c) => ({ criterion: c, met: false }))).map((c) => ({
+    criteria: (criteria.length ? criteria : o.masteryCriteria.map((c): { criterion?: string; met?: boolean; comment?: string } => ({ criterion: c, met: false }))).map((c) => ({
       criterion: String(c.criterion ?? "").trim() || "?",
       met: !!c.met,
       comment: c.comment ? String(c.comment) : undefined,

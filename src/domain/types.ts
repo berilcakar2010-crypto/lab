@@ -488,6 +488,8 @@ export const EVENT_TYPES = [
   "RETENTION_CHECK",
   "CURRICULUM_EDIT",
   "ENGAGEMENT_REPORT",
+  "FLASHCARD_REVIEW",
+  "EXPLANATION",
 ] as const;
 export type EventType = (typeof EVENT_TYPES)[number];
 
