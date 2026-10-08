@@ -9,7 +9,7 @@
 | Önkoşul / disiplinlerarası bağlantı | 880 / 1216 |
 | AP eşlemesi | **25 ders, 163 ünite.** 24'ü College Board'un resmi metniyle doğrulandı; AP Biology geçici. |
 | Doğrulayıcı | 0 hata, 0 uyarı. 132 bilgi notu, hepsi kasıtlı. |
-| Testler | 102/102 birim testi, 42/42 uçtan uca adım |
+| Testler | 106/106 birim testi, 44/44 uçtan uca adım |
 
 ## 1. Dil seçeneği (İngilizce ana dil, Türkçe seçenek)
 
@@ -102,6 +102,26 @@ Hepsi bir nesneyi açınca sekme olarak gelir; ayrıca yeni **Çalış** sayfas�
     - Anahtar yoksa ölçütleri kendin işaretlersin. Çevrimdışı tahmin, yalnızca ana kavramların
       kapsanmasına dayandığını açıkça söyler.
   - **Dışa aktarma:** kayıt dosyası, tüm anlatımlar (Markdown) ve tüm çalışma verisi (JSON).
+- **Konu bazlı aralıklı tekrar:**
+  - **Tarihe göre takip:** çalıştığın her konu tarihiyle kaydedilir. Kayıt, ham olay
+    akışından türetilir (adım denemesi, ustalık, anlatım, YZ sorusu), bu yüzden bu özellikten
+    önceki çalışmalar da sayılır.
+  - **Aralıklar:** 1 → 3 → 7 → 14 → 30 → 60 → 120 gün.
+  - **Tekrar akışı:** önce hatırlarsın, sonra grafikle karşılaştırırsın.
+    - "Unuttum" konuyu başa döndürür.
+    - "Zorlandım" konuyu aynı basamakta, daha erken getirir.
+    - "İyi" bir basamak, "Kolay" iki basamak ilerletir.
+  - **Yeniden çalışmak:** tekrarı gelmiş bir konuyu yeniden çalışmak da başarılı bir tekrar sayılır.
+  - **Kart tekrarları:** takvimde görünür ama konu takvimini kaydırmaz, çünkü kartların kendi SM-2 takvimi var.
+- **Çalışma takvimi:** son 5 haftalık etkinlik ızgarası, üst üste çalışılan gün sayısı,
+  yaklaşan tekrarlar ve her günün hangi konularla geçtiği (pratik, anlatım, YZ sorusu, kart).
+- **Hatırlatma bildirimleri:** saati Ayarlar'dan ya da Çalış sayfasından seçilir.
+  - **Android:** `@capacitor/local-notifications` ile önümüzdeki 14 günün tekrar olan her
+    gününe, o gün kaç konu ve kaç kart geleceğini söyleyen bir bildirim planlanır.
+  - **Plan güncelleme:** uygulama arka plana geçince ve ayar değişince plan güncellenir;
+    telefon yeniden başlatılınca bildirimler geri yüklenir.
+  - **Bildirime dokununca** Çalış sayfası açılır.
+  - **Tarayıcı:** bildirim yalnızca Lab açıldığında, günde bir kez gelir.
 - **Notlar** ve cihazda varsa **sesli okuma** (Dinle).
 - **Android:** mikrofon ve kamera izinleri eklendi. İzin yalnızca kayıt başlatılınca istenir.
 
@@ -122,10 +142,10 @@ Hepsi bir nesneyi açınca sekme olarak gelir; ayrıca yeni **Çalış** sayfas�
 
 | Kontrol | Sonuç |
 |---|---|
-| `npm test` | **102/102 geçti.** 12'si v2.1 testi: İngilizce katmanın eksiksizliği, İngilizce hedeflerin eylem bildirmesi, yeni alanların bağlantısı, AP eşlemeleri, dil değişiminde yeniden çevirme (düzenlenmiş metin korunur), kart planlama ve Anki dışa aktarma, zihin haritasında çakışma olmaması, YZ'nin çevrimdışı yanıtları. |
+| `npm test` | **106/106 geçti.** 4'ü konu tekrarı testi: tarihe göre günlük, art arda çalışılan günler, tekrar basamakları, bildirim öngörüsü. 12'si v2.1 testi: İngilizce katmanın eksiksizliği, İngilizce hedeflerin eylem bildirmesi, yeni alanların bağlantısı, AP eşlemeleri, dil değişiminde yeniden çevirme (düzenlenmiş metin korunur), kart planlama ve Anki dışa aktarma, zihin haritasında çakışma olmaması, YZ'nin çevrimdışı yanıtları. |
 | `npm run typecheck` | Temiz. |
 | `npm run build` | Başarılı. |
-| `npm run smoke` | **42/42 adım geçti.** İngilizce açılış; harita, zihin haritası, kart tekrarı, YZ'ye sor, anlatma ve kendi değerlendirmen; Çalış sayfası; İngilizceye geçip geri dönme. 390, 820 ve 1180 px genişlikte yatay taşma yok. |
+| `npm run smoke` | **44/44 adım geçti.** Çalışma takvimi, hatırlatma açma, saat 4 gün ileri alınınca konuların tekrara gelmesi; İngilizce açılış; harita, zihin haritası, kart tekrarı, YZ'ye sor, anlatma ve kendi değerlendirmen; Çalış sayfası; İngilizceye geçip geri dönme. 390, 820 ve 1180 px genişlikte yatay taşma yok. |
 
 ## Bilinen sınırlamalar
 
@@ -138,5 +158,8 @@ Hepsi bir nesneyi açınca sekme olarak gelir; ayrıca yeni **Çalış** sayfas�
   özellikleri; WebView'de olmayabilirler. Olmadıklarında düğmeler gizlenir ya da bir uyarı gösterilir.
 - **Kayıtlar yedeğe girmiyor.** Kayıtlar cihazda kalır ve uygulama yedeğine (JSON) dahil değildir;
   her biri tek tek dışa aktarılır.
+- **Android bildirimleri cihazda denenmedi.** Bildirim planlama kodu web ortamında test
+  edildi; telefonda bildirim izni ilk açılışta istenir. Pil tasarrufu modları bildirimleri
+  birkaç dakika geciktirebilir.
 - **Gerçek YZ çağrıları denenmedi.** Ortamda gerçek Gemini ve Groq çağrısı yapılmadı; testler
   çevrimdışı yolları sınıyor.

@@ -414,6 +414,38 @@ export default async function flows({ page, step, shot, click, BASE }) {
     await page.getByRole("heading", { name: "Ayarlar" }).waitFor();
   });
 
+  await step("study calendar: topics by date, streak and daily reminders", async () => {
+    await page.context().grantPermissions(["notifications"]);
+    await page.goto(`${BASE}#/study`);
+    await page.getByRole("tab", { name: "Takvim" }).click();
+    await page.getByRole("grid", { name: "Çalışma takvimi" }).waitFor();
+    await page.getByText("Seri").waitFor();
+    await page.getByRole("button", { name: /Newton yasaları/ }).first().waitFor();
+    await shot("30-calendar");
+    await page.getByRole("tab", { name: /^Konular/ }).click();
+    await page.getByText(/Hatırlatmalar ·/).click();
+    await page.getByLabel("Günlük tekrar hatırlatması").check();
+    await page.getByText(/Hatırlatmalar açık/).waitFor();
+    await page.getByLabel("Hatırlatma saati").fill("20:30");
+    await page.getByText("Hatırlatmalar · 20:30").waitFor();
+  });
+
+  await step("topic spaced repetition: studied topics come back days later and move along the ladder", async () => {
+    await page.clock.install({ time: new Date(Date.now() + 4 * 86_400_000) });
+    await page.goto(`${BASE}#/study`);
+    await page.reload();
+    await page.getByRole("button", { name: /konuyu tekrar et/ }).click();
+    for (let i = 0; i < 30; i++) {
+      if (await page.getByText(/Bitti — \d+ konu tekrar edildi/).isVisible().catch(() => false)) break;
+      await page.getByRole("button", { name: "Grafikle karşılaştır" }).click();
+      if (i === 0) await shot("31-topic-review");
+      await page.getByRole("button", { name: /^İyi/ }).click();
+    }
+    await page.getByText(/Bitti — \d+ konu tekrar edildi/).waitFor();
+    await page.getByRole("tab", { name: "Takvim" }).click();
+    await page.getByText("Yaklaşan tekrarlar").waitFor();
+  });
+
   await step("unknown and stale routes degrade gracefully", async () => {
     for (const r of ["#/nonsense", "#/course/missing", "#/session/missing", "#/summary/missing"]) {
       await page.goto(`${BASE}${r}`);

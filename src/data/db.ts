@@ -18,6 +18,7 @@ export function createEmptyDB(now = Date.now()): LabDB {
       experimentsEnabled: true,
       retentionDelayDays: 3,
       language: DEFAULT_LANG,
+      reminders: { enabled: false, hour: 19, minute: 0 },
     },
     subjects: {},
     curricula: {},
@@ -41,6 +42,7 @@ export function createEmptyDB(now = Date.now()): LabDB {
     chats: {},
     explanations: {},
     notes: {},
+    topicReviews: {},
   };
 }
 
@@ -70,7 +72,7 @@ function hydrateKnowledge(raw: unknown): KnowledgeState {
 const TABLE_KEYS = [
   "subjects", "curricula", "courses", "units", "topics", "concepts", "milestones",
   "questions", "attempts", "sessions", "aiInteractions", "mastery", "retention",
-  "experiments", "experimentResults", "engagement", "flashcards", "chats", "explanations", "notes",
+  "experiments", "experimentResults", "engagement", "flashcards", "chats", "explanations", "notes", "topicReviews",
 ] as const;
 
 /**
@@ -91,6 +93,7 @@ export function hydrateDB(raw: unknown): LabDB {
       ...(r.preferences ?? {}),
       models: { ...base.preferences.models, ...(r.preferences?.models ?? {}) },
       apiKeys: { ...(r.preferences?.apiKeys ?? {}) },
+      reminders: { ...base.preferences.reminders, ...(r.preferences?.reminders ?? {}) },
     },
     events: Array.isArray(r.events) ? r.events : [],
     knowledge: hydrateKnowledge(r.knowledge),

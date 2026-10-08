@@ -10,6 +10,7 @@ import { saveTextFile } from "../native";
 import { HINT_TR } from "../../ai/tutor";
 import { L, lazyLabels } from "../../i18n";
 import { LanguageToggle } from "../components/LanguageToggle";
+import { ReminderSettings } from "../components/TopicReview";
 
 export function SettingsPage() {
   const db = useDB();
@@ -70,6 +71,11 @@ export function SettingsPage() {
         <h2>Language / Dil</h2>
         <LanguageToggle />
         <p className="small text-2">{L("English is the main language. Switching also translates built-in course content you have not edited; your own notes and progress stay as they are.", "Ana dil İngilizcedir. Dil değiştirince düzenlemediğin hazır ders içerikleri de çevrilir; kendi notların ve ilerlemen olduğu gibi kalır.")}</p>
+      </section>
+
+      <section className="card stack">
+        <h2>{L("Review reminders", "Tekrar hatırlatmaları")}</h2>
+        <ReminderSettings db={db} />
       </section>
 
       <section className="card stack">

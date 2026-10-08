@@ -1,4 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { dueTopics, syncTopicSchedule } from "../../study/topics";
+import { ReminderSettings, StudyCalendar, TopicReviewSession } from "../components/TopicReview";
 import { fmtDate, L, lower } from "../../i18n";
 import { getGraph } from "../../knowledge/graph";
 import { LEARNING_PATHS } from "../../knowledge/paths";
@@ -12,13 +14,19 @@ import { MathText } from "../components/MathText";
 import { saveTextFile } from "../native";
 import { fmtNum } from "../../i18n";
 
-type Tab = "review" | "cards" | "explain" | "chats" | "export";
+type Tab = "topics" | "review" | "calendar" | "cards" | "explain" | "chats" | "export";
 
 /** Everything you study with: spaced-repetition cards, your explanations, AI conversations and exports. */
 export function StudyPage() {
   const db = useDB();
   const g = getGraph(db.knowledge);
-  const [tab, setTab] = useState<Tab>("review");
+  const [tab, setTab] = useState<Tab>("topics");
+  const [topicReview, setTopicReview] = useState(false);
+  // Pick up study done elsewhere (sessions, explanations, AI questions) into the topic schedule.
+  useEffect(() => {
+    store.transact((d) => void syncTopicSchedule(d));
+  }, []);
+  const topicsDue = dueTopics(db).filter((r) => g.objects[r.id]).length;
   const [reviewing, setReviewing] = useState(false);
   const [q, setQ] = useState("");
   const stats = cardStats(db);
@@ -39,7 +47,9 @@ export function StudyPage() {
   const chats = Object.values(db.chats).sort((a, b) => b.updatedAt - a.updatedAt);
 
   const TABS: [Tab, string][] = [
-    ["review", L("Review", "Tekrar")],
+    ["topics", L(`Topics${topicsDue ? ` · ${topicsDue}` : ""}`, `Konular${topicsDue ? ` · ${topicsDue}` : ""}`)],
+    ["review", L(`Card review${stats.due ? ` · ${stats.due}` : ""}`, `Kart tekrarı${stats.due ? ` · ${stats.due}` : ""}`)],
+    ["calendar", L("Calendar", "Takvim")],
     ["cards", L("Cards", "Kartlar")],
     ["explain", L("Explanations", "Anlatımlar")],
     ["chats", L("AI chats", "YZ sohbetleri")],
@@ -55,8 +65,8 @@ export function StudyPage() {
       </header>
 
       <div className="grid-3">
-        <div className="card stat"><span className="eyebrow">{L("Due now", "Şimdi sırada")}</span><span className="serif stat-n">{stats.due}</span></div>
-        <div className="card stat"><span className="eyebrow">{L("Reviews today", "Bugünkü tekrar")}</span><span className="serif stat-n">{stats.reviewsToday}</span></div>
+        <div className="card stat"><span className="eyebrow">{L("Topics due", "Tekrarı gelen konu")}</span><span className="serif stat-n">{topicsDue}</span></div>
+        <div className="card stat"><span className="eyebrow">{L("Cards due", "Sıradaki kart")}</span><span className="serif stat-n">{stats.due}</span></div>
         <div className="card stat"><span className="eyebrow">{L("Recall (30 d)", "Hatırlama (30 g)")}</span><span className="serif stat-n">{stats.retention === null ? "—" : `${fmtNum(stats.retention * 100, 0)}%`}</span></div>
       </div>
 
@@ -67,8 +77,23 @@ export function StudyPage() {
       )}
 
       <div className="chip-scroll" role="tablist">
-        {TABS.map(([k, label]) => <button key={k} role="tab" aria-selected={tab === k} className={`btn small ${tab === k ? "primary" : ""}`} onClick={() => { setTab(k); setReviewing(false); }}>{label}</button>)}
+        {TABS.map(([k, label]) => <button key={k} role="tab" aria-selected={tab === k} className={`btn small ${tab === k ? "primary" : ""}`} onClick={() => { setTab(k); setReviewing(false); setTopicReview(false); }}>{label}</button>)}
       </div>
+
+      {tab === "topics" && (topicReview ? <TopicReviewSession db={db} g={g} onDone={() => setTopicReview(false)} /> : (
+        <div className="stack">
+          <button className="btn primary block" disabled={!topicsDue} onClick={() => setTopicReview(true)}>
+            {topicsDue ? L(`Review ${topicsDue} topics`, `${topicsDue} konuyu tekrar et`) : L("No topic is due — well done", "Tekrarı gelen konu yok — harika")}
+          </button>
+          <p className="small text-2">{L("Every topic you study is tracked by date and comes back for review on an expanding schedule (1, 3, 7, 14, 30, 60, 120 days). Recall it first, then check against the graph and rate how well it came back.", "Çalıştığın her konu tarihiyle izlenir ve giderek uzayan aralıklarla (1, 3, 7, 14, 30, 60, 120 gün) tekrara gelir. Önce hatırlamaya çalış, sonra grafikle karşılaştır ve ne kadar iyi hatırladığını işaretle.")}</p>
+          <details className="card">
+            <summary className="small" style={{ cursor: "pointer" }}>{L("Reminders", "Hatırlatmalar")} · {db.preferences.reminders.enabled ? `${String(db.preferences.reminders.hour).padStart(2, "0")}:${String(db.preferences.reminders.minute).padStart(2, "0")}` : L("off", "kapalı")}</summary>
+            <div style={{ marginTop: 8 }}><ReminderSettings db={db} /></div>
+          </details>
+        </div>
+      ))}
+
+      {tab === "calendar" && <StudyCalendar db={db} g={g} />}
 
       {tab === "review" && (reviewing ? <ReviewSession cards={due} g={g} onDone={() => setReviewing(false)} /> : (
         <div className="stack">

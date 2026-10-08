@@ -14,16 +14,19 @@ import type { LabDB } from "../../domain/types";
 import { L, fmtDate } from "../../i18n";
 import { LanguageToggle } from "../components/LanguageToggle";
 import { cardStats } from "../../study/flashcards";
+import { dueTopics } from "../../study/topics";
 
 /** Due flashcards: a two-minute habit that keeps what you learned. */
 function StudyCard({ db }: { db: LabDB }) {
   const s = cardStats(db);
-  if (!s.total) return null;
+  const topics = dueTopics(db).length;
+  if (!s.total && !topics && !Object.keys(db.topicReviews).length) return null;
+  const parts = [topics ? L(`${topics} topics`, `${topics} konu`) : "", s.due ? L(`${s.due} cards`, `${s.due} kart`) : ""].filter(Boolean).join(L(" and ", " ve "));
   return (
     <button className="card clickable row between nowrap" style={{ textAlign: "left", color: "inherit", font: "inherit" }} onClick={() => navigate("/study")}>
       <span className="stack" style={{ gap: 2 }}>
-        <span className="eyebrow">{L("Flashcards", "Kartlar")}</span>
-        <span className="small">{s.due ? L(`${s.due} cards are due — a few minutes keeps them.`, `${s.due} kart sırada — birkaç dakika onları kalıcı yapar.`) : L("All cards are up to date.", "Tüm kartlar güncel.")}</span>
+        <span className="eyebrow">{L("Spaced repetition", "Aralıklı tekrar")}</span>
+        <span className="small">{parts ? L(`${parts} are due — a few minutes keeps them.`, `${parts} tekrar için hazır — birkaç dakika onları kalıcı yapar.`) : L("Everything is up to date.", "Her şey güncel.")}</span>
       </span>
       <Icon.arrow />
     </button>

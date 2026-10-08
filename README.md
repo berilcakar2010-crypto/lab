@@ -52,6 +52,14 @@ ilerlemen olduğu gibi kalır.
   - Groq önce Whisper ile konuşmayı yazıya döker.
   - Anahtar yoksa ustalık ölçütlerini kendin işaretlersin.
   - Kayıtlar, dökümler ve değerlendirmeler dışa aktarılabilir.
+- **Konu bazlı aralıklı tekrar:** çalıştığın her konu tarihiyle izlenir ve 1, 3, 7, 14, 30,
+  60, 120 gün aralıklarla tekrara gelir. Önce hatırlarsın, sonra grafikle karşılaştırırsın ve
+  Unuttum, Zorlandım, İyi ya da Kolay diye işaretlersin.
+- **Çalışma takvimi:** hangi gün hangi konuları çalıştığın, kaç gündür üst üste çalıştığın
+  ve yaklaşan tekrarlar.
+- **Hatırlatma bildirimleri:** Android'de seçtiğin saatte, o gün tekrar edilecek konu ve kart
+  sayısını söyleyen günlük yerel bildirim. Bildirime dokununca Çalış sayfası açılır.
+  Tarayıcıda bildirim yalnızca Lab açıldığında gelir.
 - **Notlar** ve **sesli okuma** (cihazda ses varsa).
 
 ## Bilgi grafiği — Lab Müfredatı v2.1

@@ -6,6 +6,7 @@ import { recomputeAll } from "../engines/progress";
 import { closeStaleSessions } from "../engines/sessions";
 import { isLang, setLang } from "../i18n";
 import { switchLanguage } from "../knowledge/relocalize";
+import { syncTopicSchedule } from "../study/topics";
 
 /** Initialised by `initStore()` before the app renders (ES module live binding). */
 export let store: Store;
@@ -34,6 +35,7 @@ export async function initStore() {
   store.update((db) => {
     closeStaleSessions(db);
     recomputeAll(db);
+    syncTopicSchedule(db);
   });
   window.addEventListener("pagehide", () => void store.flush());
   document.addEventListener("visibilitychange", () => {

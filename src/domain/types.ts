@@ -151,6 +151,8 @@ export interface UserPreference {
   retentionDelayDays: number;
   /** Interface and content language. English is the default. */
   language: Lang;
+  /** Daily spaced-repetition reminder (local notification). */
+  reminders: { enabled: boolean; hour: number; minute: number };
 }
 
 export interface Subject {
@@ -490,6 +492,7 @@ export const EVENT_TYPES = [
   "ENGAGEMENT_REPORT",
   "FLASHCARD_REVIEW",
   "EXPLANATION",
+  "TOPIC_REVIEW",
 ] as const;
 export type EventType = (typeof EVENT_TYPES)[number];
 
@@ -541,6 +544,22 @@ export interface LabDB {
   explanations: Table<Explanation>;
   /** Personal notes per learning object, keyed by object id. */
   notes: Table<StudyNote>;
+  /** Spaced repetition of whole topics (graph objects), keyed by object id. */
+  topicReviews: Table<TopicReview>;
+}
+
+/** 0 forgot, 1 hard, 2 good, 3 easy — how well the topic came back when reviewed. */
+export type TopicGrade = 0 | 1 | 2 | 3;
+
+export interface TopicReview {
+  /** Equal to the learning object id. */
+  id: string;
+  firstStudied: Millis;
+  lastStudied: Millis;
+  /** Index into the review ladder (1, 3, 7, 14, 30, 60, 120 days). */
+  stage: number;
+  due: Millis;
+  history: { at: Millis; kind: "study" | "review"; grade?: TopicGrade }[];
 }
 
 // ---------------------------------------------------------------------------
