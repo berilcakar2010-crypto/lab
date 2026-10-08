@@ -37,6 +37,10 @@ export function createEmptyDB(now = Date.now()): LabDB {
     engagement: {},
     events: [],
     knowledge: emptyKnowledge(),
+    flashcards: {},
+    chats: {},
+    explanations: {},
+    notes: {},
   };
 }
 
@@ -66,7 +70,7 @@ function hydrateKnowledge(raw: unknown): KnowledgeState {
 const TABLE_KEYS = [
   "subjects", "curricula", "courses", "units", "topics", "concepts", "milestones",
   "questions", "attempts", "sessions", "aiInteractions", "mastery", "retention",
-  "experiments", "experimentResults", "engagement",
+  "experiments", "experimentResults", "engagement", "flashcards", "chats", "explanations", "notes",
 ] as const;
 
 /**

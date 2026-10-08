@@ -1005,3 +1005,289 @@ export const EN_PHYSICS: Record<string, LOText> = {
       "gk.sci-hist.modern-physics": "Maxwell's unification and the road to relativity",
     },
   },
+  "phys.optics.geometric": {
+    title: "Geometric optics: reflection, refraction, lenses",
+    description: "The laws of reflection and refraction, total internal reflection, mirrors, thin lenses, optical instruments and Fermat's principle.",
+    whyItMatters: "How the eye, the camera, the microscope and the telescope work is understood from here; in olympiads it produces short but geometry-heavy questions.",
+    entryQuestions: [
+      "Why does the bottom of a pool look shallower than it really is? Does it look shallower from the side or from directly above?",
+      "What is the minimum length of a flat mirror in which you can see your whole body? Does stepping back from the mirror change this?",
+    ],
+    coreQuestions: [
+      "How does Snell's law follow from Fermat's principle?",
+      "What approximations does the thin-lens equation rest on?",
+      "How do microscopes and telescopes achieve magnification?",
+    ],
+    learningObjectives: [
+      "Derives Snell's law from Fermat's principle.",
+      "Finds the image position and magnification in thin-lens and mirror systems using ray diagrams and calculation.",
+      "Calculates the condition for total internal reflection and applies it to fiber optics.",
+    ],
+    commonMisconceptions: [
+      "Believing that covering half of a lens makes half of the image disappear.",
+      "Thinking that a mirror image is reversed left to right (it is reversed front to back).",
+    ],
+    competitionApplications: ["Lens-system and image questions", "Refraction and apparent-depth problems", "Measuring focal length in the experimental exam"],
+    links: {
+      "math.geo.euclid": "ray geometry and similar triangles",
+      "neuro.sys.sensory": "the optics of the eye and the image on the retina",
+      "gk.sci-hist.ancient-medieval": "Ibn al-Haytham and the history of optics",
+    },
+  },
+  "phys.optics.wave": {
+    title: "Wave optics: interference and diffraction",
+    description: "Young's double-slit experiment, thin-film interference, single slits and diffraction gratings, the resolution limit and polarization.",
+    whyItMatters: "It is the evidence for the wave nature of light; it lets you understand the resolution limit of microscopes, spectroscopy and the interference experiments of quantum physics.",
+    entryQuestions: [
+      "Why does a soap bubble look colored, and why does it turn black just before it bursts?",
+      "Can a telescope with an aperture twice as wide resolve stars that are twice as close together?",
+    ],
+    coreQuestions: [
+      "What does the spacing of an interference pattern depend on?",
+      "How does diffraction limit the resolution of optical instruments?",
+      "Which property of light does polarization reveal?",
+    ],
+    learningObjectives: [
+      "Derives the conditions for bright fringes for a double slit and a diffraction grating.",
+      "Predicts colors in thin-film interference, taking phase changes into account.",
+      "Calculates angular resolution using the Rayleigh criterion.",
+    ],
+    commonMisconceptions: [
+      "Believing that the diffraction pattern narrows as the slits get narrower.",
+      "Thinking that reflection always involves a phase change.",
+    ],
+    competitionApplications: ["Double-slit and thin-film questions", "Measuring wavelength with a diffraction grating in the experimental exam"],
+    links: {
+      "math.fourier": "the diffraction pattern is the Fourier transform of the aperture",
+      "neuro.methods.imaging": "the resolution limit in microscopy",
+      "math.trig.identities": "adding phasors",
+    },
+  },
+  "phys.modern.relativity": {
+    title: "Special relativity",
+    description: "The postulates of relativity, the relativity of simultaneity, time dilation, length contraction, Lorentz transformations and relativistic energy–momentum.",
+    whyItMatters: "It changes our intuitions about space and time; particle physics, GPS corrections and E = mc² rest on this theory.",
+    entryQuestions: [
+      "Lightning strikes the front and back ends of a train moving near the speed of light at the same moment. Is it 'at the same moment' for a passenger on the train too?",
+      "How do muons created in the upper atmosphere reach the ground despite their very short lifetimes?",
+    ],
+    coreQuestions: [
+      "How does the constancy of the speed of light demolish the concept of simultaneity?",
+      "How are the Lorentz transformations derived from the postulates?",
+      "What relation connects relativistic energy and momentum?",
+    ],
+    learningObjectives: [
+      "Derives time dilation using the light-clock thought experiment.",
+      "Calculates the coordinates of events in different frames by applying the Lorentz transformations.",
+      "Uses the relativistic energy–momentum relation in particle decay and collision problems.",
+      "Analyzes the twin paradox in terms of acceleration and simultaneity.",
+    ],
+    commonMisconceptions: [
+      "Believing that time dilation is a mechanical malfunction of clocks.",
+      "Thinking that mass 'increases' with speed and that this is the only thing preventing faster-than-light travel.",
+    ],
+    competitionApplications: ["Relativistic kinematics and decay questions", "Threshold energy problems"],
+    links: {
+      "gk.sci-hist.modern-physics": "Einstein and the historical context of relativity",
+      "gk.phil.science": "an example of a paradigm shift",
+      "math.linalg.linear-maps": "the Lorentz transformation is a linear map",
+    },
+  },
+  "phys.modern.quantum-intro": {
+    title: "Introduction to quantum physics",
+    description: "The photoelectric effect, the photon, the de Broglie wavelength, the uncertainty principle, the wave function and the particle in a box.",
+    whyItMatters: "The behavior of atoms, chemical bonds, semiconductors and lasers can only be explained by quantum physics.",
+    entryQuestions: [
+      "If electrons are sent through a double slit one at a time, does an interference pattern still form on the screen? What happens if you check which slit each one goes through?",
+      "No matter how much you increase the intensity of red light, you cannot knock electrons out of some metals. Why is this surprising in the wave model?",
+    ],
+    coreQuestions: [
+      "Which property of light does the photoelectric effect prove?",
+      "Is the uncertainty principle a measurement error, or a property of nature?",
+      "Why is the energy of a confined particle discrete?",
+    ],
+    learningObjectives: [
+      "Calculates Planck's constant and the work function from photoelectric effect data.",
+      "Derives the energy levels of a particle in a box from the standing-wave condition.",
+      "Estimates quantities such as atomic size and zero-point energy using the uncertainty principle.",
+    ],
+    commonMisconceptions: [
+      "Believing that the uncertainty principle arises only from imperfections in measuring instruments.",
+      "Thinking that the electron in an atom orbits in a definite planet-like path.",
+    ],
+    researchApplications: ["An introduction to quantum computing and quantum biology"],
+    competitionApplications: ["Photoelectric and de Broglie questions", "Order-of-magnitude estimates using the uncertainty principle"],
+    links: {
+      "chem.atoms.electron-config": "orbitals and quantum numbers",
+      "math.complex.numbers": "the wave function is complex-valued",
+      "gk.sci-hist.modern-physics": "the birth of quantum theory",
+    },
+  },
+  "phys.modern.atomic-nuclear": {
+    title: "Atomic and nuclear physics",
+    description: "The hydrogen atom and the Bohr model, spectral lines, nuclear structure, binding energy, radioactive decay, fission and fusion.",
+    whyItMatters: "It is the basis for understanding the energy of stars, medical imaging, radiometric dating and nuclear energy.",
+    entryQuestions: [
+      "If the protons in a nucleus repel each other, why doesn't the nucleus fly apart?",
+      "How can both splitting heavy nuclei and fusing light nuclei release energy?",
+    ],
+    coreQuestions: [
+      "Why does the hydrogen spectrum consist of discrete lines?",
+      "What does the curve of binding energy per nucleon explain?",
+      "Why does radioactive decay follow an exponential law?",
+    ],
+    learningObjectives: [
+      "Derives the hydrogen energy levels from the Bohr model and calculates spectral lines.",
+      "Calculates binding energy from the mass defect.",
+      "Performs half-life and activity calculations using the exponential decay law.",
+    ],
+    commonMisconceptions: [
+      "Believing that all nuclei have decayed after one half-life.",
+      "Thinking that it can be known in advance when a single nucleus will decay.",
+    ],
+    competitionApplications: ["Spectrum and Bohr model questions", "Binding energy and decay chains"],
+    links: {
+      "chem.atoms.structure": "the atomic model and isotopes",
+      "math.found.exp-log": "exponential decay",
+      "math.prob.stochastic": "radioactive decay is a Poisson process",
+      "neuro.methods.imaging": "positron emission in PET imaging",
+    },
+  },
+  "phys.lab.experimental": {
+    title: "Experimental physics: measurement, error analysis and graphs",
+    description: "Experimental design, random and systematic error, error propagation, linearization, least-squares fitting and the lab report.",
+    whyItMatters: "A large share of olympiad points comes from the experimental exam; the same skills are the foundation of all laboratory research.",
+    entryQuestions: [
+      "When timing a pendulum's period with a stopwatch, is it more accurate to time one swing or twenty? Why?",
+      "Your data look like a parabola. Which axes could you change to turn it into a straight line?",
+    ],
+    coreQuestions: [
+      "How are random and systematic errors distinguished, and how are they reduced?",
+      "Which graph should be drawn to extract parameters from a nonlinear relation?",
+      "How are the slope of a fit and its uncertainty calculated?",
+    ],
+    learningObjectives: [
+      "Linearizes a nonlinear relation and calculates a physical constant with its uncertainty from the slope of the graph.",
+      "Identifies the dominant source of error in an experiment and designs the measurement strategy accordingly.",
+      "Writes a short lab report consisting of measurements, a graph and a conclusion.",
+    ],
+    commonMisconceptions: [
+      "Believing that writing more significant figures means a more accurate measurement.",
+      "Thinking that every point on a graph must lie on the line.",
+    ],
+    researchApplications: ["Data analysis in every experimental research project"],
+    competitionApplications: ["Olympiad experimental exams", "Graph linearization and uncertainty calculation"],
+    links: {
+      "math.stat.regression": "least-squares fitting",
+      "res.method.experimental-design": "experimental design and controls",
+      "res.data.visualization": "drawing scientific graphs",
+    },
+  },
+  "phys.comp.simulation": {
+    title: "Computational physics: numerical simulation",
+    description: "Solving equations of motion numerically, the Euler and Verlet methods, choosing the time step, checking energy conservation and many-body simulations.",
+    whyItMatters: "It lets you explore systems with no analytical solution (the double pendulum, the three-body problem, neural networks); it is the third pillar of modern physics research.",
+    entryQuestions: [
+      "If you simulate a planetary orbit with the simple Euler method, what does the planet do after a few orbits? Predict first, then try it.",
+      "Does halving the time step halve the error, or cut it to a quarter?",
+    ],
+    coreQuestions: [
+      "How does the error of a numerical method depend on the time step?",
+      "Why do some methods conserve energy better over long times?",
+      "How can we trust that a simulation is correct?",
+    ],
+    learningObjectives: [
+      "Codes projectile, spring and orbit problems using the Euler and Verlet methods.",
+      "Validates a simulation against analytical solutions and conservation laws.",
+      "Investigates an analytically difficult effect such as air resistance by simulation and interprets the result.",
+    ],
+    commonMisconceptions: [
+      "Believing that a smaller time step always gives a better result (rounding error and cost).",
+      "Thinking that a simulation looking nice proves that it is correct.",
+    ],
+    researchApplications: ["Molecular dynamics and celestial mechanics simulations", "Computational neuroscience models"],
+    competitionApplications: ["Research project competitions supported by programming"],
+    links: {
+      "prog.sci.simulation": "general simulation techniques",
+      "neuro.proj.hh-simulation": "a neuron model built with the same numerical methods",
+      "math.ode.numerical": "Euler and Runge–Kutta",
+    },
+  },
+  "phys.olymp.estimation": {
+    title: "Fermi estimation and reasoning with dimensional analysis",
+    description: "Fast physical reasoning using rough order-of-magnitude estimates, scaling laws, dimensional analysis and limiting-case checks.",
+    whyItMatters: "Knowing the size of the answer before solving a problem catches errors; in olympiads and in research it is the answer to the question 'does this make sense?'",
+    entryQuestions: [
+      "How many piano tuners are there in Istanbul? Without looking up any data, give a range and write down your assumptions.",
+      "Why can't an elephant jump as high as a flea? Explain using scaling.",
+    ],
+    coreQuestions: [
+      "Which assumptions are enough to estimate a quantity to within an order of magnitude?",
+      "How do scaling laws limit the sizes of living things and structures?",
+      "How do limiting cases test the correctness of a result?",
+    ],
+    learningObjectives: [
+      "Breaks a Fermi problem into sub-estimates and gives the result to within an order of magnitude.",
+      "Derives and tests an unknown relation using dimensional analysis.",
+      "Checks a solution using limiting cases and extreme values.",
+    ],
+    commonMisconceptions: [
+      "Believing that estimation is 'guessing' and worthless without exact data.",
+      "Thinking that computing every intermediate step very precisely improves the estimate.",
+    ],
+    competitionApplications: ["Estimation questions in olympiads", "Limiting-case checks to verify solutions"],
+    links: {
+      "bio.ecology": "scaling laws and metabolism",
+      "media.lit.stats-in-news": "testing whether numbers in the news are plausible",
+      "math.found.exp-log": "thinking on a logarithmic scale",
+    },
+  },
+  "phys.olymp.boss": {
+    title: "Boss: Full physics olympiad problem set",
+    description: "A full olympiad set combining mechanics, electromagnetism, thermodynamics, optics and estimation questions, solved under real exam conditions.",
+    whyItMatters: "It takes you from knowing topics separately to combining the different parts of a single long problem under time pressure.",
+    entryQuestions: [
+      "If you can't solve part a of a problem with parts a, b and c, can you still score points on the later parts? What strategy would you follow?",
+      "How do you decide which question to start with in an exam?",
+    ],
+    coreQuestions: [
+      "How is a long, multi-part problem read and planned?",
+      "How do different topics come together in a single physical situation?",
+      "How is partial credit maximized under a time limit?",
+    ],
+    learningObjectives: [
+      "Solves a full timed problem set and writes up the solution legibly.",
+      "Selects and derives the necessary principles in a problem that combines different topics.",
+      "Compares their own solution with the official solution and writes an analysis in an error log.",
+    ],
+    commonMisconceptions: [
+      "Believing that you cannot move on to later parts without solving the first part.",
+      "Thinking that a solution is graded only on whether the final number is correct.",
+    ],
+    competitionApplications: ["Stages of the national physics olympiad", "The International Physics Olympiad and regional olympiads", "Practice with past years' problem sets"],
+    links: {
+      "comp.phys.theory-practice": "olympiad theory practice",
+      "comp.meta.exam-strategy": "time management and question selection",
+      "comp.boss.mock": "full mock-exam simulation",
+    },
+  },
+};
+
+/** Turkish field/unit names used in this file's b.unit(field, unit) calls → English. */
+export const UNITS_PHYSICS: Record<string, string> = {
+  "Temel": "Foundations",
+  "Ölçme": "Measurement",
+  "Mekanik": "Mechanics",
+  "Kinematik ve dinamik": "Kinematics and dynamics",
+  "Dönme, kütle çekimi, salınım": "Rotation, gravitation, oscillation",
+  "Dalgalar ve termodinamik": "Waves and thermodynamics",
+  "Dalgalar": "Waves",
+  "Termodinamik": "Thermodynamics",
+  "Elektromanyetizma": "Electromagnetism",
+  "Elektrostatik ve devreler": "Electrostatics and circuits",
+  "Manyetizma ve indüksiyon": "Magnetism and induction",
+  "Optik ve modern fizik": "Optics and modern physics",
+  "Optik": "Optics",
+  "Modern fizik": "Modern physics",
+  "Deney ve hesaplama": "Experiment and computation",
+};

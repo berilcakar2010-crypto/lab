@@ -154,8 +154,10 @@ const ROLE_TR: Record<string, string> = lazyLabels<string>({
   TUTOR: "tutor", SOCRATIC_GUIDE: "socratic guide", EVALUATOR: "evaluator", HINT_GENERATOR: "hint generator",
   MILESTONE_GENERATOR: "milestone generator", CURRICULUM_BUILDER: "curriculum builder", DIFFICULTY_CALIBRATOR: "difficulty calibrator",
   REFLECTION_ANALYST: "reflection analyst", CURRICULUM_ADVISOR: "curriculum advisor", FEEDBACK_GENERATOR: "feedback generator",
+  QA_ASSISTANT: "question answering", EXPLANATION_EVALUATOR: "explanation evaluator", FLASHCARD_GENERATOR: "flashcard generator", MINDMAP_GENERATOR: "mind-map generator",
 }, {
   TUTOR: "öğretmen", SOCRATIC_GUIDE: "sokratik rehber", EVALUATOR: "değerlendirici", HINT_GENERATOR: "ipucu üretici",
   MILESTONE_GENERATOR: "adım üretici", CURRICULUM_BUILDER: "müfredat kurucu", DIFFICULTY_CALIBRATOR: "zorluk ayarlayıcı",
   REFLECTION_ANALYST: "değerlendirme analisti", CURRICULUM_ADVISOR: "müfredat danışmanı", FEEDBACK_GENERATOR: "geri bildirim üretici",
+  QA_ASSISTANT: "soru yanıtlama", EXPLANATION_EVALUATOR: "anlatım değerlendirici", FLASHCARD_GENERATOR: "kart üretici", MINDMAP_GENERATOR: "zihin haritası üretici",
 });

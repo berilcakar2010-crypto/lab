@@ -122,7 +122,11 @@ export type AIRole =
   | "DIFFICULTY_CALIBRATOR"
   | "REFLECTION_ANALYST"
   | "CURRICULUM_ADVISOR"
-  | "FEEDBACK_GENERATOR";
+  | "FEEDBACK_GENERATOR"
+  | "QA_ASSISTANT"
+  | "EXPLANATION_EVALUATOR"
+  | "FLASHCARD_GENERATOR"
+  | "MINDMAP_GENERATOR";
 
 // ---------------------------------------------------------------------------
 // Entities
@@ -530,6 +534,95 @@ export interface LabDB {
   engagement: Table<EngagementRecord>;
   events: AnalyticsEvent[];
   knowledge: KnowledgeState;
+  flashcards: Table<Flashcard>;
+  chats: Table<ChatThread>;
+  explanations: Table<Explanation>;
+  /** Personal notes per learning object, keyed by object id. */
+  notes: Table<StudyNote>;
+}
+
+// ---------------------------------------------------------------------------
+// Study tools: flashcards, AI questions, explain-the-logic, notes
+// ---------------------------------------------------------------------------
+
+export type CardGrade = 0 | 1 | 2 | 3; // again, hard, good, easy
+
+export interface Flashcard {
+  id: ID;
+  /** Learning object the card belongs to (optional for free cards). */
+  loId?: string;
+  front: string;
+  back: string;
+  kind: "BASIC" | "CLOZE" | "REVERSE";
+  source: "AUTO" | "USER" | "AI";
+  /** Stable key for auto cards so regeneration never duplicates them. */
+  autoKey?: string;
+  tags: string[];
+  createdAt: Millis;
+  /** SM-2 style scheduling. */
+  due: Millis;
+  intervalDays: number;
+  ease: number;
+  reps: number;
+  lapses: number;
+  suspended?: boolean;
+  history: { at: Millis; grade: CardGrade; ms?: number }[];
+}
+
+export interface ChatMessage {
+  role: "user" | "assistant";
+  text: string;
+  at: Millis;
+  provider?: string;
+}
+
+export interface ChatThread {
+  id: ID;
+  loId?: string;
+  title: string;
+  messages: ChatMessage[];
+  createdAt: Millis;
+  updatedAt: Millis;
+}
+
+export interface ExplanationEvaluation {
+  /** 0..1 */
+  score: number;
+  criteria: { criterion: string; met: boolean; comment?: string }[];
+  strengths: string[];
+  gaps: string[];
+  misconceptions: string[];
+  feedback: string;
+  provider: string;
+  /** "ai" when a model judged it; "self" when the learner ticked the rubric. */
+  by: "ai" | "self";
+  at: Millis;
+}
+
+export interface Explanation {
+  id: ID;
+  loId?: string;
+  /** What the learner set out to explain. */
+  prompt: string;
+  mode: "TEXT" | "AUDIO" | "VIDEO";
+  text?: string;
+  transcript?: string;
+  /** Key of the recording in the media store (IndexedDB), if any. */
+  mediaId?: string;
+  mime?: string;
+  durationSec?: number;
+  sizeBytes?: number;
+  evaluation?: ExplanationEvaluation;
+  createdAt: Millis;
+}
+
+export interface StudyNote {
+  /** Equal to the learning object id. */
+  id: string;
+  text: string;
+  /** Extra mind-map branches the learner added. */
+  mapItems: string[];
+  updatedAt: Millis;
 }
 
 // ---------------------------------------------------------------------------
