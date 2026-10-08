@@ -1,4 +1,5 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
+import { usePanZoom } from "./panZoom";
 import { L } from "../../i18n";
 import { mindLayout, mindMapMarkdown, type MindNode, type PlacedNode } from "../../study/mindmap";
 import { saveBlobFile, saveTextFile } from "../native";
@@ -55,15 +56,16 @@ export function MindMapView({ root, onOpenObject, onAddItem, fileName }: {
   const placed = useMemo(() => mindLayout(root), [root]);
   const [sel, setSel] = useState<PlacedNode | null>(null);
   const [add, setAdd] = useState("");
-  const svgRef = useRef<SVGSVGElement>(null);
-  const pad = 130;
-  const xs = placed.map((p) => p.x), ys = placed.map((p) => p.y);
-  const vb = { x: Math.min(...xs) - pad, y: Math.min(...ys) - pad, w: Math.max(...xs) - Math.min(...xs) + 2 * pad, h: Math.max(...ys) - Math.min(...ys) + 2 * pad };
-  const [zoom, setZoom] = useState(1);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-  const drag = useRef<{ x: number; y: number } | null>(null);
-  const view = { w: vb.w / zoom, h: vb.h / zoom };
-  const viewBox = `${vb.x + (vb.w - view.w) / 2 + pan.x} ${vb.y + (vb.h - view.h) / 2 + pan.y} ${view.w} ${view.h}`;
+  const vb = useMemo(() => {
+    const pad = 130;
+    const xs = placed.map((p) => p.x), ys = placed.map((p) => p.y);
+    if (!xs.length) return { x: -pad, y: -pad, w: 2 * pad, h: 2 * pad };
+    return { x: Math.min(...xs) - pad, y: Math.min(...ys) - pad, w: Math.max(...xs) - Math.min(...xs) + 2 * pad, h: Math.max(...ys) - Math.min(...ys) + 2 * pad };
+  }, [placed]);
+  const { vb: view, fit, zoom, svgRef, wasDrag, handlers } = usePanZoom(vb);
+  const viewBox = `${view.x} ${view.y} ${view.w} ${view.h}`;
+  // A selection from an older version of the map (e.g. after adding a branch) is dropped.
+  const selected = sel && placed.find((p) => p.node.id === sel.node.id) ? sel : null;
 
   const svgText = () => {
     const el = svgRef.current;
@@ -108,15 +110,7 @@ export function MindMapView({ root, onOpenObject, onAddItem, fileName }: {
     <div className="stack" style={{ gap: 8 }}>
       <div className="mind-map graph-map">
         <svg ref={svgRef} viewBox={viewBox} style={{ height: 460 }} role="img" aria-label={L(`Mind map: ${root.label}`, `Zihin haritası: ${root.label}`)}
-          onPointerDown={(e) => { drag.current = { x: e.clientX, y: e.clientY }; }}
-          onPointerMove={(e) => {
-            if (!drag.current || !svgRef.current) return;
-            const s = view.w / svgRef.current.clientWidth;
-            setPan((p) => ({ x: p.x - (e.clientX - drag.current!.x) * s, y: p.y - (e.clientY - drag.current!.y) * s }));
-            drag.current = { x: e.clientX, y: e.clientY };
-          }}
-          onPointerUp={() => { drag.current = null; }} onPointerLeave={() => { drag.current = null; }}
-          onWheel={(e) => setZoom((z) => Math.min(4, Math.max(0.5, z * (e.deltaY > 0 ? 0.9 : 1.1))))}>
+          {...handlers}>
           {placed.filter((p) => p.parent).map((p) => {
             const a = p.parent!;
             // Horizontal S-curves from the parent's edge to the child's edge.
@@ -125,20 +119,20 @@ export function MindMapView({ root, onOpenObject, onAddItem, fileName }: {
             return <path key={`l-${p.node.id}`} className="mm-line" d={`M${x1},${a.y} C${mx},${a.y} ${mx},${p.y} ${x2},${p.y}`}
               style={p.depth === 1 ? { stroke: TONE[p.node.tone ?? ""] ?? undefined, strokeOpacity: 0.6 } : undefined} />;
           })}
-          {[...placed].reverse().map((p, i, all) => <NodeBox key={p.node.id} p={p} delay={p.depth === 0 ? 0 : p.depth === 1 ? 0.08 + (all.length - i) * 0.004 : 0.25 + (all.length - i) * 0.008} selected={sel?.node.id === p.node.id} onTap={() => setSel(p)} />)}
+          {[...placed].reverse().map((p, i, all) => <NodeBox key={p.node.id} p={p} delay={p.depth === 0 ? 0 : p.depth === 1 ? 0.08 + (all.length - i) * 0.004 : 0.25 + (all.length - i) * 0.008} selected={selected?.node.id === p.node.id} onTap={() => !wasDrag() && setSel(p)} />)}
         </svg>
         <div className="gm-tools">
-          <button className="btn small" onClick={() => setZoom((z) => Math.min(4, z * 1.25))} aria-label={L("Zoom in", "Yakınlaştır")}>+</button>
-          <button className="btn small" onClick={() => setZoom((z) => Math.max(0.5, z / 1.25))} aria-label={L("Zoom out", "Uzaklaştır")}>−</button>
-          <button className="btn small" onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}>{L("Fit", "Sığdır")}</button>
+          <button className="btn small" onClick={() => zoom(1 / 1.25)} aria-label={L("Zoom in", "Yakınlaştır")}>+</button>
+          <button className="btn small" onClick={() => zoom(1.25)} aria-label={L("Zoom out", "Uzaklaştır")}>−</button>
+          <button className="btn small" onClick={fit}>{L("Fit", "Sığdır")}</button>
         </div>
       </div>
-      {sel && (
+      {selected && (
         <div className="card stack" style={{ gap: 6 }}>
-          <span className="eyebrow">{sel.parent?.node.kind === "branch" ? sel.parent.node.label : sel.node.kind === "root" ? L("Topic", "Konu") : L("Branch", "Dal")}</span>
-          <p className="small" style={{ margin: 0 }}>{sel.node.detail ?? sel.node.label}</p>
-          {sel.node.loId && onOpenObject && sel.node.kind !== "root" && (
-            <button className="btn small" style={{ alignSelf: "flex-start" }} onClick={() => onOpenObject(sel.node.loId!)}>{L("Open this object", "Bu nesneyi aç")}</button>
+          <span className="eyebrow">{selected.parent?.node.kind === "branch" ? selected.parent.node.label : selected.node.kind === "root" ? L("Topic", "Konu") : L("Branch", "Dal")}</span>
+          <p className="small" style={{ margin: 0 }}>{selected.node.detail ?? selected.node.label}</p>
+          {selected.node.loId && onOpenObject && selected.node.kind !== "root" && (
+            <button className="btn small" style={{ alignSelf: "flex-start" }} onClick={() => onOpenObject(selected.node.loId!)}>{L("Open this object", "Bu nesneyi aç")}</button>
           )}
         </div>
       )}

@@ -1,4 +1,5 @@
-import { useMemo, useRef, useState, type PointerEvent as RPointerEvent, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
+import { usePanZoom } from "./panZoom";
 import { depths } from "../../engines/graph";
 import { L } from "../../i18n";
 import { domainLabel, DOMAINS, type Domain, type KnowledgeGraph } from "../../knowledge/schema";
@@ -32,46 +33,6 @@ function labelLines(label: string, width = 18): string[] {
   return lines.map((l) => (l.length > width + 2 ? `${l.slice(0, width)}…` : l));
 }
 
-/** Pan (drag) and zoom (wheel, pinch or buttons) over an SVG viewBox. */
-function usePanZoom(initial: { x: number; y: number; w: number; h: number }) {
-  const [vb, setVb] = useState(initial);
-  const pointers = useRef(new Map<number, { x: number; y: number }>());
-  const last = useRef<{ x: number; y: number; d?: number } | null>(null);
-  const svgRef = useRef<SVGSVGElement>(null);
-  const scale = () => (svgRef.current ? vb.w / svgRef.current.clientWidth : 1);
-  const zoom = (f: number) => setVb((v) => {
-    const w = Math.min(Math.max(v.w * f, 200), 6000);
-    const h = (w / v.w) * v.h;
-    return { x: v.x + (v.w - w) / 2, y: v.y + (v.h - h) / 2, w, h };
-  });
-  const onPointerDown = (e: RPointerEvent<SVGSVGElement>) => {
-    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    last.current = null;
-  };
-  const onPointerMove = (e: RPointerEvent<SVGSVGElement>) => {
-    if (!pointers.current.has(e.pointerId)) return;
-    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    const pts = [...pointers.current.values()];
-    const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
-    const cy = pts.reduce((s, p) => s + p.y, 0) / pts.length;
-    const d = pts.length === 2 ? Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) : undefined;
-    if (last.current) {
-      const s = scale();
-      const dx = (cx - last.current.x) * s;
-      const dy = (cy - last.current.y) * s;
-      setVb((v) => ({ ...v, x: v.x - dx, y: v.y - dy }));
-      if (d && last.current.d) zoom(last.current.d / d);
-    }
-    last.current = { x: cx, y: cy, d };
-  };
-  const onPointerUp = (e: RPointerEvent<SVGSVGElement>) => {
-    pointers.current.delete(e.pointerId);
-    last.current = null;
-  };
-  const onWheel = (e: React.WheelEvent<SVGSVGElement>) => zoom(e.deltaY > 0 ? 1.12 : 1 / 1.12);
-  return { vb, setVb, zoom, svgRef, handlers: { onPointerDown, onPointerMove, onPointerUp, onPointerCancel: onPointerUp, onPointerLeave: onPointerUp, onWheel } };
-}
-
 function MapFrame({ nodes, edges, onTap, height = 420, legend }: { nodes: Node[]; edges: Edge[]; onTap: (id: string) => void; height?: number; legend?: ReactNode }) {
   const bounds = useMemo(() => {
     const xs = nodes.map((n) => n.x), ys = nodes.map((n) => n.y);
@@ -79,15 +40,12 @@ function MapFrame({ nodes, edges, onTap, height = 420, legend }: { nodes: Node[]
     const x = Math.min(...xs, 0) - pad, y = Math.min(...ys, 0) - pad;
     return { x, y, w: Math.max(...xs, 0) + pad - x, h: Math.max(...ys, 0) + pad - y };
   }, [nodes]);
-  const { vb, setVb, zoom, svgRef, handlers } = usePanZoom(bounds);
+  const { vb, fit, zoom, svgRef, wasDrag, handlers } = usePanZoom(bounds);
   const byId = new Map(nodes.map((n) => [n.id, n]));
-  const moved = useRef(false);
   return (
     <div className="graph-map">
       <svg ref={svgRef} viewBox={`${vb.x} ${vb.y} ${vb.w} ${vb.h}`} style={{ height }} role="img" aria-label={L("Knowledge map", "Bilgi haritası")}
-        {...handlers}
-        onPointerDown={(e) => { moved.current = false; handlers.onPointerDown(e); }}
-        onPointerMove={(e) => { if (e.buttons || e.pointerType === "touch") moved.current = true; handlers.onPointerMove(e); }}>
+        {...handlers}>
         <defs>
           <marker id="gm-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
             <path d="M0,0 L10,5 L0,10 z" fill="var(--border-strong)" />
@@ -102,7 +60,7 @@ function MapFrame({ nodes, edges, onTap, height = 420, legend }: { nodes: Node[]
         })}
         {nodes.map((n) => (
           <g key={n.id} className={`gm-node ${n.focus ? "focus" : ""} ${n.dim ? "dim" : ""}`} transform={`translate(${n.x},${n.y})`}
-            onClick={() => !moved.current && onTap(n.id)} role="button" aria-label={n.label} tabIndex={0}
+            onClick={() => !wasDrag() && onTap(n.id)} role="button" aria-label={n.label} tabIndex={0}
             onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onTap(n.id)}>
             {n.ring && <circle r={n.r + 5} fill="none" stroke={n.ring} strokeWidth={2.5} />}
             <circle r={n.r} fill={n.color} fillOpacity={n.focus ? 0.95 : 0.8} />
@@ -115,7 +73,7 @@ function MapFrame({ nodes, edges, onTap, height = 420, legend }: { nodes: Node[]
       <div className="gm-tools">
         <button className="btn small" onClick={() => zoom(1 / 1.3)} aria-label={L("Zoom in", "Yakınlaştır")}>+</button>
         <button className="btn small" onClick={() => zoom(1.3)} aria-label={L("Zoom out", "Uzaklaştır")}>−</button>
-        <button className="btn small" onClick={() => setVb(bounds)}>{L("Fit", "Sığdır")}</button>
+        <button className="btn small" onClick={fit}>{L("Fit", "Sığdır")}</button>
       </div>
       {legend}
     </div>

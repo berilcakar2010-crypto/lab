@@ -1,7 +1,8 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { MilestoneStatus, MilestoneType, RecommendationKind } from "../../domain/types";
 import { useToasts } from "../state";
+import { ErrorBoundary } from "./ErrorBoundary";
 import { L, fmtNum, lazyLabels } from "../../i18n";
 
 const P = { width: 20, height: 20, fill: "none", stroke: "currentColor", strokeWidth: 1.7, strokeLinecap: "round", strokeLinejoin: "round" } as const;
@@ -33,15 +34,22 @@ export function Sheet({ title, onClose, children, wide }: { title: string; onClo
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
+  // Close only on a tap that both starts and ends on the backdrop: a drag that
+  // begins inside the sheet (a map pan, a text selection) and is released
+  // outside must not close it.
+  const downOnBackdrop = useRef(false);
   // Portal to <body> so animated (transformed) ancestors can't offset the fixed overlay.
   return createPortal(
-    <div className="sheet-backdrop" onClick={onClose} role="presentation">
+    <div className="sheet-backdrop" role="presentation"
+      onPointerDown={(e) => { downOnBackdrop.current = e.target === e.currentTarget; }}
+      onClick={(e) => { if (e.target === e.currentTarget && downOnBackdrop.current) onClose(); downOnBackdrop.current = false; }}>
       <div className="sheet" style={wide ? { maxWidth: 860 } : undefined} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={title}>
         <div className="row between nowrap" style={{ marginBottom: 16 }}>
           <h2>{title}</h2>
           <button className="btn ghost small" onClick={onClose} aria-label={L("Close", "Kapat")}><Icon.close /></button>
         </div>
-        {children}
+        {/* A problem inside one sheet stays in the sheet instead of taking the page down. */}
+        <ErrorBoundary>{children}</ErrorBoundary>
       </div>
     </div>,
     document.body,

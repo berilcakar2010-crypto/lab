@@ -364,6 +364,19 @@ export default async function flows({ page, step, shot, click, BASE }) {
     await sheet.getByRole("tab", { name: "Zihin haritası" }).click();
     await sheet.getByRole("img", { name: /Zihin haritası:/ }).waitFor();
     await shot("25-mind-map");
+    // Pan, zoom and a drag released outside the sheet: the map moves and the sheet stays open.
+    const mm = sheet.getByRole("img", { name: /Zihin haritası:/ });
+    const box = await mm.boundingBox();
+    const before = await mm.getAttribute("viewBox");
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2, 5, { steps: 10 });
+    await page.mouse.up();
+    await page.mouse.wheel(0, -300);
+    if ((await mm.getAttribute("viewBox")) === before) throw new Error("mind map did not pan or zoom");
+    await sheet.getByRole("button", { name: "Sığdır" }).click();
+    await sheet.locator(".mm-leaf").nth(1).click();
+    await sheet.getByRole("tab", { name: "Zihin haritası" }).waitFor();
     await sheet.getByRole("tab", { name: /^Kartlar/ }).click();
     await sheet.getByRole("button", { name: "Grafikten kart yap" }).click();
     await page.getByText(/kart eklendi/).first().waitFor();

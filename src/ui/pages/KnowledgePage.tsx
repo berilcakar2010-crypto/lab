@@ -96,7 +96,9 @@ export function KnowledgePage() {
 
 function LORow({ id, pg, onOpen, note }: { id: string; pg: PersonalGraph; onOpen: (id: string) => void; note?: ReactNode }) {
   const o = pg.g.objects[id];
-  const p = pg.progress.get(id)!;
+  const p = pg.progress.get(id);
+  // A goal or link to an object that is no longer in the graph is skipped, not fatal.
+  if (!o || !p) return null;
   return (
     <button className="list-item lo-row" onClick={() => onOpen(id)}>
       <span className="lo-dot" style={{ background: DOMAIN_COLOR[o.domain] }} aria-hidden />
