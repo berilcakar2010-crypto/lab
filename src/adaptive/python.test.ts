@@ -1,11 +1,15 @@
 import { beforeAll, describe, expect, it } from "vitest";
+import { existsSync } from "node:fs";
 import { loadPyodide } from "pyodide";
 import { execute, prepare, type PyodideLike } from "./pythonCore";
 import { pythonRun } from "./python";
 
 let py: PyodideLike;
+/** Packages are bundled by scripts/fetch-pyodide-packages.mjs (run by build/dev and CI). */
+const BUNDLED = existsSync("public/pyodide/lab-packages.json");
 beforeAll(async () => {
-  py = (await loadPyodide({ indexURL: `${process.cwd()}/node_modules/pyodide/` })) as unknown as PyodideLike;
+  // Runtime from the npm package; scientific packages from the bundle the app ships.
+  py = (await loadPyodide({ indexURL: `${process.cwd()}/node_modules/pyodide/`, ...(BUNDLED ? { packageCacheDir: `${process.cwd()}/public/pyodide/` } : {}) } as Parameters<typeof loadPyodide>[0])) as unknown as PyodideLike;
   prepare(py);
 }, 60_000);
 
@@ -42,4 +46,44 @@ describe("Python sandbox (real CPython via Pyodide)", () => {
     const r = await execute(py, "for i in range(100000): print('x'*50)");
     expect(r.stdout.length).toBeLessThanOrEqual(20_001);
   });
+});
+
+describe.skipIf(!BUNDLED)("bundled scientific packages (offline)", () => {
+  it("numpy, scipy, pandas, sympy work", async () => {
+    const r = await execute(py, `import numpy as np
+from scipy.integrate import quad
+import pandas as pd
+import sympy as sp
+x = sp.symbols("x")
+print(float(np.mean([1, 2, 3])), round(quad(lambda t: t**2, 0, 3)[0], 6), int(pd.DataFrame({"a": [1, 2]}).a.sum()), sp.diff(x**3, x))`);
+    expect(r.error).toBeUndefined();
+    expect(r.stdout).toContain("2.0 9.0 3 3*x**2");
+    expect(r.packages).toEqual(expect.arrayContaining(["numpy", "scipy", "pandas", "sympy"]));
+  }, 180_000);
+
+  it("matplotlib figures come back as PNG images", async () => {
+    const r = await execute(py, "import matplotlib.pyplot as plt\nplt.plot([0, 1, 2], [0, 1, 4])\nplt.title('t')");
+    expect(r.error).toBeUndefined();
+    expect(r.images).toHaveLength(1);
+    expect(r.images[0]).toMatch(/^data:image\/png;base64,iVBOR/);
+    const again = await execute(py, "print('no figure left open')");
+    expect(again.images).toEqual([]);
+  }, 180_000);
+
+  it("scikit-learn, statsmodels and networkx work", async () => {
+    const r = await execute(py, `from sklearn.linear_model import LinearRegression
+import statsmodels.api as sm
+import networkx as nx
+import numpy as np
+X = np.arange(10).reshape(-1, 1); y = 3 * X.ravel() + 1
+print(round(LinearRegression().fit(X, y).coef_[0], 3), round(sm.OLS(y, sm.add_constant(X)).fit().params[1], 3), nx.shortest_path_length(nx.path_graph(5), 0, 4))`);
+    expect(r.error).toBeUndefined();
+    expect(r.stdout).toContain("3.0 3.0 4");
+  }, 180_000);
+
+  it("a package that is not bundled is reported clearly", async () => {
+    const r = await execute(py, "import astropy");
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/astropy|No module/);
+  }, 60_000);
 });

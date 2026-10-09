@@ -43,6 +43,17 @@ jobs:
       - name: Bağımlılıklar
         run: npm ci
 
+      # Bilimsel Python paketleri (numpy, scipy, pandas, matplotlib, sympy, networkx, scikit-learn,
+      # statsmodels) resmi Pyodide sürümünden alınıp uygulamanın içine gömülür; çevrimdışı çalışırlar.
+      - name: Pyodide dağıtım önbelleği
+        uses: actions/cache@v4
+        with:
+          path: .cache/pyodide/*.tar.bz2
+          key: pyodide-${{ hashFiles('package-lock.json') }}
+
+      - name: Python paketleri
+        run: npm run python:packages
+
       - name: Testler
         run: npm test
 

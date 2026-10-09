@@ -92,8 +92,8 @@ ustalık → transfer → sıradaki seçim.
 - **YZ müfredat önerisi:** Önce diff gösterilir; değişiklikler seçerek onaylanır, sonra sürümlenir. Her değişikliğin
   köken bilgisi tutulur.
 - **Kaynaklar:** Kitap ve kurslar kaynaktır, müfredat değil.
-- **Lab sekmesi:** Tahmin → test → açıkla, araştırma defteri ve güvenli sandbox (formül, ODE/RK4, veri analizi; Python
-  yok).
+- **Lab sekmesi:** Tahmin → test → açıkla, araştırma defteri ve güvenli sandbox (formül, ODE/RK4, veri analizi ve
+  numpy/scipy/pandas/matplotlib içeren gerçek Python).
 - **İstatistik:** Katılım, öğrenme ve kalıcılık ayrı gösterilir.
 
 Ayrıntılar: `LAB_UPGRADE_AUDIT.md`, `docs/LAB_UPGRADE_PHASES.md`, `LAB_UPGRADE_FINAL_REPORT.md`.
@@ -133,6 +133,10 @@ iş için *Devam / Baştan / Gözden geçir / Değiştir*, **Beni şaşırt** (R
 - **Python sandbox**: gerçek CPython 3 (Pyodide), uygulamanın içinde, çevrimdışı. Yalıtılmış bir
   worker'da çalışır; ağa ve verilere erişemez, 15 sn sınırı var, `plot()` ile grafik çizer.
   Derleme sırasında `scripts/copy-pyodide.mjs` dosyaları `public/pyodide`'a kopyalar.
+  Bilimsel paketler de çevrimdışı gömülüdür: **numpy, scipy, pandas, matplotlib, sympy, networkx,
+  scikit-learn, statsmodels** (bağımlılıklarla 26 wheel, ≈82 MB). `scripts/fetch-pyodide-packages.mjs`
+  Pyodide sürüm arşivinden bağımlılık kapanışını çözüp çıkarır (`npm run python:packages`). Paketler
+  ilk `import`ta yüklenir; matplotlib figürleri Lab temasıyla PNG olarak gösterilir.
 - **Anlamsal arama** (Gemini embedding'leri; yalnızca sorgu gönderilir), **YZ ile ayrıştırma ve
   soru varyasyonu** (büyüklük ve kalite kontrollerinden geçen kabul edilir), kaynaklarda baskı /
   yıl / güncellik, isteğe bağlı araştırma hatırlatması, konu başına kalemle çizimler, yıllık

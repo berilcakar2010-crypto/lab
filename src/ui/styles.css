@@ -617,3 +617,4 @@ button.plain { background: none; border: 0; padding: 0; color: inherit; font: in
 .sketch { margin: 0; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; background: var(--surface); }
 .sketch img { display: block; width: 100%; height: auto; }
 .sketch figcaption { padding: 2px 6px; }
+.py-fig { display: block; width: 100%; height: auto; border-radius: var(--radius-sm); border: 1px solid var(--border); }

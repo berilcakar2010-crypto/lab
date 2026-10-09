@@ -5,13 +5,14 @@
   "type": "module",
   "description": "Lab \u2014 a personal academic operating system",
   "scripts": {
-    "dev": "node scripts/copy-pyodide.mjs && vite",
-    "build": "node scripts/copy-pyodide.mjs && tsc --noEmit && vite build",
+    "dev": "node scripts/copy-pyodide.mjs && node scripts/fetch-pyodide-packages.mjs && vite",
+    "build": "node scripts/copy-pyodide.mjs && node scripts/fetch-pyodide-packages.mjs && tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "smoke": "node scripts/smoke.mjs"
+    "smoke": "node scripts/smoke.mjs",
+    "python:packages": "node scripts/copy-pyodide.mjs && node scripts/fetch-pyodide-packages.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.2",

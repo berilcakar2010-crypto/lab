@@ -7,7 +7,7 @@ Dal: `ccr-2af93b6d-f90t4l` · Tarih: 2026-10-09 · Denetim: `LAB_FINAL_AUDIT.md`
 | Kontrol | Sonuç |
 |---|---|
 | Typecheck (`tsc --noEmit`) | **PASS** |
-| Birim + entegrasyon testleri (`vitest`) | **PASS** — 36 dosyada 227 test (öncesi: 183); gerçek CPython testleri dahil |
+| Birim + entegrasyon testleri (`vitest`) | **PASS** — 36 dosyada 231 test (öncesi: 183); gerçek CPython testleri dahil |
 | Üretim derlemesi (`vite build`) | **PASS** — ana paket 2,35 MB (gzip ≈ 750 KB); ikincil ekranlar ve Python ayrı parçalarda |
 | Gerçek tarayıcıda uçtan uca akışlar (`npm run smoke`) | **PASS** — 61 adım (öncesi: 48); A–F senaryolarının hepsi; telefon, yatay ve dikey tablette yatay taşma yok |
 | Müfredat doğrulayıcısı (yerleşik grafik) | 0 hata · 0 uyarı (sağlık testi bunu doğruluyor) |
@@ -82,7 +82,7 @@ Bunlar yeniden yazılmadı; bu sistemlerin üzerine inşa edildi.
 
 | Madde | Önceki durum | Şimdi | Nasıl |
 |---|---|---|---|
-| **Python sandbox** | BLOCKED | **DONE** | Pyodide (CPython 3, WebAssembly) npm paketinden uygulamanın içine kopyalanıyor (`scripts/copy-pyodide.mjs`), yani **çevrimdışı** çalışıyor. Yalnızca Python açıldığında yükleniyor. **Web Worker** içinde çalışıyor; Python'dan `js` ve ağa erişim kapalı, worker'dan fetch / XHR / WebSocket / IndexedDB kaldırılıyor. Çıktı sınırlı, 15 sn sonra worker sonlandırılıyor. `plot()` sandbox grafiğine çiziyor; kaydedilen çalıştırma yorumla birlikte kanıt oluyor. Android'de `.wasm` yanlış MIME türüyle sunulursa bayt dizisinden derlemeye düşülüyor (smoke testinde yanlış MIME ile doğrulandı). |
+| **Python sandbox** | BLOCKED | **DONE** | Pyodide (CPython 3, WebAssembly) npm paketinden uygulamanın içine kopyalanıyor (`scripts/copy-pyodide.mjs`), yani **çevrimdışı** çalışıyor. Yalnızca Python açıldığında yükleniyor. **Web Worker** içinde çalışıyor; Python'dan `js` ve ağa erişim kapalı, worker'dan fetch / XHR / WebSocket / IndexedDB kaldırılıyor. Çıktı sınırlı, 15 sn sonra worker sonlandırılıyor. `plot()` sandbox grafiğine çiziyor; kaydedilen çalıştırma yorumla birlikte kanıt oluyor. Android'de `.wasm` yanlış MIME türüyle sunulursa bayt dizisinden derlemeye düşülüyor (smoke testinde yanlış MIME ile doğrulandı). Bilimsel paketler (numpy, scipy, pandas, matplotlib, sympy, networkx, scikit-learn, statsmodels) çevrimdışı gömülü, ilk importta yükleniyor; matplotlib figürleri temalı PNG olarak gösteriliyor; 7 hazır örnek var. |
 | **Embedding + anlamsal arama** | BLOCKED | **DONE (Gemini)** | `text-embedding-004` (256 boyut). Nesne vektörleri grafik sürümü başına bir kez hesaplanıp yerelde önbelleğe alınıyor; her arama yalnızca **sorguyu** gönderiyor. Komut paletinde "Anlama göre ara (YZ)" var. Groq embedding sunmadığı için orada `embed: false`. Smoke testinde günlük metninin gönderilmediği doğrulanıyor. |
 | **YZ ile ayrıştırma** | PARTIAL | **DONE** | `decomposeAI`: her adımın hedefi büyüklük doğrulayıcısından, her sorusu kalite kontrolünden geçiyor; geçemeyenler eleniyor, hiçbiri geçmezse Lab'ın yerel planına düşülüyor. Oturumda "YZ ile böl" düğmesi. |
 | **YZ ile soru varyasyonu** | PARTIAL | **DONE** | `varyQuestionAI`: aynı beceri, başka sayı / bağlam / gösterim. Kalite kontrolü var; orijinali otomatik değerlendirilebiliyorsa varyasyonun da öyle olması şart. Soru bankasında "YZ varyasyonu" düğmesi. |
@@ -95,8 +95,8 @@ Bunlar yeniden yazılmadı; bu sistemlerin üzerine inşa edildi.
 ## 5. Hâlâ kısmi olanlar (dürüst durum)
 
 - **Paket boyutu**: ana paket 2,35 MB (gzip ≈ 750 KB) ve APK içinden yerel olarak yükleniyor. Varsayılan dil İngilizce olduğu için Türkçe temel içerik ve İngilizce katman açılışta birlikte gerekiyor; dile göre bölmek yalnızca Türkçe kullanıcılara ~%40 kazandırırdı ve dil değiştirme akışını eşzamansız hale getirmeyi gerektirirdi. Teknik borç olarak duruyor.
-- **APK boyutu**: Python ortamı uygulamayı yaklaşık 14 MB büyütüyor (yalnızca kullanılınca belleğe yükleniyor).
-- **Python paketleri**: yalnızca standart kütüphane var (math, statistics, random, fractions…). numpy veya matplotlib yok; bunlar ağdan paket indirmeyi gerektirir.
+- **APK boyutu**: Python ortamı ve bilimsel paketler uygulamayı yaklaşık 96 MB büyütüyor (kalite öncelikli tercih; yalnızca kullanılınca belleğe yükleniyor, `largeHeap` açık).
+- **Python paketleri**: numpy, scipy, pandas, matplotlib, sympy, networkx, scikit-learn, statsmodels çevrimdışı gömülü (26 wheel). Bunların dışındaki paketler (ör. astropy) yok ve net bir hata veriyor. Fiziksel Android cihazda henüz denenmedi; ilk import birkaç saniye sürebilir.
 - **Anlamsal arama**: yalnızca Gemini ile çalışıyor; diğer sağlayıcılarda sözcük tabanlı arama devam ediyor.
 - **Grafik haritasının üzerine çizim**: yok.
 
@@ -230,7 +230,7 @@ Teknik borç: içerik verisinin dil bazında tembel yüklenmesi.
 ## 18. Testler
 
 - `src/adaptive/final.test.ts` (21 test): kontroller, ayrıştırma, derinlik, Open Lab, keşif, soru bankası, stratejiler, kişisel model, arama, v4 göçü, What Next güven değeri, dil ve yarışma katmanları.
-- `src/adaptive/python.test.ts` (4 test): gerçek CPython; çıktı, grafik serileri, hata izi, JavaScript/ağ erişiminin engellenmesi, çıktı sınırı.
+- `src/adaptive/python.test.ts` (8 test): gerçek CPython; çıktı, grafik serileri, hata izi, JavaScript/ağ erişiminin engellenmesi, çıktı sınırı; gömülü numpy/scipy/pandas/sympy, matplotlib PNG, sklearn/statsmodels/networkx ve gömülü olmayan paket hatası.
 - `src/ai/generative.test.ts` (4 test): YZ ayrıştırma (kontrollerden geçmeyen adımlar elenir, yerel yedek), YZ varyasyonu (cevap anahtarını kaybeden reddedilir), anlamsal arama (dizin bir kez kurulur, yalnızca sorgu gönderilir).
 - `src/academic/academic.test.ts` (15 test): kayıtlar ve sürümleme, hedefler, okul, portfolyo, dışa / içe aktarma, kullanıcı kavramları ve geri alma, YZ önbelleği / üslup / bağlam bütçesi, anlık görüntüler, sağlık.
 - Smoke: 61 adım; Python (yanlış MIME ile bile), anlamsal arama (gizlilik kontrolüyle), kalemle çizim, kaynak meta verisi ve 3 ay sonra dönüş dahil. Spesifikasyon §170 senaryolarının karşılığı:
@@ -248,7 +248,6 @@ Typecheck, 227 test, üretim derlemesi ve 61 adımlık smoke testi geçiyor.
 ## 20. Kalan teknik borç
 
 - İçerik verisini dil bazında parçalara bölmek (ana paket 2,35 MB, gzip ≈ 750 KB).
-- Python için isteğe bağlı paket (numpy) desteği; ağ gerektirir.
 - Groq gibi embedding sunmayan sağlayıcılar için anlamsal arama.
 - Grafik haritası üzerine doğrudan çizim.
 
@@ -292,5 +291,5 @@ Her yeni özellik Kullanıcı → Hedef → Grafik → Rota → Meydan okuma →
 | Derin çalışma / devam / kesinti kurtarma / oturum sonu | DONE |
 | Arama + hızlı komut | DONE |
 | Sistem sağlığı + bakım önerileri | DONE |
-| Sandbox (formül, ODE, veri, **gerçek Python, çevrimdışı**) | DONE (yalnızca standart kütüphane) |
+| Sandbox (formül, ODE, veri, **gerçek Python, çevrimdışı**) | DONE (8 bilimsel paket gömülü) |
 | Dikey tablet öncelikli, kalem dostu (konu başına çizimler), erişilebilir | DONE (harita üzerine çizim PARTIAL) |

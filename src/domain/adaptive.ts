@@ -359,6 +359,8 @@ export interface SandboxRun {
   summary: string;
   /** Bounded numeric output for re-plotting (series of [x, y]). */
   series: { label: string; points: [number, number][] }[];
+  /** Figures (PNG data URLs) from a Python run, at most two. */
+  images?: string[];
   stats?: Record<string, number>;
   loIds: string[];
   researchId?: ID;

@@ -10,7 +10,7 @@ import { fmtDate, L } from "../../i18n";
 import type { KnowledgeGraph } from "../../knowledge/schema";
 import { getGraph } from "../../knowledge/graph";
 import { freeVariables, parse } from "../../engines/expr";
-import { PY_EXAMPLE, pythonRun, runPython } from "../../adaptive/python";
+import { PY_EXAMPLE, PY_EXAMPLES, pythonRun, runPython } from "../../adaptive/python";
 import { MODELS, modelsFor, runData, runOde, runSweep, saveAsEvidence, saveRun, startSandbox, type SandboxModel } from "../../adaptive/sandbox";
 import { DIRECTION_LABEL, comparison, explainPrediction, pteTask, submitPrediction } from "../../adaptive/pte";
 import { STEP_LABEL, createResearch, nextStep, researchAsExplanation, researchGuideAI, researchMarkdown, setStep, stepPrompts } from "../../adaptive/research";
@@ -125,7 +125,8 @@ export function SandboxPanel({ loId }: { loId?: string }) {
   const [mode, setMode] = useState<"model" | "formula" | "data" | "python">(models.length ? "model" : "formula");
   const [code, setCode] = useState(PY_EXAMPLE);
   const [pyBusy, setPyBusy] = useState(false);
-  const [pyOut, setPyOut] = useState<{ ok: boolean; text: string } | null>(null);
+  const [pyOut, setPyOut] = useState<{ ok: boolean; text: string; images: string[]; packages: string[] } | null>(null);
+  const [pyProgress, setPyProgress] = useState("");
   const [modelId, setModelId] = useState(models[0]?.id ?? "");
   const model = models.find((m) => m.id === modelId);
   const [values, setValues] = useState<Record<string, number>>(model ? defaults(model) : {});
@@ -149,9 +150,11 @@ export function SandboxPanel({ loId }: { loId?: string }) {
     act((d) => startSandbox(d, "PYTHON", loId ? [loId] : []));
     setPyBusy(true);
     setPyOut(null);
-    const r = await runPython(code);
+    setPyProgress("");
+    const r = await runPython(code, { onProgress: (m) => setPyProgress(m) });
     setPyBusy(false);
-    setPyOut({ ok: r.ok, text: r.ok ? `${r.stdout}${r.result ? `→ ${r.result}` : ""}` || L("(no output)", "(çıktı yok)") : `${r.stdout}${r.error ?? ""}` });
+    setPyProgress("");
+    setPyOut({ ok: r.ok, images: r.images ?? [], packages: r.packages ?? [], text: r.ok ? `${r.stdout}${r.result ? `→ ${r.result}` : ""}` || (r.images?.length ? "" : L("(no output)", "(çıktı yok)")) : `${r.stdout}${r.error ?? ""}` });
     setRun(r.ok ? (pythonRun(code, r) as ReturnType<typeof runSweep>) : null);
     setSaved(null);
   };
@@ -196,9 +199,16 @@ export function SandboxPanel({ loId }: { loId?: string }) {
       </div>
       {mode === "python" && (
         <>
+          <select className="input" value="" onChange={(e) => { const ex = PY_EXAMPLES.find((x) => x.id === e.target.value); if (ex) { setCode(ex.code); setPyOut(null); setRun(null); } }} aria-label={L("Example", "Örnek")}>
+            <option value="">{L("Start from an example…", "Bir örnekten başla…")}</option>
+            {PY_EXAMPLES.map((x) => <option key={x.id} value={x.id}>{x.title}</option>)}
+          </select>
           <textarea className="textarea mono" style={{ minHeight: 180, fontSize: "0.82rem" }} spellCheck={false} autoCapitalize="off" value={code} onChange={(e) => setCode(e.target.value)} aria-label={L("Python code", "Python kodu")} />
-          <span className="tiny muted">{L("Standard library only (math, statistics, random, fractions…). plot(xs, ys, label) draws on the chart. No access to the internet or your data; stops after 15 s.", "Yalnızca standart kütüphane (math, statistics, random, fractions…). plot(xs, ys, etiket) grafiğe çizer. İnternete ya da verilerine erişemez; 15 sn sonra durur.")}</span>
-          {pyOut && <pre className={`small mono py-out ${pyOut.ok ? "" : "error"}`}>{pyOut.text}</pre>}
+          <span className="tiny muted">{L("Python 3 with numpy, scipy, pandas, matplotlib, sympy, networkx, scikit-learn and statsmodels — all offline. matplotlib figures appear below; plot(xs, ys, label) draws on Lab's chart. No access to the internet or your data; code stops after 15 s (loading a package the first time may take longer).", "numpy, scipy, pandas, matplotlib, sympy, networkx, scikit-learn ve statsmodels ile Python 3 — hepsi çevrimdışı. matplotlib figürleri aşağıda görünür; plot(xs, ys, etiket) Lab'ın grafiğine çizer. İnternete ya da verilerine erişemez; kod 15 sn sonra durur (bir paketi ilk kez yüklemek daha uzun sürebilir).")}</span>
+          {pyBusy && pyProgress && <span className="tiny text-2">{pyProgress}</span>}
+          {pyOut?.packages.length ? <span className="tiny muted">{L("Loaded: ", "Yüklendi: ")}{pyOut.packages.join(", ")}</span> : null}
+          {pyOut && pyOut.text && <pre className={`small mono py-out ${pyOut.ok ? "" : "error"}`}>{pyOut.text}</pre>}
+          {pyOut?.images.map((src, i) => <img key={i} className="py-fig" src={src} alt={L(`Figure ${i + 1}`, `Figür ${i + 1}`)} />)}
         </>
       )}
       {mode === "model" && model && (

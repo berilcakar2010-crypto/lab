@@ -28,9 +28,15 @@ async function load(indexURL: string): Promise<PyodideLike> {
   const mod = (await import(/* @vite-ignore */ `${indexURL}pyodide.mjs`)) as { loadPyodide: (o: { indexURL: string }) => Promise<PyodideLike> };
   const p = await mod.loadPyodide({ indexURL });
   prepare(p);
-  // From here on, nothing in this worker can reach the network or storage.
+  // From here on, the worker can only fetch the app's own Python files (packages
+  // load from there on first import) and nothing else: no network, no storage.
   const g = self as unknown as Record<string, unknown>;
-  for (const k of ["fetch", "XMLHttpRequest", "WebSocket", "indexedDB", "importScripts", "EventSource"]) {
+  const ownFetch = fetch.bind(self);
+  g.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url, indexURL).href;
+    return url.startsWith(indexURL) ? ownFetch(url, init) : Promise.reject(new TypeError("Network access is disabled in the Python sandbox"));
+  };
+  for (const k of ["XMLHttpRequest", "WebSocket", "indexedDB", "importScripts", "EventSource"]) {
     try { g[k] = undefined; } catch { /* read-only in some engines */ }
   }
   return p;
@@ -44,8 +50,10 @@ self.onmessage = async (e: MessageEvent<{ id: number; code?: string; indexURL: s
       (self as unknown as Worker).postMessage({ id, ready: true });
       return;
     }
-    (self as unknown as Worker).postMessage({ id, ...(await execute(py, code)) });
+    const post = (m: object) => (self as unknown as Worker).postMessage({ id, ...m });
+    const r = await execute(py, code, { onMessage: (m) => post({ progress: m }), onRunning: () => post({ running: true }) });
+    post({ ...r, done: true });
   } catch (err) {
-    (self as unknown as Worker).postMessage({ id, ok: false, stdout: "", series: [], error: `Python could not start: ${err instanceof Error ? err.message : String(err)}`, ms: 0 });
+    (self as unknown as Worker).postMessage({ id, ok: false, stdout: "", series: [], images: [], packages: [], error: `Python could not start: ${err instanceof Error ? err.message : String(err)}`, ms: 0, done: true });
   }
 };

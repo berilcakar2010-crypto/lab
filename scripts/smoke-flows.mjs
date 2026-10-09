@@ -706,6 +706,24 @@ export default async function flows({ page, step, shot, click, BASE }) {
     await page.getByText(/period ≈ 2\.006 s/).first().waitFor({ timeout: 90_000 });
     if (!wrongMime) throw new Error("wasm request was not intercepted; MIME fallback not exercised");
     await shot("50-python");
+    // Scientific packages ship inside the app: numpy + matplotlib, scipy, pandas/statsmodels, sympy, scikit-learn, networkx.
+    const runExample = async (id, expect) => {
+      await page.getByLabel("Örnek").selectOption(id);
+      await page.getByRole("button", { name: "Çalıştır" }).first().click();
+      await page.getByText(expect).first().waitFor({ timeout: 240_000 });
+    };
+    await page.getByLabel("Örnek").selectOption("numpy");
+    await page.getByRole("button", { name: "Çalıştır" }).first().click();
+    await page.locator("img.py-fig").first().waitFor({ timeout: 240_000 });
+    await page.getByText(/energy after 5 s/).first().waitFor();
+    await shot("54-python-matplotlib");
+    await runExample("scipy", /max prey:/);
+    await page.locator("img.py-fig").first().waitFor();
+    await runExample("pandas", /R² =/);
+    await runExample("sympy", /Taylor:/);
+    await runExample("sklearn", /test accuracy:/);
+    await runExample("networkx", /shortest A→D/);
+    await shot("55-python-sklearn");
     await page.getByLabel("Python kodu").fill("import js");
     await page.getByRole("button", { name: "Çalıştır" }).first().click();
     await page.locator(".py-out.error").waitFor({ timeout: 30_000 });
