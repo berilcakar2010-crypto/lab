@@ -1,3 +1,4 @@
+import { summarizeIssues, validateCurriculum } from "../../adaptive/validation";
 import { PathView } from "../components/PathView";
 import { LabTab } from "../components/LabTools";
 import { MasteryProfileCard } from "../components/Adaptive";
@@ -413,6 +414,28 @@ const INTENTIONAL = (): Partial<Record<Issue["code"], string>> => ({
   DISIPLINLERARASI_YOK: L("Info: some objects (e.g. grammar) naturally stay within one field.", "Bilgi: bazı nesneler (ör. dil dilbilgisi) doğal olarak tek alanda kalır."),
 });
 
+/** Validation of what lives in the learner's data: milestones, references, AI objects, integrity. */
+function YourCurriculumValidation({ db, g }: { db: LabDB; g: KnowledgeGraph }) {
+  const issues = useMemo(() => validateCurriculum(db, g).filter((i) => i.code !== "GRAPH"), [db, g]);
+  const sum = summarizeIssues(issues);
+  return (
+    <section className="stack" style={{ gap: 8 }}>
+      <h2>{L("Your curriculum", "Senin müfredatın")}</h2>
+      <p className="small text-2">{L(`${sum.errors} errors · ${sum.warnings} warnings · ${sum.info} notes — duplicate milestones, milestone size, invalid references, AI-generated objects and data integrity.`, `${sum.errors} hata · ${sum.warnings} uyarı · ${sum.info} not — kopya adımlar, adım boyutu, geçersiz bağlantılar, YZ üretimi nesneler ve veri bütünlüğü.`)}</p>
+      {issues.length > 0 && (
+        <div className="card list">
+          {issues.slice(0, 80).map((i, k) => (
+            <div key={k} className="list-item small" style={{ alignItems: "flex-start" }}>
+              <span className={`chip ${i.severity === "ERROR" ? "s-NEEDS_REVIEW" : i.severity === "WARNING" ? "s-ATTEMPTED" : ""}`}>{i.severity === "ERROR" ? L("error", "hata") : i.severity === "WARNING" ? L("warning", "uyarı") : L("note", "not")}</span>
+              <span className="grow">{i.message}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function ValidationView({ db, g, onOpen }: { db: LabDB; g: KnowledgeGraph; onOpen: (id: string) => void }) {
   const issues = useMemo(() => validateGraph(getBaseGraph(db.knowledge), { knownIds: knownIds(db), display: g }), [g, db]);
   const sum = summarize(issues);
@@ -443,6 +466,7 @@ function ValidationView({ db, g, onOpen }: { db: LabDB; g: KnowledgeGraph; onOpe
           {list.length > 60 && <p className="tiny muted">{L(`…and ${list.length - 60} more`, `…ve ${list.length - 60} tane daha`)}</p>}
         </Collapsible>
       ))}
+      <YourCurriculumValidation db={db} g={g} />
     </div>
   );
 }

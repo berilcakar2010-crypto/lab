@@ -73,6 +73,31 @@ ilerlemen olduğu gibi kalır.
   - Sınavlar .ics olarak telefon takvimine aktarılabilir. Sınavdan sonra notunu girersin.
 - **Notlar** ve **sesli okuma** (cihazda ses varsa).
 
+## Uyarlanır öğrenme katmanı (`src/adaptive/`)
+
+Ana döngü: hedef → rota → soru → deneme → geri bildirim → hata analizi → onarım → öğren → uygula → kanıt →
+ustalık → transfer → sıradaki seçim.
+
+- **Ustalık profili:** 7 boyut (hatırlama, kavrayış, uygulama, problem çözme, transfer, açıklama, gecikmeli
+  kalıcılık). Doğrulanmış skor ile kendi beyan ayrı tutulur; bayatlayan ustalık işaretlenir.
+- **Hata analizi:** 10 kategori. Her hata grafikte bir izle önkoşuluna bağlanır (güven değeriyle); onarım önerilir;
+  tekrarlayan hatalar ve dersler arası yanılgılar yakalanır.
+- **Takılma algılama:** Seçenek sunar; çözümü asla varsayılan yapmaz.
+- **Rota planlayıcı:** "Rotam" sekmesi. Her adımın gerekçesi gösterilir; rota değiştirilebilir, bırakılabilir ve
+  sürdürülebilir.
+- **Sırada ne var:** Yedi tür seçenek (A–G): devam, meydan okuma, onarım, tekrar, transfer, alan değiştirme,
+  araştırma.
+- **Sınav modu:** Öncelikler aynı grafik üzerinde geçici bir katmandır.
+- **Uyarlanır tekrar:** Tekrar sırası ve aralığı konuya göre ayarlanır.
+- **YZ müfredat önerisi:** Önce diff gösterilir; değişiklikler seçerek onaylanır, sonra sürümlenir. Her değişikliğin
+  köken bilgisi tutulur.
+- **Kaynaklar:** Kitap ve kurslar kaynaktır, müfredat değil.
+- **Lab sekmesi:** Tahmin → test → açıkla, araştırma defteri ve güvenli sandbox (formül, ODE/RK4, veri analizi; Python
+  yok).
+- **İstatistik:** Katılım, öğrenme ve kalıcılık ayrı gösterilir.
+
+Ayrıntılar: `LAB_UPGRADE_AUDIT.md`, `docs/LAB_UPGRADE_PHASES.md`, `LAB_UPGRADE_FINAL_REPORT.md`.
+
 ## Bilgi grafiği — Lab Müfredatı v2.1
 
 Lab'in merkezinde zamandan bağımsız, yaşayan bir **bilgi grafiği** vardır (`src/knowledge/`).
@@ -138,6 +163,7 @@ davranışa geçer ve bunu kaydeder. YZ çıktıları varsayılan olarak Türkç
 | YZ katmanı (sağlayıcı soyutlaması + 10 rol) | `src/ai/` |
 | Bilgi grafiği, eşlemeler, doğrulayıcı, güncelleme planlayıcı | `src/knowledge/` |
 | Kartlar, zihin haritaları, notlar, anlatımlar | `src/study/` |
+| Uyarlanır katman: ustalık profili, hatalar, rota, sırada ne var, tekrar, üretici, köken, metrikler, sandbox | `src/adaptive/` |
 | Dil altyapısı | `src/i18n.ts` |
 | Arayüz (bordo araştırma defteri teması) | `src/ui/` |
 | Android kabuğu (Capacitor) | `android/`, `capacitor.config.ts`, `src/ui/native.ts` |

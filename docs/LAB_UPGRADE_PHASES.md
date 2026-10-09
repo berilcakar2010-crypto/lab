@@ -422,3 +422,36 @@ Tests: 3 yeni (ID/ustalık/oturum/müfredat korunur; yeni alanlar + legacy hata 
 Known limitations: —
 Next phase: Faz 22 — testler
 ```
+
+## Faz 22 — Testler
+
+```text
+PHASE STATUS: PASS
+Implemented: İstenen asgari testlerin hepsi yazıldı ve geçiyor:
+  Path Planner (doğru rota, eksik önkoşul/onarım, alternatif rota, kullanıcı geçersiz kılması), Ustalık (profil
+  güncellemesi, bayatlama, doğrulanmış ≠ beyan), Takılma (tekrarlayan hata, ipucu, uzun süre, yanlış pozitif koruması),
+  Hata grafiği (hata→beceri, beceri→kavram, kavram→önkoşul, onarım adımı), Granularity (geniş, dar, geçerli, kopya),
+  YZ müfredatı (mevcut düğüm tespiti, yeni düğüm önerisi, diff, onay, ret), Analitik (ham olaylar, türetilmiş metrikler,
+  veri yok durumu), Taşıma (eski veri, yeni alanlar, idempotentlik), Grafik (döngü tespiti, yetim düğüm tespiti).
+New files: src/adaptive/*.test.ts (14 dosya)
+Tests: 183 birim testi (32 dosya) + 48 adımlı duman testi — hepsi geçiyor.
+Next phase: Faz 23 — son doğrulama
+```
+
+## Faz 23 — Son doğrulama
+
+```text
+PHASE STATUS: PASS
+Implemented: Müfredatın tamamı için son doğrulayıcı: grafik doğrulayıcısı (döngü, yetim, kopya, geçersiz/imkânsız
+  önkoşul, eksik ustalık kanıtı, kaynak gerektiren içerik, aşırı büyük/küçük nesne) + öğrencinin verisi (kopya adımlar,
+  çok geniş/dar/zayıf kanıtlı adımlar — YZ üretimiyse uyarı, yerleşikse not —, kayıtlar arası geçersiz bağlantılar,
+  geçersiz ya da doğrulanmamış YZ nesneleri, veri bütünlüğü denetimi). Doğrulama hiçbir şeyi değiştirmez/silmez.
+  Bilgi grafiği → Doğrulama görünümünde "Senin müfredatın" bölümü.
+  Yerleşik grafik: 0 hata, 0 uyarı, 132 bilgi notu. Notlar yeniden değerlendirildi: 60 "doğrulanmamış tarihsel iddia"
+  ve 59 "kaynak gerektiren ama kaynağı olmayan içerik" bilerek açık bırakıldı (kaynak uydurulmadı); 13 "tek alanda kalan
+  nesne" (ör. dil bilgisi) doğası gereği. Promptta geçen "9 warning" bu depoda yok.
+New files: src/adaptive/validation.ts, src/adaptive/validation.test.ts
+Modified files: src/ui/pages/KnowledgePage.tsx
+Tests: 5 yeni (döngü, yetim, kopya/geçersiz önkoşul, temiz veritabanı = 0 hata/uyarı, öğrenci verisindeki sorunlar
+  ve doğrulamanın veriyi değiştirmemesi).
+```
