@@ -136,19 +136,24 @@ export function syncTopicSchedule(db: LabDB, now: Millis = Date.now()): number {
   return changed;
 }
 
-/** Record a deliberate topic review and move it on the ladder. */
-export function reviewTopic(db: LabDB, loId: string, grade: TopicGrade, now: Millis = Date.now()): TopicReview {
+/**
+ * Record a deliberate topic review and move it on the ladder. `factor` scales
+ * the interval (adaptive retention: important or weak topics come back sooner);
+ * 1 keeps the plain ladder.
+ */
+export function reviewTopic(db: LabDB, loId: string, grade: TopicGrade, now: Millis = Date.now(), factor = 1): TopicReview {
   const r: TopicReview = db.topicReviews[loId] ?? { id: loId, firstStudied: now, lastStudied: now, stage: 0, due: now, history: [] };
   if (grade === 0) r.stage = 0;
   else if (grade === 2) r.stage = Math.min(r.stage + 1, LADDER_DAYS.length - 1);
   else if (grade === 3) r.stage = Math.min(r.stage + 2, LADDER_DAYS.length - 1);
   // "Hard" keeps the stage but comes back sooner than its interval.
-  const days = grade === 1 ? Math.max(1, Math.round(LADDER_DAYS[r.stage] * 0.6)) : LADDER_DAYS[r.stage];
+  const base = grade === 1 ? LADDER_DAYS[r.stage] * 0.6 : LADDER_DAYS[r.stage];
+  const days = Math.max(1, Math.round(base * Math.max(0.4, Math.min(1.5, factor))));
   r.due = startOfDay(now) + days * DAY;
   r.lastStudied = now;
   r.history = [...r.history, { at: now, kind: "review" as const, grade }].slice(-60);
   db.topicReviews[loId] = r;
-  logEvent(db, "TOPIC_REVIEW", {}, { lo: loId, grade, stage: r.stage, nextInDays: days });
+  logEvent(db, "TOPIC_REVIEW", {}, { lo: loId, grade, stage: r.stage, nextInDays: days, factor });
   return r;
 }
 

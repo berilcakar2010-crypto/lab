@@ -26,7 +26,7 @@ const KNOWN: Record<PathOptions["difficulty"], number> = { gentle: 0.8, normal: 
 
 // Graph structure is fixed per graph object: compute dependents once.
 const structCache = new WeakMap<KnowledgeGraph, { descendants: Map<string, number>; unlocks: Map<string, number>; maxDesc: number }>();
-function structure(g: KnowledgeGraph) {
+export function graphStructure(g: KnowledgeGraph) {
   let s = structCache.get(g);
   if (s) return s;
   const children = new Map<string, string[]>();
@@ -73,7 +73,7 @@ export function planPath(db: LabDB, g: KnowledgeGraph, input: PlanInput, now: Mi
   const goals = [...new Set(input.goalIds)].filter((id) => g.objects[id]);
   const known = KNOWN[opts.difficulty];
   const r = route(g, goals, opts);
-  const st = structure(g);
+  const st = graphStructure(g);
   const errs = openErrors(db);
   const errorsOn = (id: string) => errs.filter((e) => e.trace?.repairLoId === id).length;
   const title = (id: string) => g.objects[id]?.title ?? id;

@@ -183,3 +183,22 @@ Tests: 2 yeni (mod değişimi + müfredat dokunulmazlığı + otomatik dönüş;
 Known limitations: Süreli deneme sınavı (zamanlayıcı) arayüz tarafında sunulacak; motor süre önerisi yapmıyor.
 Next phase: Faz 10 — uyarlanır aralıklı tekrar
 ```
+
+## Faz 10 — Uyarlanır aralıklı tekrar
+
+```text
+PHASE STATUS: PASS
+Implemented: Tek bir sabit algoritmaya bağlı olmayan tekrar önceliği. Sinyaller: kavramın önemi (bağımlı nesne
+  sayısı), önkoşul merkeziliği, son hatalar, öğrencinin güveni, profil güveni, anlık ve gecikmeli doğruluk farkı
+  (çabuk unutma), transfer performansı, son doğrulamadan geçen süre, kanıt kalitesi (yardım indirimi), ustalık açığı.
+  Çıktı: 0..1 öncelik, 0.5–1.3 aralık çarpanı ve gerekçeler. Konu merdiveni ve kart SM-2'si taban aralığı verir;
+  çarpan bunu ölçekler. Sinyal yoksa çarpan tam 1 (mevcut davranış değişmez). Tekrar kuyrukları (konu ve kart)
+  önceliğe göre sıralanır.
+Modified files: src/study/topics.ts (reviewTopic'e isteğe bağlı çarpan; olayda kaydedilir),
+  src/adaptive/pathPlanner.ts (graphStructure dışa açıldı)
+New files: src/adaptive/retention.ts, src/adaptive/retention.test.ts
+Data model changes: TOPIC_REVIEW olayına factor alanı.
+Tests: 3 yeni (sinyalsiz = değişiklik yok; zayıf/önemli konu daha erken, oturmuş yaprak konu daha geç; kuyruk sırası ve kart aralığı).
+Known limitations: Ağırlıklar elle seçildi; kişisel deneylerle ayarlanabilir.
+Next phase: Faz 11 — YZ müfredat üretici
+```
