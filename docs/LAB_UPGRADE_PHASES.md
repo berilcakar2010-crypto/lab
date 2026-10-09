@@ -318,3 +318,54 @@ Tests: 3 yeni (cevap içeren takip sorusu elenir + yanılgı grafiğe bağlanır
 Known limitations: Takip sorusu cevabının değerlendirmesi aynı değerlendiriciyle yapılır (ayrı ölçüt seti yok).
 Next phase: Faz 17 — Tahmin → Test → Açıklama
 ```
+
+## Faz 17 — Tahmin → Test → Açıklama
+
+```text
+PHASE STATUS: PASS
+Implemented: Yeni etkileşim akışı: TAHMİN (artar/azalır/değişmez/önce bir yöne sonra öbürüne + isteğe bağlı sayısal
+  tahmin) → TEST (gerçek modelle hesap ya da simülasyon) → GÖZLEM (önce/sonra değerleri) → AÇIKLAMA → KARŞILAŞTIRMA.
+  Tahmin bir görüşe göre değil, hesaplanan sonuca göre puanlanır; "önce artar sonra azalır" cevabı tüm aralıkta
+  dönüm noktası aranarak doğrulanır. Açıklama iki maddelik öz değerlendirme ya da YZ puanıyla kaydedilir; tahmin
+  kavrayış, açıklama açıklama boyutuna kanıt olur. PREDICTION_SUBMITTED ve EXPLANATION olayları.
+New files: src/adaptive/pte.ts
+Tests: hesaplanan sonuca göre puanlama + kanıt; dönüm noktalı (gelir) model.
+Known limitations: Görevler yerleşik modellerden üretilir (12 model); her grafik nesnesinde model yok.
+Next phase: Faz 18 — Araştırma modu
+```
+
+## Faz 18 — Araştırma modu
+
+```text
+PHASE STATUS: PASS
+Implemented: On adımlı araştırma defteri: Bilinenler → Açık soru → Varsayımlar → Model → Tahmin → Simülasyon/Deney →
+  Sonuç → Yorum → Sınırlılıklar → Sonraki soru. Her adımı öğrenci yazar; adımlara gerçek sandbox çalıştırması
+  bağlanabilir. Her adım için düşündüren sorular (çevrimdışı) ve YZ araştırma rehberi (RESEARCH_GUIDE; yalnızca soru
+  sorar, soru işareti olmayan/cevap içeren maddeler elenir). Adım tamamlanınca RESEARCH_STEP_COMPLETED. Biten proje
+  Markdown olarak dışa aktarılır ve açıklama olarak değerlendirmeye gönderilerek kanıta dönüşür. Ödev üreticisi değil.
+New files: src/adaptive/research.ts
+Tests: 10 adım + sandbox bağlantısı + kanıt; rehber soru sorar, adımı yazmaz.
+Known limitations: Laboratuvar deneyi verisi elle (DATA modu) girilir.
+Next phase: Faz 19 — Sandbox
+```
+
+## Faz 19 — Sandbox mimarisi
+
+```text
+PHASE STATUS: PARTIAL
+Implemented: Güvenli, kontrollü çalışma alanı; çalıştırma modeli Lab'in kendi ifade ayrıştırıcısı (eval yok, kod
+  çalıştırma yok, ağ yok, adım ve çıktı sınırları): SWEEP (bir parametre üzerinde formül taraması ve grafik),
+  ODE (RK4 ile diferansiyel denklem sistemleri + eşik-sıfırlama kuralı → sızıntılı bütünleştir-ateşle nöron gibi
+  sinir bilimi simülasyonları), DATA (yapıştırılan sayılarda betimsel istatistik, histogram için seri, doğrusal
+  regresyon ve R²). 12 yerleşik model (eğik atış, sarkaç, RC devresi, bozunma, ideal gaz, LIF hızı ve simülasyonu,
+  lojistik büyüme, talep-gelir, Coulomb, sönümlü yay, av-avcı), hepsi gerçek grafik nesnelerine bağlı.
+  Sandbox sonucu → kanıt zinciri: çalıştırma tek başına ustalık sayılmaz; öğrencinin yorumu açıklama olarak kaydedilir,
+  değerlendirilince ustalık profiline geçer. SANDBOX_STARTED / SANDBOX_RESULT olayları.
+New files: src/adaptive/sandbox.ts, src/adaptive/lab.test.ts
+Tests: 7 (17–19 birlikte): modellerin geçerliliği, tarama tepe noktası (45°), RK4 doğruluğu (e^-1), LIF akım-ateşleme
+  ilişkisi, regresyon, sınırlar, kanıt yalnızca yorumla.
+Known limitations: BLOCKED — genel amaçlı Python çalıştırma desteklenmiyor: çevrimdışı Android WebView'da ~10 MB
+  çalışma zamanı (Pyodide) ve ağ gerektirir. Sahte bir terminal yapılmadı; çalıştırıcı arayüzü dar tutuldu, ileride
+  takılabilir. Bu yüzden faz PARTIAL.
+Next phase: Faz 20 — arayüz entegrasyonu
+```
