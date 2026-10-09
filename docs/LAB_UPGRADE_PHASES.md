@@ -80,3 +80,24 @@ Known limitations: Kural tabanlı sınıflandırma kesin değildir; bu yüzden h
   YZ analisti arayüze Faz 20'de bağlanacak.
 Next phase: Faz 5 — adım granularity motoru
 ```
+
+## Faz 5 — Adım granularity motoru ve doğrulayıcı
+
+```text
+PHASE STATUS: PASS
+Implemented: Her adım için yetenek tanımı (capability, cognitive_action, difficulty, estimated_effort,
+  assessment_method, mastery_evidence, prerequisites) — kayıtlı adımlarda açıkça yazılmamışsa hedef, sorular
+  ve ustalık ölçütünden çıkarılır. İki dilli bilişsel eylem sözlüğü (Türkçe ekleri için kök eşleşmesi).
+  Doğrulayıcı: VALID / TOO_BROAD (3+ bağımsız beceri, koca alan, >120 dk) / TOO_NARROW (yalnızca okuma-izleme,
+  <3 dk) / DUPLICATE (aynı yetenek) / MISSING_PREREQUISITE / WEAK_EVIDENCE (ölçülemeyen ustalık).
+  Taslak müfredat (YZ ders kurucu çıktısı) için toplu doğrulama; kayıtlı adım için kontrol ve sonucun saklanması.
+  Kalibrasyon: öğrencinin kendi ziyaretlerinden gerçek/tahmini süre oranı, kısa/uzun adım tamamlama oranı
+  (nedensellik iddiası olmadan) ve bölünmeye aday adımlar.
+Modified files: —
+New files: src/adaptive/granularity.ts, src/adaptive/granularity.test.ts
+Data model changes: Milestone.capability ve Milestone.granularity alanları kullanılıyor.
+Tests: 4 yeni; yerleşik içerikte yanlış pozitif oranı 0/80 (EN+TR paketler ve grafikten üretilen adımlar).
+Known limitations: Sözlük tabanlı; dili garip kurulmuş hedeflerde yanılabilir, bu yüzden kullanıcı işaretli
+  bir adımı açıkça "yine de ekle" diyerek tutabilir (Faz 11/20).
+Next phase: Faz 6 — takılma algılama
+```
