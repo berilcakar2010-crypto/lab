@@ -1,3 +1,7 @@
+import { PathView } from "../components/PathView";
+import { LabTab } from "../components/LabTools";
+import { MasteryProfileCard } from "../components/Adaptive";
+import { SourcesBlock } from "../components/Curation";
 import { useMemo, useState, type ReactNode } from "react";
 import type { LabDB } from "../../domain/types";
 import { getBaseGraph, getGraph, incomingLinks, mappingsFor } from "../../knowledge/graph";
@@ -39,9 +43,10 @@ function usePersonal(): { db: LabDB; g: KnowledgeGraph; pg: PersonalGraph } {
   return { db, g, pg: personalGraph(db, g) };
 }
 
-type View = "baglam" | "harita" | "yollar" | "disiplin" | "esleme" | "dogrulama" | "surum";
+type View = "baglam" | "rota" | "harita" | "yollar" | "disiplin" | "esleme" | "dogrulama" | "surum";
 const VIEWS = (): [View, string][] => [
   ["baglam", L("Context", "Bağlam")],
+  ["rota", L("My path", "Rotam")],
   ["harita", L("Map", "Harita")],
   ["yollar", L("Paths", "Yollar")],
   ["disiplin", L("Fields", "Disiplinler")],
@@ -83,6 +88,7 @@ export function KnowledgePage() {
         ))}
       </div>
       {view === "baglam" && <ContextView db={db} pg={pg} onOpen={setOpen} />}
+      {view === "rota" && <PathView db={db} g={g} onOpen={setOpen} />}
       {view === "harita" && <MapView pg={pg} onOpen={setOpen} />}
       {view === "yollar" && <PathsView db={db} pg={pg} onOpen={setOpen} />}
       {view === "disiplin" && <DisciplineView pg={pg} onOpen={setOpen} />}
@@ -531,7 +537,7 @@ function PlanPreview({ plan, onApply }: { plan: UpdatePlan; onApply: () => void 
 // Object sheet: overview, map, mind map, cards, ask AI, explain, notes
 // ---------------------------------------------------------------------------
 
-type Tab = "overview" | "map" | "mind" | "cards" | "ask" | "explain" | "notes";
+type Tab = "overview" | "map" | "mind" | "cards" | "ask" | "explain" | "lab" | "notes";
 const TABS = (): [Tab, string][] => [
   ["overview", L("Overview", "Genel")],
   ["map", L("Map", "Harita")],
@@ -539,6 +545,7 @@ const TABS = (): [Tab, string][] => [
   ["cards", L("Cards", "Kartlar")],
   ["ask", L("Ask AI", "YZ'ye sor")],
   ["explain", L("Explain", "Anlat")],
+  ["lab", L("Lab", "Lab")],
   ["notes", L("Notes", "Notlar")],
 ];
 
@@ -575,6 +582,7 @@ function LOSheet({ id, db, pg, onOpen, onClose }: { id: string; db: LabDB; pg: P
         {tab === "cards" && <ObjectFlashcards db={db} g={g} loId={id} />}
         {tab === "ask" && <AskAI db={db} g={g} loId={id} />}
         {tab === "explain" && <ExplainPanel db={db} g={g} loId={id} />}
+        {tab === "lab" && <LabTab loId={id} />}
         {tab === "notes" && <NotesTab db={db} id={id} />}
       </div>
     </Sheet>
@@ -649,6 +657,7 @@ function Overview({ o, db, pg, onOpen }: { o: LearningObject; db: LabDB; pg: Per
       <Section title={L("Why does it matter?", "Neden önemli?")}><p className="small text-2">{o.whyItMatters}</p></Section>
       {o.coreQuestions.length > 0 && <Section title={L("Questions it answers", "Cevapladığı sorular")}><ul className="small text-2 tight">{o.coreQuestions.map((q) => <li key={q}>{q}</li>)}</ul></Section>}
       <Section title={L("You'll be able to", "Bunu yapabileceksin")}><ul className="small text-2 tight">{o.learningObjectives.map((q) => <li key={q}>{q}</li>)}</ul></Section>
+      <MasteryProfileCard loId={o.id} />
       <Section title={L("Evidence that you've learned it", "Öğrendiğinin kanıtı")}>
         <div className="row" style={{ gap: 4 }}>{o.evidenceTypes.map((e) => <span key={e} className="chip">{evidenceLabel(e)}</span>)}</div>
         <ul className="small text-2 tight">{o.masteryCriteria.map((c) => <li key={c}>{c}</li>)}</ul>
@@ -701,6 +710,7 @@ function Overview({ o, db, pg, onOpen }: { o: LearningObject; db: LabDB; pg: Per
         </Section>
       )}
 
+      <SourcesBlock loId={o.id} />
       <div className="stack sheet-actions">
         {existing ? (
           <button className="btn primary block" onClick={() => navigate(`/course/${existing}`)}>{L("Go to the course", "Derse git")} <Icon.arrow /></button>

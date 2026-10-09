@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import type { LabDB, TopicGrade } from "../../domain/types";
 import { fmtDate, L } from "../../i18n";
 import { domainLabel, type KnowledgeGraph } from "../../knowledge/schema";
-import { dayKey, dueTopics, LADDER_DAYS, reviewTopic, startOfDay, streak, studyLog, TOPIC_GRADE_LABELS, upcomingTopics, type StudyKind } from "../../study/topics";
+import { adaptiveReviewTopic, prioritizedDueTopics } from "../../adaptive/retention";
+import { dayKey, LADDER_DAYS, startOfDay, streak, studyLog, TOPIC_GRADE_LABELS, upcomingTopics, type StudyKind } from "../../study/topics";
 import { cardStats } from "../../study/flashcards";
 import { navigate, store, toast } from "../state";
 import { notificationPermission, refreshReminders, type PermissionState } from "../reminders";
@@ -20,7 +21,8 @@ function nextDays(stage: number, grade: TopicGrade): number {
 
 /** Review whole topics: recall first, then check against the graph, then rate how well it came back. */
 export function TopicReviewSession({ db, g, onDone }: { db: LabDB; g: KnowledgeGraph; onDone?: () => void }) {
-  const [queue, setQueue] = useState(() => dueTopics(db).map((r) => r.id).filter((id) => g.objects[id]));
+  // Most important first (adaptive retention); intervals adapt to the topic too.
+  const [queue, setQueue] = useState(() => prioritizedDueTopics(db, g).map((r) => r.id).filter((id) => g.objects[id]));
   const [shown, setShown] = useState(false);
   const [done, setDone] = useState(0);
   const id = queue[0];
@@ -39,7 +41,7 @@ export function TopicReviewSession({ db, g, onDone }: { db: LabDB; g: KnowledgeG
   const cards = cardStats(db, Date.now(), id);
   const labels = TOPIC_GRADE_LABELS();
   const grade = (gr: TopicGrade) => {
-    store.transact((d) => reviewTopic(d, id, gr));
+    store.transact((d) => adaptiveReviewTopic(d, g, id, gr));
     setDone((n) => n + 1);
     setShown(false);
     setQueue((q) => q.slice(1));

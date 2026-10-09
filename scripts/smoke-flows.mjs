@@ -102,6 +102,9 @@ export default async function flows({ page, step, shot, click, BASE }) {
     await page.getByLabel("Sayısal cevap").fill("5");
     await click("Kontrol et");
     await page.getByText("Henüz değil", { exact: true }).waitFor();
+    // Error analysis: the wrong answer is classified and traced back into the graph.
+    await page.getByText("Hata analizi").waitFor();
+    await page.locator(".trace-chain").first().waitFor();
     await shot("08-feedback");
     await click("Tekrar dene");
     await page.getByRole("button", { name: /Küçük ipucu/ }).click();
@@ -131,8 +134,12 @@ export default async function flows({ page, step, shot, click, BASE }) {
     await page.getByText("Anında kontrol geçti").waitFor();
   });
 
-  await step("continue to the next milestone", async () => {
-    await page.getByText("önerilen").first().click();
+  await step("continue to the next milestone (what next: ranked options with reasons)", async () => {
+    await page.locator(".what-next .next-option").first().waitFor();
+    await page.getByText("Sıralı öneriler — seçim senin.").waitFor();
+    await page.locator(".what-next .next-option .why summary").first().click();
+    await shot("08b-what-next");
+    await page.locator(".what-next .next-option .next-main").first().click();
     await page.getByText("Bunun sonunda şunu yapabileceksin").waitFor();
   });
 
@@ -487,6 +494,68 @@ export default async function flows({ page, step, shot, click, BASE }) {
     await shot("34-home-exam");
   });
 
+  await step("adaptive: mastery profile, sources, predict-test-explain and sandbox on an object", async () => {
+    await page.goto(`${BASE}#/graph?lo=phys.mech.oscillations`);
+    const sheet = page.getByRole("dialog");
+    await sheet.getByText("Ustalık profili").waitFor();
+    await sheet.getByText("Kaynaklar ve köken").waitFor();
+    await sheet.getByRole("tab", { name: "Lab", exact: true }).click();
+    await sheet.getByRole("button", { name: "Artar" }).click();
+    await sheet.getByRole("button", { name: "Tahmin et, sonra test et" }).click();
+    await sheet.getByText(/Tahminin tuttu/).waitFor();
+    await sheet.getByLabel("Açıklama").fill("T = 2π√(L/g): ip uzadıkça salınım yavaşlar.");
+    await sheet.getByText("Mekanizmayı söyledim", { exact: false }).click();
+    await sheet.getByRole("button", { name: "Açıklamayı kaydet" }).click();
+    await sheet.getByText(/Açıklama kaydedildi/).waitFor();
+    await sheet.getByRole("button", { name: "Çalıştır" }).click();
+    await sheet.locator(".sandbox .series-plot").waitFor();
+    await sheet.getByRole("button", { name: "Çalıştırmayı kaydet" }).click();
+    await shot("35-lab-tab");
+    await page.keyboard.press("Escape");
+  });
+
+  await step("adaptive: plan a path with reasons, then change it", async () => {
+    await page.goto(`${BASE}#/graph?view=rota`);
+    await page.getByLabel("Hedef", { exact: true }).fill("Bayes");
+    await page.locator(".lo-row", { hasText: "Bayes" }).first().click();
+    await page.getByRole("button", { name: "Rotayı planla" }).click();
+    await page.getByText("Mevcut rota").waitFor();
+    await page.locator(".path-step").first().waitFor();
+    await page.getByText("Bu adım neden?").first().click();
+    await shot("36-path");
+    await page.locator(".path-step").first().getByRole("button", { name: "Atla" }).click();
+    await page.locator(".path-step.skipped").first().waitFor();
+    await page.goto(`${BASE}#/`);
+    await page.getByText("Şu an").first().waitFor();
+  });
+
+  await step("adaptive: errors, research and learning layers", async () => {
+    await page.goto(`${BASE}#/study?tab=errors`);
+    await page.getByText(/Açık hata yok|Hata analizi|Önce onar/).first().waitFor();
+    await page.goto(`${BASE}#/study?tab=research`);
+    await page.getByLabel("Araştırma sorusu").fill("Sinaptik gürültü ateşleme güvenilirliğini nasıl etkiler?");
+    await page.getByRole("button", { name: "Başla", exact: true }).click();
+    await page.getByLabel("Bilinenler").fill("LIF nöronu eşiği geçince ateşler.");
+    await page.getByRole("button", { name: "Adımı kaydet" }).first().click();
+    await page.getByText("1/10").waitFor();
+    await shot("37-research");
+    await page.goto(`${BASE}#/stats`);
+    await page.getByRole("heading", { name: "Katılım, öğrenme, kalıcılık" }).waitFor();
+    await shot("38-layers");
+  });
+
+  await step("adaptive: AI curriculum proposal is reviewed as a diff before anything is applied", async () => {
+    await page.goto(`${BASE}#/build`);
+    await page.getByLabel("Neyde ustalaşmak istiyorsun?").fill("Bayes teoremi");
+    await page.getByRole("button", { name: /Bilgi grafiği üzerinden öner/ }).click();
+    const dlg = page.getByRole("dialog", { name: "Müfredat önerisi" });
+    await dlg.getByText(/Yeniden kullanılan/).waitFor();
+    await dlg.locator(".diff-row").first().waitFor();
+    await shot("39-proposal");
+    await dlg.getByRole("button", { name: "Geçerlilerin tümünü onayla" }).click();
+    await page.getByText(/Uygulandı/).waitFor();
+  });
+
   await step("unknown and stale routes degrade gracefully", async () => {
     for (const r of ["#/nonsense", "#/course/missing", "#/session/missing", "#/summary/missing"]) {
       await page.goto(`${BASE}${r}`);
@@ -505,7 +574,7 @@ export default async function flows({ page, step, shot, click, BASE }) {
   for (const [w, h, label] of [[390, 844, "phone"], [1180, 820, "tablet-landscape"], [820, 1180, "tablet-portrait"]]) {
     await step(`no horizontal overflow at ${label} (${w}px)`, async () => {
       await page.setViewportSize({ width: w, height: h });
-      for (const r of ["#/", "#/graph", "#/graph?view=harita", "#/study", "#/study?tab=exams", "#/stats", "#/focus", "#/retention", "#/settings", "#/build"]) {
+      for (const r of ["#/", "#/graph", "#/graph?view=harita", "#/study", "#/study?tab=exams", "#/study?tab=errors", "#/study?tab=research", "#/graph?view=rota", "#/stats", "#/focus", "#/retention", "#/settings", "#/build"]) {
         await page.goto(`${BASE}${r}`);
         await page.waitForTimeout(250);
         const over = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);

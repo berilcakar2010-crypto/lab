@@ -87,6 +87,18 @@ function ExperimentCard({ id }: { id: string }) {
         })}
       </div>
       <div className={`banner ${c.enoughSessions ? "info" : ""} small`}>{exp.status === "CONCLUDED" && exp.note ? exp.note : c.verdict}</div>
+      {exp.report && (
+        <details className="card raised">
+          <summary className="small" style={{ cursor: "pointer" }}>{L("Written result", "Yazılı sonuç")} · {exp.report.result === "SUPPORTED" ? L("supported", "desteklendi") : exp.report.result === "NOT_SUPPORTED" ? L("not supported", "desteklenmedi") : L("inconclusive", "sonuçsuz")} · {L("confidence", "güven")} {pct(exp.report.confidence)}</summary>
+          <div className="stack small" style={{ gap: 4, marginTop: 6 }}>
+            <span><strong>{L("Hypothesis", "Hipotez")}:</strong> {exp.report.hypothesis}</span>
+            <span><strong>{L("Design", "Tasarım")}:</strong> {exp.report.design}</span>
+            <span style={{ whiteSpace: "pre-wrap" }}><strong>{L("Observed", "Gözlenen")}:</strong> {exp.report.observed}</span>
+            <span><strong>{L("Limitations", "Sınırlılıklar")}:</strong></span>
+            <ul className="tight" style={{ margin: 0 }}>{exp.report.limitations.map((l) => <li key={l}>{l}</li>)}</ul>
+          </div>
+        </details>
+      )}
     </div>
   );
 }

@@ -17,6 +17,7 @@ import { cardStats } from "../../study/flashcards";
 import { dueTopics } from "../../study/topics";
 import { daysUntil, examReadiness, upcomingExams } from "../../study/exams";
 import { countdown, TodayForExams } from "../components/Exams";
+import { NowCard } from "../components/Adaptive";
 
 /** Due flashcards: a two-minute habit that keeps what you learned. */
 function StudyCard({ db }: { db: LabDB }) {
@@ -105,6 +106,7 @@ export function HomePage() {
           <p className="text-2">{L("Name a course or paste a syllabus. Lab turns it into the next meaningful thing you can actually do — then you attempt it, get feedback, master it, and see yourself move forward.", "Bir ders adı yaz ya da müfredat yapıştır. Lab bunu şu an gerçekten yapabileceğin bir sonraki anlamlı adıma dönüştürür — sen dener, geri bildirim alır, ustalaşır ve ilerlediğini görürsün.")}</p>
           <button className="btn primary" onClick={() => navigate("/build")}><Icon.plus /> {L("New course", "Yeni ders")}</button>
         </div>
+        <NowCard db={db} g={getGraph(db.knowledge)} />
         <ExamsCard db={db} />
         <GraphCard db={db} />
       </div>
@@ -136,6 +138,8 @@ export function HomePage() {
         <Bar value={fp.requiredTotal ? fp.requiredMastered / fp.requiredTotal : 0} mastered />
         <span className="small muted">{L(`${fp.requiredMastered} of ${fp.requiredTotal} core milestones mastered`, `${fp.requiredTotal} temel adımın ${fp.requiredMastered} tanesinde ustalaşıldı`)}</span>
       </header>
+
+      <NowCard db={db} g={getGraph(db.knowledge)} />
 
       {inProgress && (
         <button className="card accent clickable stack" style={{ textAlign: "left", color: "inherit", font: "inherit", gap: 6 }} onClick={() => open(inProgress.id)}>

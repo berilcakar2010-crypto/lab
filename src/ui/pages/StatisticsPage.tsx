@@ -3,6 +3,7 @@ import { GROUP_LABEL, groupStats, overview, visitRows, type GroupKey } from "../
 import { navigate, useDB } from "../state";
 import { L, fmtNum, lower, pick } from "../../i18n";
 import { Icon } from "../components/common";
+import { LearningLayers } from "../components/Adaptive";
 import { RateBars, RateTile, StatTile } from "../components/Stats";
 
 const GROUPS: GroupKey[] = ["subject", "topic", "milestoneType", "interaction", "difficulty", "duration", "inputMethod", "stylus"];
@@ -46,6 +47,8 @@ export function StatisticsPage() {
         </div>
         <p className="small text-2">{L(`Computed from ${db.events.length} raw events. Percentages show the count, sample size and a likely range; nothing is shown until there are enough observations.`, `${db.events.length} ham olaydan hesaplandı. Yüzdeler sayıyı, örneklem büyüklüğünü ve olası aralığı gösterir; yeterli gözlem olmadan hiçbir şey gösterilmez.`)}</p>
       </header>
+
+      <LearningLayers />
 
       <section className="stack">
         <h2>{L("Progress", "İlerleme")}</h2>

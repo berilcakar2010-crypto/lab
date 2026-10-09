@@ -13,7 +13,7 @@ import { generateQuestionsAI } from "../../ai/curriculumAI";
 import { act, aiHost, navigate, store, toast, useAsync, useDB } from "../state";
 import { Bar, Difficulty, Empty, Icon, StatusChip, TYPE_LABEL, minutes } from "../components/common";
 import { QuestionCard } from "../components/QuestionCard";
-import { NextOptions } from "../components/NextOptions";
+import { WhatNextPanel } from "../components/Adaptive";
 import { courseProgress } from "./CoursePage";
 import { useActivityTracker } from "../activity";
 import { ImmediateCheck } from "../components/ImmediateCheck";
@@ -94,10 +94,6 @@ export function SessionPage({ milestoneId }: { milestoneId: ID }) {
   if (phase === "complete") {
     return (
       <CompletionView milestoneId={milestoneId} sessionId={sessionId} before={before.current}
-        onChoose={(id) => {
-          act((d) => logEvent(d, "CONTINUE_DECISION", { sessionId, milestoneId }, { continued: true, next: id }));
-          navigate(`/session/${id}`);
-        }}
         onFinish={finishSession} onBack={exit} />
     );
   }
@@ -167,7 +163,8 @@ function WorkArea({ milestoneId, sessionId, onComplete }: { milestoneId: ID; ses
       {q ? (
         <QuestionCard key={`${q.id}-${qKey}`} question={q} sessionId={sessionId} conditions={conditions}
           purposeOverride={state.mastered ? "MASTERY" : undefined}
-          onNext={() => advance([q.id])} onMastered={onComplete} onDifferent={() => advance([q.id])} />
+          onNext={() => advance([q.id])} onMastered={onComplete} onDifferent={() => advance([q.id])}
+          onSwitchQuestion={(id) => { setCurrentQ(id); setQKey((k) => k + 1); }} />
       ) : !state.mastered ? (
         <NoQuestions milestoneId={milestoneId} sessionId={sessionId} onMastered={onComplete} exhausted={state.exhausted} />
       ) : null}
@@ -274,9 +271,9 @@ function NoQuestions({ milestoneId, sessionId, onMastered, exhausted }: { milest
   );
 }
 
-function CompletionView({ milestoneId, sessionId, before, onChoose, onFinish, onBack }: {
+function CompletionView({ milestoneId, sessionId, before, onFinish, onBack }: {
   milestoneId: ID; sessionId: ID; before: { progress: number; open: Set<ID> } | null;
-  onChoose: (id: ID) => void; onFinish: () => void; onBack: () => void;
+  onFinish: () => void; onBack: () => void;
 }) {
   const db = useDB();
   const m = db.milestones[milestoneId];
@@ -314,7 +311,8 @@ function CompletionView({ milestoneId, sessionId, before, onChoose, onFinish, on
       </div>
       <section className="stack">
         <h2>{L("What's next?", "Sırada ne var?")}</h2>
-        <NextOptions courseId={m.courseId} justCompletedId={milestoneId} sessionId={sessionId} onChoose={onChoose} compact />
+        <WhatNextPanel justCompletedMilestoneId={milestoneId} sessionId={sessionId}
+          onChosen={(o) => act((d) => logEvent(d, "CONTINUE_DECISION", { sessionId, milestoneId }, { continued: true, next: o.target.milestoneId ?? o.target.loId ?? o.target.courseId, kind: o.kind }))} />
       </section>
     </div>
   );

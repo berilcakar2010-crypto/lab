@@ -4,8 +4,11 @@ import { HINT_LEVELS } from "../../domain/types";
 import { answerMode, evaluateAuto, evaluateSelf, type Answer, type Evaluation } from "../../engines/evaluation";
 import { recordAttempt } from "../../engines/progress";
 import { logEvent } from "../../engines/analytics";
-import { act, aiHost, useDB } from "../state";
-import { generateHints } from "../../ai/tutor";
+import { act, aiHost, navigate, toast, useDB } from "../state";
+import { explainConcept, generateHints } from "../../ai/tutor";
+import { ErrorInsight, StuckCard } from "./Adaptive";
+import { simplerQuestion, type StuckOption } from "../../adaptive/stuck";
+import { skipMilestone } from "../../engines/progress";
 import type { Conditions } from "../../engines/experiments";
 import { INTERACTION_TR } from "../../engines/statistics";
 import { AnswerInput } from "./AnswerInput";
@@ -39,13 +42,15 @@ export interface QuestionOutcome {
 }
 
 export function QuestionCard({
-  question: q, sessionId, onNext, onMastered, onDifferent, purposeOverride, hideHelp, onRecorded, conditions = {},
+  question: q, sessionId, onNext, onMastered, onDifferent, onSwitchQuestion, purposeOverride, hideHelp, onRecorded, conditions = {},
 }: {
   question: Question;
   sessionId: string;
   onNext: () => void;
   onMastered: () => void;
   onDifferent?: () => void;
+  /** Move to a specific question (e.g. a simpler example when stuck). */
+  onSwitchQuestion?: (questionId: string) => void;
   purposeOverride?: Question["purpose"];
   /** Retention checks hide hints by design. */
   hideHelp?: boolean;
@@ -68,6 +73,8 @@ export function QuestionCard({
   const [drawing, setDrawing] = useState<{ stats: DrawingStats; image: () => string } | null>(null);
   const [showSolution, setShowSolution] = useState(false);
   const [attempts, setAttempts] = useState(0);
+  const [lastAttemptId, setLastAttemptId] = useState<string | null>(null);
+  const [conceptNote, setConceptNote] = useState<string | null>(null);
   const input = useRef<InputMethod>("unknown");
   const usedStylus = useRef(false);
   const started = useRef(Date.now());
@@ -108,6 +115,7 @@ export function QuestionCard({
       }),
     );
     setAttempts((n) => n + 1);
+    setLastAttemptId(res.attempt.id);
     setResult({ ...ev, feedback: { ...ev.feedback, ...extra }, masteredNow: res.masteredNow, by });
     onRecorded?.(res.attempt.id, ev.correct);
   };
@@ -165,6 +173,36 @@ export function QuestionCard({
     setHintLevel(level);
     if (level === 5) setShowSolution(true);
     act((d) => logEvent(d, "HINT_REQUEST", { sessionId, milestoneId: q.milestoneId, questionId: q.id }, { level, label: HINT_LEVELS[level], attemptsBefore: attempts, source }));
+  };
+
+  // Stuck options: every one is an explicit choice; the solution is never shown by default.
+  const onStuckOption = async (o: StuckOption) => {
+    switch (o.kind) {
+      case "TRY_AGAIN": if (result) retry(); break;
+      case "SMALL_HINT": await requestHint(Math.min(4, hintLevel + 1) as HintLevel); break;
+      case "CHANGE_STRATEGY": await requestHint(Math.max(3, Math.min(4, hintLevel + 1)) as HintLevel); break;
+      case "SEE_SOLUTION": await requestHint(5); break;
+      case "CONCEPT_EXPLANATION": {
+        const res = await explainConcept(aiHost, db, q, sessionId);
+        setConceptNote(res.value);
+        break;
+      }
+      case "SIMPLER_EXAMPLE": {
+        const id = simplerQuestion(db, q.milestoneId, q.id);
+        if (id && onSwitchQuestion) onSwitchQuestion(id);
+        else toast(L("No simpler question here yet — try the concept explanation or a prerequisite.", "Burada henüz daha basit soru yok — kavram açıklamasını ya da önkoşulu dene."));
+        break;
+      }
+      case "CHECK_PREREQUISITE":
+        if (o.target?.milestoneId) navigate(`/session/${o.target.milestoneId}`);
+        else if (o.target?.loId) navigate(`/graph?lo=${encodeURIComponent(o.target.loId)}`);
+        break;
+      case "SKIP_TEMPORARILY":
+        act((d) => skipMilestone(d, q.milestoneId, sessionId));
+        toast(L("Skipped for now — it stays on the map.", "Şimdilik atlandı — haritada kalıyor."));
+        if (m) navigate(`/course/${m.courseId}`);
+        break;
+    }
   };
 
   const purpose = purposeOverride ?? q.purpose;
@@ -245,6 +283,9 @@ export function QuestionCard({
       )}
 
       {result && <FeedbackPanel result={result} minimal={minimalFeedback} />}
+      {result && result.correct === false && lastAttemptId && !minimalFeedback && (
+        <ErrorInsight attemptId={lastAttemptId} answerText={mode === "text" ? (effectiveAnswer() as { text?: string } | null)?.text : undefined} />
+      )}
 
       {result && (
         <div className="row">
@@ -262,6 +303,15 @@ export function QuestionCard({
         </div>
       )}
 
+      {!hideHelp && attempts > 0 && !result?.correct && (
+        <StuckCard milestoneId={q.milestoneId} questionId={q.id} sessionId={sessionId} onOption={(o) => void onStuckOption(o)} />
+      )}
+      {conceptNote && (
+        <div className="card raised small rise">
+          <span className="eyebrow">{L("The idea behind it", "Arkasındaki fikir")}</span>
+          <MathText text={conceptNote} className="text-2" style={{ marginTop: 4 }} />
+        </div>
+      )}
       {!hideHelp && (
         <HelpLadder q={q} level={hintLevel} cap={hintCap} onRequest={requestHint} attempts={attempts} busy={hintBusy} />
       )}

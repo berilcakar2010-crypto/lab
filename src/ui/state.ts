@@ -1,3 +1,5 @@
+import { normalizeMode } from "../adaptive/modes";
+import { activePath, refreshPath } from "../adaptive/pathPlanner";
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import type { LabDB } from "../domain/types";
 import { indexedDBAdapter, localStorageAdapter, Store } from "../data/store";
@@ -36,6 +38,10 @@ export async function initStore() {
     closeStaleSessions(db);
     recomputeAll(db);
     syncTopicSchedule(db);
+    // Adaptive layer: exam mode ends with its exam; the current path picks up new evidence.
+    normalizeMode(db);
+    const path = activePath(db);
+    if (path) refreshPath(db, path.id);
   });
   window.addEventListener("pagehide", () => void store.flush());
   document.addEventListener("visibilitychange", () => {

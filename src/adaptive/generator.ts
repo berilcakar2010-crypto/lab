@@ -26,7 +26,7 @@ import { matchRequest } from "../knowledge/search";
 import { DOMAINS, domainLabel, type KnowledgeGraph, type LearningObject } from "../knowledge/schema";
 import { L, getLang } from "../i18n";
 import { runAI, parseJSON, type AIHost } from "../ai/engine";
-import { cognitiveActions, isValid, similarity, validateGranularity } from "./granularity";
+import { COGNITIVE_LABEL, cognitiveActions, isValid, similarity, validateGranularity } from "./granularity";
 import { makeProvenance } from "./provenance";
 import { masteryProfile } from "./mastery";
 import { recordDecision } from "./decisions";
@@ -148,9 +148,12 @@ export async function proposeCurriculum(host: AIHost, request: string, now: Mill
   const found = match.path ? [...new Set([...match.path.targets, ...match.objects])] : match.objects;
   const candidates = [...new Set([...found, ...found.flatMap((id) => g.objects[id].prerequisites.map((p) => p.id))])].filter((id) => g.objects[id]).slice(0, 30);
 
+  // Prefer objects whose title really matches the request (one shared word like "theorem" is not enough).
+  const baseTr = getBaseGraph(db.knowledge);
+  const close = found.filter((id) => similarity(g.objects[id].title, request) >= 0.3 || (baseTr.objects[id] && similarity(baseTr.objects[id].title, request) >= 0.3));
   const offline = (): CurriculumDraft => {
     if (!found.length) throw new Error("no match");
-    return { goal: request, reuse: found.slice(0, 3), newNodes: [], addEdges: [], removeEdges: [], milestones: [], sources: [] };
+    return { goal: request, reuse: (close.length ? close : found).slice(0, 3), newNodes: [], addEdges: [], removeEdges: [], milestones: [], sources: [] };
   };
   let draft: CurriculumDraft;
   let generatedBy: CurriculumProposal["generatedBy"] = "engine";
@@ -278,7 +281,7 @@ export function buildProposal(db: LabDB, g: KnowledgeGraph, request: string, dra
   }
   for (const m of milestones) {
     const ok = isValid(m.granularity);
-    changes.push({ id: newId("chg"), kind: "ADD_MILESTONE", target: m.key, other: m.loId, title: m.title, detail: `${m.capability.cognitiveAction} · ${m.estimatedDuration} min`, valid: ok, issues: m.granularity.notes, dependsOn: nodeChange.has(m.loId) ? [nodeChange.get(m.loId)!] : [] });
+    changes.push({ id: newId("chg"), kind: "ADD_MILESTONE", target: m.key, other: m.loId, title: m.title, detail: `${COGNITIVE_LABEL(m.capability.cognitiveAction)} · ${m.estimatedDuration} ${L("min", "dk")}`, valid: ok, issues: m.granularity.notes, dependsOn: nodeChange.has(m.loId) ? [nodeChange.get(m.loId)!] : [] });
   }
 
   // Graph validator over the hypothetical update.

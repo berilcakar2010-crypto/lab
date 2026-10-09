@@ -369,3 +369,39 @@ Known limitations: BLOCKED — genel amaçlı Python çalıştırma desteklenmiy
   takılabilir. Bu yüzden faz PARTIAL.
 Next phase: Faz 20 — arayüz entegrasyonu
 ```
+
+## Faz 20 — Arayüz entegrasyonu
+
+```text
+PHASE STATUS: PASS
+Implemented: Yeniden tasarım yok; mevcut kart/çip/çubuk bileşenleriyle, ilgili ekranlara yerleştirildi:
+  - Ana sayfa: "Şu an" kartı — etkin rotanın sıradaki adımı + "Neden?" (gerçek gerekçeler), en öncelikli onarım,
+    sınav modundaysa öneri cümlesi. Yalnızca gösterecek bir şey varsa çıkar.
+  - Oturum: yanlış cevaptan hemen sonra Hata analizi kartı (tür, güven, kaynak, iz zinciri, "Bunu onar", "Tür yanlış
+    mı?", açık uçlu cevaplarda "YZ ile analiz et"); takılınca seçenek kartı (8 seçenek, çözüm en sonda, önerilmez);
+    "Kavram açıklaması" ve "Daha basit örnek" gerçek işlevlere bağlı. Adım bitince A–G "Sırada ne var?" paneli (sıralı,
+    seçim kullanıcıda, her seçenekte "Neden?"); devam kararı olayı korunuyor.
+  - Bilgi grafiği: yeni "Rotam" görünümü (hedef seç, zorluk tercihi, planla; adım başına gerekçe; atla/geri al, yukarı/
+    aşağı taşı, konu ekle, bırak, eski rotayı sürdür, kanıtla güncelle). Nesne sayfasında Ustalık profili (7 boyut,
+    doğrulanmış vs beyan, kalıcılık durumu, boşluk cümlesi) ve Kaynaklar/köken (doğrulama, kitap/kurs bölümü bağlama).
+    Yeni "Lab" sekmesi: Tahmin→Test→Açıkla, Sandbox (modeller, formül, veri), "Araştırmaya dönüştür".
+  - Çalış: "Hatalar" sekmesi (alanlar arası yanılgı/tekrarlayan hata içgörüleri, önce onar listesi, açık hatalar),
+    "Araştırma" sekmesi (defterler + genel sandbox), konu ve kart tekrarlarında uyarlanır öncelik ve aralık,
+    sınavda konu önceliği + "Bu sınav için sınav modu" + "Sınava rota planla", anlatımlarda takip soruları ve
+    grafiğe bağlı yanılgılar, dışa aktarmada uyarlanır veriler (JSON).
+  - İstatistik: "Katılım, öğrenme, kalıcılık" bölümü (üç ayrı seviye; genişlik/derinlik/kalıcılık/transfer; tüm ölçüler
+    n ile; nedensellik dili yok).
+  - Ders oluşturucu: taslak adımlarda granularity uyarıları (işaretli adım varsa bilerek tutma onayı olmadan kabul edilmez)
+    + "Bilgi grafiği üzerinden öner" → diff ekranı (geçerli/geçersiz satırlar, seçerek onay, reddet, ikinci görüş).
+  - Deneyler: bitince yazılı sonuç raporu.
+  - Açılışta: sınavı geçen sınav modu kapanır, etkin rota yeni kanıtla güncellenir.
+Modified files: src/ui/pages/{HomePage,SessionPage,KnowledgePage,StudyPage,StatisticsPage,BuilderPage,ExperimentsSection}.tsx,
+  src/ui/components/{QuestionCard,TopicReview,Flashcards,Exams,ExplainPanel}.tsx, src/ui/state.ts, src/ui/styles.css,
+  scripts/smoke-flows.mjs
+New files: src/ui/components/{Adaptive,PathView,LabTools,Curation}.tsx, src/adaptive/exportData.ts
+Data model changes: —
+Tests: Duman testine 4 yeni adım + mevcut adımlarda hata analizi ve A–G paneli; taşma kontrolüne yeni rotalar
+  (Hatalar, Araştırma, Rotam). Duman testi geçti.
+Known limitations: NextOptions bileşeni ders sayfası için korunuyor; tamamlama ekranında yerini A–G paneli aldı.
+Next phase: Faz 21 — taşıma
+```

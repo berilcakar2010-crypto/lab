@@ -1,3 +1,8 @@
+import { proposeCurriculum, storeProposal } from "../../adaptive/generator";
+import { checkMilestone, isValid, validateSpec, GRANULARITY_LABEL } from "../../adaptive/granularity";
+import { makeProvenance } from "../../adaptive/provenance";
+import { recordDecision } from "../../adaptive/decisions";
+import { ProposalReview } from "../components/Curation";
 import { useState } from "react";
 import { buildCurriculumAI } from "../../ai/curriculumAI";
 import type { CurriculumSpec } from "../../engines/curriculumSpec";
@@ -30,6 +35,7 @@ export function BuilderPage() {
   const [syllabus, setSyllabus] = useState("");
   const [showSyllabus, setShowSyllabus] = useState(false);
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [proposalId, setProposalId] = useState<string | null>(null);
   const { busy, run } = useAsync();
   const provider = db.preferences.aiProvider;
   const providerReady = provider !== "local" && !!db.preferences.apiKeys[provider];
@@ -44,6 +50,17 @@ export function BuilderPage() {
       setDraft({ ...res.value, provider: res.provider, fallbackUsed: res.fallbackUsed, error: res.error, request, syllabus });
     });
 
+  const propose = () =>
+    run(async () => {
+      if (!request.trim()) {
+        toast(L("Write what you want to learn first.", "Önce ne öğrenmek istediğini yaz."), "error");
+        return;
+      }
+      const p = await proposeCurriculum(aiHost, request.trim());
+      store.transact((d) => storeProposal(d, p));
+      setProposalId(p.id);
+    });
+
   const accept = () => {
     if (!draft) return;
     try {
@@ -56,6 +73,10 @@ export function BuilderPage() {
           });
           logEvent(d, "CURRICULUM_EDIT", { courseId: r.courseId }, { action: "create", provider: draft.provider, milestones: r.milestoneCount });
           courseId = r.courseId;
+          // Granularity: store the check on every new milestone and record the learner's decision to keep flagged ones.
+          const flagged = Object.values(d.milestones).filter((m) => m.courseId === r.courseId).map((m) => checkMilestone(d, m.id)).filter((x) => x && !isValid(x)).length;
+          d.courses[r.courseId].provenance = makeProvenance(draft.fallbackUsed ? "OTHER" : "AI_GENERATED", { source: draft.provider, generatedByAI: !draft.fallbackUsed });
+          recordDecision(d, { role: "GRANULARITY_VALIDATOR", decision: flagged ? `${flagged} flagged, kept by learner` : "all valid", reason: flagged ? L("The learner chose to keep milestones the validator flagged.", "Öğrenci doğrulayıcının işaretlediği adımları tutmayı seçti.") : L("Every milestone is one assessable capability.", "Her adım tek bir ölçülebilir yetenek."), confidence: 0.7, evidence: [r.courseId], ref: `course:${r.courseId}` });
           return r;
         },
         (d) => assertValidCourse(d, courseId),
@@ -122,7 +143,10 @@ export function BuilderPage() {
         <button className="btn primary block" onClick={build} disabled={busy}>
           {busy ? <><span className="spinner" /> {L("Structuring the knowledge graph…", "Bilgi haritası yapılandırılıyor…")}</> : <>{L("Build curriculum", "Müfredatı oluştur")}</>}
         </button>
+        <button className="btn block" onClick={propose} disabled={busy || !request.trim()}>{L("Propose over the knowledge graph (review every change)", "Bilgi grafiği üzerinden öner (her değişikliği gözden geçir)")}</button>
+        <span className="tiny muted">{L("The proposal reuses existing graph objects, checks every milestone and prerequisite, and applies nothing until you approve it.", "Öneri mevcut grafik nesnelerini yeniden kullanır, her adımı ve önkoşulu denetler ve sen onaylamadan hiçbir şeyi uygulamaz.")}</span>
       </div>
+      {proposalId && <ProposalReview id={proposalId} onClose={() => setProposalId(null)} />}
     </div>
   );
 }
@@ -132,6 +156,9 @@ function DraftPreview({ draft, onAccept, onBack, onRegenerate, busy }: { draft: 
   const all = spec.units.flatMap((u) => u.topics.flatMap((t) => t.milestones));
   const types = all.reduce<Record<string, number>>((acc, m) => ((acc[(m.type ?? "PRACTICE").toUpperCase()] = (acc[(m.type ?? "PRACTICE").toUpperCase()] ?? 0) + 1), acc), {});
   const total = all.reduce((s, m) => s + (Number(m.estimatedMinutes) || 15), 0);
+  const checks = new Map(validateSpec(spec).map((c) => [c.key, c.result]));
+  const flagged = [...checks.values()].filter((r) => !isValid(r)).length;
+  const [keep, setKeep] = useState(false);
   return (
     <div className="stack-lg rise">
       <header className="stack" style={{ gap: 6 }}>
@@ -157,6 +184,7 @@ function DraftPreview({ draft, onAccept, onBack, onRegenerate, busy }: { draft: 
                   <div key={k} className="row nowrap small" style={{ gap: 8 }}>
                     <span className="chip" style={{ minWidth: 0 }}>{TYPE_LABEL[(m.type ?? "PRACTICE").toUpperCase() as keyof typeof TYPE_LABEL] ?? m.type}</span>
                     <span className="grow">{m.title}{m.optional ? <span className="muted"> · {L("optional", "isteğe bağlı")}</span> : null}</span>
+                    {checks.get(m.key) && !isValid(checks.get(m.key)!) && <span className="chip s-NEEDS_REVIEW" title={checks.get(m.key)!.notes.join(" ")}>{checks.get(m.key)!.status.map(GRANULARITY_LABEL).join(", ")}</span>}
                   </div>
                 ))}
               </div>
@@ -164,10 +192,16 @@ function DraftPreview({ draft, onAccept, onBack, onRegenerate, busy }: { draft: 
           </div>
         ))}
       </div>
+      {flagged > 0 && (
+        <div className="banner warn stack" style={{ gap: 6 }}>
+          <span>{L(`${flagged} milestones are not one independently assessable capability (too broad, too narrow, duplicate, missing prerequisite or weak evidence). Regenerate, or keep them knowingly.`, `${flagged} adım tek başına ölçülebilir tek bir yetenek değil (çok geniş, çok dar, kopya, eksik önkoşul ya da zayıf kanıt). Yeniden oluştur ya da bilerek tut.`)}</span>
+          <label className="row nowrap small" style={{ gap: 8 }}><input type="checkbox" checked={keep} onChange={(e) => setKeep(e.target.checked)} />{L("I keep the flagged milestones anyway", "İşaretli adımları yine de tutuyorum")}</label>
+        </div>
+      )}
       <div className="row" style={{ position: "sticky", bottom: "calc(var(--nav-h) + 12px)" }}>
         <button className="btn" onClick={onBack} disabled={busy}>{L("Back", "Geri")}</button>
         <button className="btn" onClick={onRegenerate} disabled={busy}>{busy ? <span className="spinner" /> : L("Regenerate", "Yeniden oluştur")}</button>
-        <button className="btn primary grow" onClick={onAccept} disabled={busy}>{L("Accept and find my starting point", "Kabul et ve başlangıç noktamı bul")}</button>
+        <button className="btn primary grow" onClick={onAccept} disabled={busy || (flagged > 0 && !keep)}>{L("Accept and find my starting point", "Kabul et ve başlangıç noktamı bul")}</button>
       </div>
     </div>
   );

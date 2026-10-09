@@ -518,3 +518,52 @@ h1 { background: linear-gradient(100deg, var(--text) 30%, #f2c2c9 70%, var(--acc
 .today-exams { background-image: linear-gradient(90deg, transparent 9px, var(--margin-rule) 9px, var(--margin-rule) 10px, transparent 10px), radial-gradient(120% 90% at 100% 0%, rgba(224, 180, 106, 0.1), transparent 60%); }
 @media (prefers-reduced-motion: reduce) { .exam-card.soon .exam-count { animation: none; } }
 .reduce-motion .exam-card.soon .exam-count { animation: none; }
+
+/* ===========================================================================
+   Adaptive layer: why-lists, error analysis, stuck options, mastery profile,
+   what-next, path, lab tools, proposal diff. Same tokens, no new palette.
+   =========================================================================== */
+button.plain { background: none; border: 0; padding: 0; color: inherit; font: inherit; cursor: pointer; }
+.link-btn { background: none; border: 0; padding: 0; color: var(--accent); font: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.why summary { list-style: none; }
+.why summary::-webkit-details-marker { display: none; }
+.why summary::before { content: "ⓘ "; }
+
+.error-card { border-left: 3px solid var(--review); }
+.trace-chain { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.trace-step { padding: 2px 8px; border-radius: 999px; background: var(--raised); border: 1px solid var(--border); color: var(--text-2); }
+.trace-step + .trace-step::before { content: "→"; margin-right: 6px; margin-left: -2px; color: var(--muted); }
+.trace-step.k-error { color: var(--review); border-color: transparent; background: var(--review-soft); }
+.trace-step.k-prerequisite, .trace-step.k-repair { color: var(--accent); border-color: transparent; background: var(--accent-soft); }
+
+.stuck-card { border: 1px solid rgba(224, 180, 106, 0.45); background-image: radial-gradient(120% 90% at 0% 0%, rgba(224, 180, 106, 0.12), transparent 60%); }
+.stuck-options { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.mastery-profile .mp-split { grid-template-columns: 1fr 1fr; }
+.mp-dims { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px 14px; }
+.mp-dim { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; align-items: center; }
+.mp-dim > .tiny:first-child { grid-column: 1 / -1; }
+
+.next-option { padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
+.next-main { background: none; border: 0; padding: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; gap: 12px; width: 100%; align-items: center; }
+.next-letter { flex: 0 0 auto; width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; font-family: var(--font-mono, monospace); font-size: 0.85rem; color: var(--accent); background: var(--accent-soft); }
+.now-card { background-image: linear-gradient(90deg, transparent 9px, var(--margin-rule) 9px, var(--margin-rule) 10px, transparent 10px), radial-gradient(120% 90% at 100% 0%, rgba(142, 31, 54, 0.18), transparent 60%); }
+
+.path-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; counter-reset: step; }
+.path-step { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px; background: var(--surface); }
+.path-step.current { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent-soft) inset; }
+.path-step.done { opacity: 0.6; }
+.path-step.skipped { opacity: 0.45; text-decoration: line-through; }
+.path-title { background: none; border: 0; padding: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; min-width: 0; }
+
+.series-plot { width: 100%; height: auto; max-height: 240px; background: var(--raised); border-radius: var(--radius-sm); }
+.sp-axis { stroke: var(--border-strong); stroke-width: 1; }
+.sp-tick { fill: var(--muted); font-size: 9px; font-family: var(--font-mono, monospace); }
+.sp-mark { stroke: var(--review); stroke-dasharray: 3 3; stroke-width: 1; }
+.sandbox input[type="range"] { accent-color: var(--accent); }
+.research-step.done summary { color: var(--text-2); }
+
+.proposal-diff .diff-row { gap: 10px; }
+.proposal-diff .diff-row.invalid { opacity: 0.75; background: var(--danger-soft); }
+.diff-kind { font-size: 0.72rem; color: var(--accent); white-space: nowrap; }
+@media (max-width: 420px) { .mastery-profile .mp-split { grid-template-columns: 1fr; } }

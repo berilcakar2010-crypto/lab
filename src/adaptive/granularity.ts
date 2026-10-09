@@ -155,6 +155,14 @@ export function validateGranularity(m: GranularityInput, ctx: GranularityContext
   return { status: status.length ? status : ["VALID"], notes, duplicateOf, checkedAt: now };
 }
 
+export const COGNITIVE_LABEL = (a: CognitiveAction): string =>
+  ({
+    RECALL: L("recall", "hatırlama"), EXPLAIN: L("explain", "açıklama"), CALCULATE: L("calculate", "hesaplama"), APPLY: L("apply", "uygulama"),
+    ANALYZE: L("analyse", "analiz"), DERIVE: L("derive", "türetme"), PROVE: L("prove", "ispat"), PREDICT: L("predict", "tahmin"),
+    COMPARE: L("compare", "karşılaştırma"), DESIGN: L("design", "tasarım"), MODEL: L("model", "modelleme"), EVALUATE: L("evaluate", "değerlendirme"),
+    CREATE: L("create", "oluşturma"), INTERPRET: L("interpret", "yorumlama"),
+  })[a];
+
 export const isValid = (r: GranularityResult) => r.status.length === 1 && r.status[0] === "VALID";
 
 export const GRANULARITY_LABEL = (s: GranularityStatus): string =>

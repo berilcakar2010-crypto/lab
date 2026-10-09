@@ -2,7 +2,8 @@ import { Celebrate, CountUp } from "./Effects";
 import { useMemo, useRef, useState } from "react";
 import type { CardGrade, Flashcard, LabDB } from "../../domain/types";
 import { fmtDate, L } from "../../i18n";
-import { addAutoCards, addCards, cardStats, dueCards, exportAnki, exportCardsCSV, GRADE_LABELS, renderCloze, reviewCard, schedule } from "../../study/flashcards";
+import { addAutoCards, addCards, cardStats, dueCards, exportAnki, exportCardsCSV, GRADE_LABELS, renderCloze, schedule } from "../../study/flashcards";
+import { adaptiveReviewCard } from "../../adaptive/retention";
 import { generateCardsAI } from "../../ai/studyAI";
 import type { KnowledgeGraph } from "../../knowledge/schema";
 import { aiHost, store, toast, useAsync } from "../state";
@@ -30,7 +31,7 @@ export function ReviewSession({ cards, g, onDone }: { cards: Flashcard[]; g: Kno
     );
   }
   const grade = (gr: CardGrade) => {
-    store.transact((d) => reviewCard(d, card.id, gr, Date.now() - started.current));
+    store.transact((d) => adaptiveReviewCard(d, g, card.id, gr, Date.now() - started.current));
     setDone((n) => n + 1);
     setShown(false);
     started.current = Date.now();

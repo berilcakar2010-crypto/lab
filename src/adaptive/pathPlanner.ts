@@ -107,13 +107,19 @@ export function planPath(db: LabDB, g: KnowledgeGraph, input: PlanInput, now: Mi
     else if (p.verified >= known && p.retentionStatus === "FRESH") continue; // already known: not on the path
     else if (p.verified >= known) role = "review";
     else if (p.selfDeclared >= 0.8) role = "verify";
-    else role = "prerequisite";
+    // Easy foundations far from the goal, with no evidence either way: a quick check, not a full lesson.
+    else if (!p.evidenceCount && g.objects[id].difficulty <= 1 && info.dist >= 2) {
+      if (opts.difficulty === "stretch") continue;
+      role = "verify";
+    } else role = "prerequisite";
 
     if (!isGoal) reasons.push({ code: "PREREQUISITE", value: info.dist, text: L(`${info.strength === "ZORUNLU" ? "Required" : "Helpful"} prerequisite of "${title(info.via)}"`, `"${title(info.via)}" için ${info.strength === "ZORUNLU" ? "zorunlu" : "yardımcı"} önkoşul`) });
     if (p.verified < known) reasons.push({ code: "MASTERY_GAP", value: Math.round((1 - p.verified) * 100) / 100, text: p.evidenceCount ? L(`Verified mastery ${Math.round(p.verified * 100)}%`, `Doğrulanmış ustalık %${Math.round(p.verified * 100)}`) : L("No verified evidence yet", "Henüz doğrulanmış kanıt yok") });
     if (errors) reasons.push({ code: "RECENT_ERRORS", value: errors, text: L(`${errors} recent errors trace back here`, `Son ${errors} hata buraya işaret ediyor`) });
     if (p.retentionStatus === "STALE" || p.retentionStatus === "FADING") reasons.push({ code: "RETENTION", text: p.retentionStatus === "STALE" ? L("Not verified for a long time (stale)", "Uzun süredir doğrulanmadı (bayat)") : L("Retention is fading", "Kalıcılık zayıflıyor") });
-    if (role === "verify") reasons.push({ code: "SELF_DECLARED", value: p.selfDeclared, text: L("You said you know it — a quick check instead of a full lesson", "Bildiğini söyledin — tam ders yerine kısa bir kontrol") });
+    if (role === "verify") reasons.push(p.selfDeclared >= 0.8
+      ? { code: "SELF_DECLARED", value: p.selfDeclared, text: L("You said you know it — a quick check instead of a full lesson", "Bildiğini söyledin — tam ders yerine kısa bir kontrol") }
+      : { code: "MASTERY_GAP", text: L("A basic topic — a quick check may be enough", "Temel bir konu — kısa bir kontrol yeterli olabilir") });
     const desc = st.descendants.get(id) ?? 0;
     if (desc >= 5) reasons.push({ code: "IMPORTANCE", value: desc, text: L(`${desc} other objects build on it`, `${desc} başka nesne bunun üzerine kurulu`) });
     const un = st.unlocks.get(id) ?? 0;

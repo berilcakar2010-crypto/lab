@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import type { Explanation, ExplanationEvaluation, LabDB } from "../../domain/types";
 import { fmtDate, getLang, L } from "../../i18n";
 import { evaluateExplanation, transcribeWithGroq } from "../../ai/studyAI";
-import { addExplanation, deleteExplanation, setEvaluation } from "../../study/actions";
+import { addExplanation, answerFollowUp, deleteExplanation, setEvaluation } from "../../study/actions";
 import { blobToDataURL, extFor, media } from "../../data/media";
 import type { KnowledgeGraph, LearningObject } from "../../knowledge/schema";
-import { aiHost, store, toast, useAsync } from "../state";
+import { aiHost, navigate, store, toast, useAsync } from "../state";
+import { getGraph } from "../../knowledge/graph";
 import { saveBlobFile } from "../native";
 
 type Mode = Explanation["mode"];
@@ -182,7 +183,12 @@ function ExplanationCard({ e, o, open }: { e: Explanation; o: LearningObject; op
         {ev?.feedback && <div className="banner info small">{ev.feedback}</div>}
         {!!ev?.strengths.length && <ul className="small tight">{ev.strengths.map((s) => <li key={s}>✓ {s}</li>)}</ul>}
         {!!ev?.gaps.length && <ul className="small tight">{ev.gaps.map((s) => <li key={s}>△ {s}</li>)}</ul>}
-        {!!ev?.misconceptions.length && <ul className="small tight" style={{ color: "var(--review)" }}>{ev.misconceptions.map((s) => <li key={s}>! {s}</li>)}</ul>}
+        {!!ev?.misconceptions.length && <ul className="small tight" style={{ color: "var(--review)" }}>{ev.misconceptions.map((s) => {
+          const link = ev.misconceptionLinks?.find((m) => m.text === s)?.loId;
+          return <li key={s}>! {s}{link && link !== o.id ? <> · <button className="link-btn" onClick={() => navigate(`/graph?lo=${encodeURIComponent(link)}`)}>{getGraph(store.state.knowledge).objects[link]?.title ?? link}</button></> : null}</li>;
+        })}</ul>}
+        {e.followUpOf && <span className="tiny muted">{L("Answer to a follow-up question", "Bir takip sorusunun cevabı")}: {e.prompt}</span>}
+        {!!ev?.followUps?.length && <FollowUps e={e} o={o} questions={ev.followUps} />}
         <span className="eyebrow">{L("Mastery criteria", "Ustalık ölçütleri")}</span>
         <SelfRubric o={o} e={e} />
         <div className="row">
@@ -191,6 +197,40 @@ function ExplanationCard({ e, o, open }: { e: Explanation; o: LearningObject; op
         </div>
       </div>
     </details>
+  );
+}
+
+/** Feynman dialogue: answer a follow-up question in your own words; it is evaluated like any explanation. */
+function FollowUps({ e, o, questions }: { e: Explanation; o: LearningObject; questions: string[] }) {
+  const [open, setOpen] = useState<string | null>(null);
+  const [text, setText] = useState("");
+  const { busy, run } = useAsync();
+  const answered = new Set(Object.values(store.state.explanations).filter((x) => x.followUpOf === e.id).map((x) => x.prompt));
+  const submit = (q: string) => run(async () => {
+    const child = store.transact((d) => answerFollowUp(d, e.id, q, text));
+    if (!child) return;
+    const res = await evaluateExplanation(aiHost, o, getGraph(store.state.knowledge), { text });
+    store.transact((d) => setEvaluation(d, child.id, res.value));
+    setText("");
+    setOpen(null);
+  });
+  return (
+    <div className="stack" style={{ gap: 6 }}>
+      <span className="eyebrow">{L("Think further", "Biraz daha düşün")}</span>
+      {questions.map((q) => (
+        <div key={q} className="stack" style={{ gap: 4 }}>
+          <button className="list-item lo-row small" onClick={() => setOpen(open === q ? null : q)}>
+            <span className="grow" style={{ textAlign: "left" }}>{q}</span>{answered.has(q) ? <span className="tiny muted">✓</span> : <span className="muted">→</span>}
+          </button>
+          {open === q && (
+            <>
+              <textarea className="textarea" style={{ minHeight: 60 }} value={text} onChange={(ev) => setText(ev.target.value)} placeholder={L("Answer in your own words — no copying.", "Kendi cümlelerinle cevapla — kopyalama yok.")} aria-label={q} />
+              <button className="btn small" style={{ alignSelf: "flex-start" }} disabled={!text.trim() || busy} onClick={() => submit(q)}>{busy ? <span className="spinner" /> : L("Answer and evaluate", "Cevapla ve değerlendir")}</button>
+            </>
+          )}
+        </div>
+      ))}
+    </div>
   );
 }
 

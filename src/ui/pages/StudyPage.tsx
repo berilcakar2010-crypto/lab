@@ -5,7 +5,12 @@ import { ReminderSettings, StudyCalendar, TopicReviewSession } from "../componen
 import { fmtDate, L, lower } from "../../i18n";
 import { getGraph } from "../../knowledge/graph";
 import { LEARNING_PATHS } from "../../knowledge/paths";
-import { addAutoCards, cardStats, dueCards, renderCloze } from "../../study/flashcards";
+import { addAutoCards, cardStats, renderCloze } from "../../study/flashcards";
+import { prioritizedDueCards } from "../../adaptive/retention";
+import { openErrors } from "../../adaptive/errors";
+import { adaptiveExport } from "../../adaptive/exportData";
+import { ErrorsTab } from "../components/Adaptive";
+import { ResearchTab } from "../components/LabTools";
 import { chatsMarkdown, explanationsMarkdown, studyExport } from "../../study/actions";
 import { dueRetentionChecks } from "../../engines/progress";
 import { navigate, store, toast, useDB } from "../state";
@@ -17,14 +22,16 @@ import { upcomingExams } from "../../study/exams";
 import { saveTextFile } from "../native";
 import { fmtNum } from "../../i18n";
 
-type Tab = "topics" | "exams" | "review" | "calendar" | "cards" | "explain" | "chats" | "export";
+type Tab = "topics" | "exams" | "errors" | "research" | "review" | "calendar" | "cards" | "explain" | "chats" | "export";
 
 /** Everything you study with: spaced-repetition cards, your explanations, AI conversations and exports. */
 export function StudyPage() {
   const db = useDB();
   const g = getGraph(db.knowledge);
   const query = new URLSearchParams(window.location.hash.split("?")[1] ?? "");
-  const [tab, setTab] = useState<Tab>(query.get("tab") === "exams" ? "exams" : "topics");
+  const wanted = query.get("tab");
+  const [tab, setTab] = useState<Tab>(wanted === "exams" || wanted === "errors" || wanted === "research" ? wanted : "topics");
+  const openErrorCount = openErrors(db).length;
   const examsSoon = upcomingExams(db).length;
   const [topicReview, setTopicReview] = useState(false);
   // Pick up study done elsewhere (sessions, explanations, AI questions) into the topic schedule.
@@ -35,7 +42,7 @@ export function StudyPage() {
   const [reviewing, setReviewing] = useState(false);
   const [q, setQ] = useState("");
   const stats = cardStats(db);
-  const due = useMemo(() => dueCards(db), [db, stats.due]);
+  const due = useMemo(() => prioritizedDueCards(db, g), [db, g, stats.due]);
   const retentionDue = dueRetentionChecks(db).filter((r) => r.kind !== "IMMEDIATE").length;
   const goals = db.knowledge.goals.length ? db.knowledge.goals : LEARNING_PATHS.find((p) => p.id === db.knowledge.pathId)?.targets ?? [];
   const known = g.order.filter((id) => db.knowledge.selfAttested[id] || Object.values(db.milestones).some((m) => m.learningObjectIds?.includes(id) && m.status === "MASTERED"));
@@ -54,6 +61,8 @@ export function StudyPage() {
   const TABS: [Tab, string][] = [
     ["topics", L(`Topics${topicsDue ? ` · ${topicsDue}` : ""}`, `Konular${topicsDue ? ` · ${topicsDue}` : ""}`)],
     ["exams", L(`Exams${examsSoon ? ` · ${examsSoon}` : ""}`, `Sınavlar${examsSoon ? ` · ${examsSoon}` : ""}`)],
+    ["errors", L(`Errors${openErrorCount ? ` · ${openErrorCount}` : ""}`, `Hatalar${openErrorCount ? ` · ${openErrorCount}` : ""}`)],
+    ["research", L("Research", "Araştırma")],
     ["review", L(`Card review${stats.due ? ` · ${stats.due}` : ""}`, `Kart tekrarı${stats.due ? ` · ${stats.due}` : ""}`)],
     ["calendar", L("Calendar", "Takvim")],
     ["cards", L("Cards", "Kartlar")],
@@ -100,6 +109,9 @@ export function StudyPage() {
       ))}
 
       {tab === "exams" && <ExamsPanel db={db} g={g} initial={query.get("exam") ?? undefined} />}
+
+      {tab === "errors" && <ErrorsTab />}
+      {tab === "research" && <ResearchTab db={db} g={g} initial={query.get("res") ?? undefined} />}
 
       {tab === "calendar" && <StudyCalendar db={db} g={g} />}
 
@@ -182,6 +194,7 @@ export function StudyPage() {
             <button className="btn small" onClick={() => saveTextFile("lab-explanations.md", explanationsMarkdown(db, g), "text/markdown")}>{L("Explanations (Markdown)", "Anlatımlar (Markdown)")}</button>
             <button className="btn small" onClick={() => saveTextFile("lab-ai-chats.md", chatsMarkdown(db, g), "text/markdown")}>{L("AI chats (Markdown)", "YZ sohbetleri (Markdown)")}</button>
             <button className="btn small" onClick={() => saveTextFile("lab-study-data.json", studyExport(db), "application/json")}>{L("All study data (JSON)", "Tüm çalışma verisi (JSON)")}</button>
+            <button className="btn small" onClick={() => saveTextFile("lab-adaptive-data.json", adaptiveExport(db), "application/json")}>{L("Paths, errors, mastery, decisions (JSON)", "Rotalar, hatalar, ustalık, kararlar (JSON)")}</button>
           </div>
           <p className="tiny muted">{L("Anki: File → Import, choose the .txt file, separator Tab, allow HTML.", "Anki: Dosya → İçe aktar, .txt dosyasını seç, ayırıcı Sekme, HTML'ye izin ver.")}</p>
         </div>

@@ -12,6 +12,7 @@ import { navigate, store, toast } from "../state";
 import { saveTextFile } from "../native";
 import { notificationPermission, refreshReminders } from "../reminders";
 import { Bar, Icon, Sheet } from "./common";
+import { planExamPath, setExamPriority, setStudyMode } from "../../adaptive/modes";
 import { DOMAIN_COLOR } from "./GraphMap";
 import { CountUp } from "./Effects";
 
@@ -205,11 +206,15 @@ export function ExamDetail({ db, g, exam, onClose }: { db: LabDB; g: KnowledgeGr
             <summary className="small" style={{ cursor: "pointer" }}>{L(`Topics (${ready.topics.length})`, `Konular (${ready.topics.length})`)}{ready.prereqs.length ? L(` · ${ready.prereqs.length} gaps`, ` · ${ready.prereqs.length} eksik`) : ""}</summary>
             <div className="list" style={{ marginTop: 6 }}>
               {[...ready.topics].sort((a, b) => a.score - b.score).map((t) => (
-                <button key={t.loId} className="list-item lo-row" onClick={() => openLO(t.loId)}>
+                <div key={t.loId} className="list-item lo-row">
                   <span className="lo-dot" style={{ background: DOMAIN_COLOR[g.objects[t.loId].domain] }} aria-hidden />
-                  <span className="grow truncate" style={{ textAlign: "left" }}>{g.objects[t.loId].title}</span>
+                  <button className="grow truncate plain" style={{ textAlign: "left" }} onClick={() => openLO(t.loId)}>{g.objects[t.loId].title}</button>
+                  <select className="input small" style={{ width: "auto", minHeight: 32 }} value={exam.priorities?.[t.loId] ?? 2} aria-label={L("Exam priority", "Sınav önceliği")}
+                    onChange={(e) => store.transact((d) => setExamPriority(d, exam.id, t.loId, Number(e.target.value) as 1 | 2 | 3))}>
+                    <option value={3}>{L("high", "yüksek")}</option><option value={2}>{L("medium", "orta")}</option><option value={1}>{L("low", "düşük")}</option>
+                  </select>
                   <span className={`chip ${STATUS_CHIP[t.status]}`}>{STATUS_LABEL(t.status)}</span>
-                </button>
+                </div>
               ))}
               {ready.prereqs.map((id) => (
                 <button key={id} className="list-item lo-row" onClick={() => openLO(id)}>
@@ -238,6 +243,14 @@ export function ExamDetail({ db, g, exam, onClose }: { db: LabDB; g: KnowledgeGr
           </div>
         )}
 
+        {!exam.result && left >= 0 && (
+          <div className="row" style={{ gap: 6 }}>
+            {db.preferences.studyMode === "EXAM" && db.preferences.focusExamId === exam.id
+              ? <button className="btn small" onClick={() => store.transact((d) => void setStudyMode(d, "NORMAL"))}>{L("Back to normal mode", "Normal moda dön")}</button>
+              : <button className="btn small primary" onClick={() => { store.transact((d) => void setStudyMode(d, "EXAM", exam.id)); toast(L("Exam mode on: suggestions now follow this exam's priorities. The curriculum does not change.", "Sınav modu açık: öneriler bu sınavın önceliklerine göre. Müfredat değişmez.")); }}>{L("Exam mode for this exam", "Bu sınav için sınav modu")}</button>}
+            {ready.topics.length > 0 && <button className="btn small" onClick={() => { store.transact((d) => void planExamPath(d, g, exam.id)); onClose(); navigate("/graph?view=rota"); }}>{L("Plan a path to the exam", "Sınava rota planla")}</button>}
+          </div>
+        )}
         <div className="row">
           {ready.topics.length > 0 && <button className="btn small" onClick={cards}>{L("Make cards for weak topics", "Zayıf konular için kart yap")}</button>}
           <button className="btn small" onClick={() => void saveTextFile(`lab-exam-${exam.id}.ics`, examsICS([exam], g), "text/calendar")}>{L("Add to calendar (.ics)", "Takvime ekle (.ics)")}</button>
