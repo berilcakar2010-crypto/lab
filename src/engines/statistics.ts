@@ -150,11 +150,11 @@ export function engagementIndex(rows: VisitRow[]): { value: number | null; parts
 
 export type GroupKey =
   | "subject" | "topic" | "milestoneType" | "interaction" | "difficulty" | "duration" | "inputMethod" | "stylus"
-  | "feedback" | "challenge" | "novelty" | "timeOfDay" | "assistance";
+  | "feedback" | "challenge" | "novelty" | "timeOfDay" | "assistance" | "granularity";
 
 export const GROUP_LABEL = lazyLabels<GroupKey>(
-  { subject: "Subject", topic: "Topic", milestoneType: "Milestone type", interaction: "Interaction type", difficulty: "Difficulty", duration: "Milestone length", inputMethod: "Input method", stylus: "Stylus", feedback: "Feedback timing", challenge: "Challenge level", novelty: "Novelty", timeOfDay: "Time of day", assistance: "AI / hint assistance" },
-  { subject: "Alan", topic: "Konu", milestoneType: "Adım türü", interaction: "Etkileşim türü", difficulty: "Zorluk", duration: "Adım uzunluğu", inputMethod: "Giriş yöntemi", stylus: "Kalem", feedback: "Geri bildirim biçimi", challenge: "Zorlayıcılık", novelty: "Yenilik", timeOfDay: "Günün saati", assistance: "YZ / ipucu desteği" },
+  { subject: "Subject", topic: "Topic", milestoneType: "Milestone type", interaction: "Interaction type", difficulty: "Difficulty", duration: "Milestone length", inputMethod: "Input method", stylus: "Stylus", feedback: "Feedback timing", challenge: "Challenge level", novelty: "Novelty", timeOfDay: "Time of day", assistance: "AI / hint assistance", granularity: "Milestone granularity" },
+  { subject: "Alan", topic: "Konu", milestoneType: "Adım türü", interaction: "Etkileşim türü", difficulty: "Zorluk", duration: "Adım uzunluğu", inputMethod: "Giriş yöntemi", stylus: "Kalem", feedback: "Geri bildirim biçimi", challenge: "Zorlayıcılık", novelty: "Yenilik", timeOfDay: "Günün saati", assistance: "YZ / ipucu desteği", granularity: "Adım granularity'si" },
 );
 
 export function groupOf(db: LabDB, r: VisitRow, key: GroupKey): string | null {
@@ -171,6 +171,13 @@ export function groupOf(db: LabDB, r: VisitRow, key: GroupKey): string | null {
     case "challenge": return r.milestoneType === "BOSS" || r.milestoneType === "CHALLENGE" ? L("challenge / boss", "meydan okuma / final") : r.milestoneType ? L("regular", "normal") : null;
     case "novelty": return r.novelTopic ? L("new topic in session", "oturumda yeni konu") : L("same topic as before", "önceki konuyla aynı");
     case "timeOfDay": return r.hourOfDay < 6 ? L("night", "gece") : r.hourOfDay < 12 ? L("morning", "sabah") : r.hourOfDay < 18 ? L("afternoon", "öğleden sonra") : L("evening", "akşam");
+    case "granularity": {
+      // One capability per milestone (micro/standard) vs larger units, or flagged as too broad by the validator.
+      const m = db.milestones[r.milestoneId];
+      if (!m) return null;
+      if (m.granularity?.status.includes("TOO_BROAD")) return L("too broad (several skills)", "çok geniş (birden çok beceri)");
+      return m.scope === "MICRO" ? L("micro (one small capability)", "mikro (tek küçük yetenek)") : m.scope === "STANDARD" ? L("standard (one capability)", "standart (tek yetenek)") : L("extended / project", "geniş / proje");
+    }
     case "assistance": return r.maxHintLevel === 0 && r.aiInteractions === 0 ? L("no help", "yardımsız") : r.maxHintLevel >= 4 ? L("heavy help (4–5)", "yoğun yardım (4–5)") : L("light help (1–3, AI guide)", "hafif yardım (1–3, rehber)");
   }
 }

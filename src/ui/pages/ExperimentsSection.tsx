@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { ExperimentVariable } from "../../domain/types";
-import { EXPERIMENT_TEMPLATES, METRIC_LABEL, compareExperiment, runningExperiment, setExperimentStatus, startExperiment } from "../../engines/experiments";
+import { EXPERIMENT_TEMPLATES, METRIC_LABEL, compareExperiment, runningExperiment, setExperimentStatus, startExperiment, concludeExperiment } from "../../engines/experiments";
 import { act, safely, useDB } from "../state";
 import { Sheet } from "../components/common";
 import { pct } from "../components/Stats";
@@ -53,7 +53,7 @@ function ExperimentCard({ id }: { id: string }) {
         <div className="row nowrap">
           {exp.status === "RUNNING" && <button className="btn small" onClick={() => act((d) => setExperimentStatus(d, id, "PAUSED"))}>{L("Pause", "Duraklat")}</button>}
           {exp.status === "PAUSED" && <button className="btn small" onClick={() => safely(() => act((d) => setExperimentStatus(d, id, "RUNNING")))}>{L("Resume", "Sürdür")}</button>}
-          {exp.status !== "CONCLUDED" && <button className="btn small" onClick={() => { if (confirm(L("Conclude this experiment? Its data is kept.", "Bu deney bitirilsin mi? Verileri saklanır."))) act((d) => setExperimentStatus(d, id, "CONCLUDED", c.verdict)); }}>{L("Conclude", "Bitir")}</button>}
+          {exp.status !== "CONCLUDED" && <button className="btn small" onClick={() => { if (confirm(L("Conclude this experiment? Its data is kept.", "Bu deney bitirilsin mi? Verileri saklanır."))) act((d) => concludeExperiment(d, id, c.verdict)); }}>{L("Conclude", "Bitir")}</button>}
         </div>
       </div>
       <h3>{exp.title}</h3>

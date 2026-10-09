@@ -14,7 +14,7 @@ export const OUTCOME_LABEL = lazyLabels<Outcome>(
   { continuation: "başka bir adıma devam etme", completion: "adımları tamamlama (yarıda bırakmaya karşı)", persistence: "hatadan sonra yeniden deneme", firstTry: "ilk denemede doğruluk" },
 );
 
-export const FOCUS_FACTORS: GroupKey[] = ["duration", "difficulty", "stylus", "interaction", "feedback", "challenge", "novelty", "subject", "timeOfDay", "assistance"];
+export const FOCUS_FACTORS: GroupKey[] = ["duration", "difficulty", "stylus", "interaction", "feedback", "challenge", "novelty", "subject", "timeOfDay", "assistance", "granularity"];
 
 export const MIN_GROUP_N = 8;
 

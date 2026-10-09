@@ -5,6 +5,7 @@
  * retention records, and never name a winner on small samples.
  */
 import type { Experiment, ExperimentArm, ExperimentVariable, ID, LabDB, Session } from "../domain/types";
+import type { ExperimentReport } from "../domain/adaptive";
 import { newId } from "../data/ids";
 import { L, getLang, lazyLabels, type Lang } from "../i18n";
 import { rate, visitRows, engagementIndex, type Rate, type VisitRow } from "./statistics";
@@ -224,4 +225,46 @@ export function compareExperiment(db: LabDB, expId: ID): Comparison {
       L(". This is evidence from your own sessions, not proof — other things changed between sessions too.", ". Bu kendi oturumlarından gelen bir kanıt, kesin ispat değil — oturumlar arasında başka şeyler de değişti.");
   }
   return { arms, enoughSessions, findings, verdict };
+}
+
+/** The arm the template's hypothesis favours (AI assistance: "less help" is the hypothesis). */
+export const hypothesisArm = (e: Experiment) => (e.variable === "AI_ASSISTANCE" ? 1 : 0);
+
+/**
+ * The written result of an experiment: hypothesis, design, observed data,
+ * result, confidence and limitations. Single-learner, alternating design —
+ * evidence about this learner, never general proof.
+ */
+export function experimentReport(db: LabDB, expId: ID, now = Date.now()): ExperimentReport {
+  const exp = db.experiments[expId];
+  const c = compareExperiment(db, expId);
+  const fav = exp.arms[hypothesisArm(exp)]?.label;
+  const leads = c.findings.filter((f) => f.leader);
+  const forH = leads.filter((f) => f.leader === fav).length, against = leads.length - forH;
+  const result: ExperimentReport["result"] = !c.enoughSessions || !leads.length || (forH && against) ? "INCONCLUSIVE" : forH ? "SUPPORTED" : "NOT_SUPPORTED";
+  const sessions = c.arms.reduce((s, a) => s + a.sessions, 0);
+  const limitations = [
+    L("One learner, alternating conditions across sessions, no blinding.", "Tek öğrenci, oturumlar arasında dönüşümlü koşullar, körleme yok."),
+    L("Topics, time of day and mood also changed between sessions.", "Oturumlar arasında konu, günün saati ve ruh hali de değişti."),
+  ];
+  if (sessions < exp.minSessionsPerArm * exp.arms.length * 2) limitations.push(L("Few sessions; small effects cannot be seen.", "Az oturum; küçük etkiler görülemez."));
+  if (c.arms.some((a) => a.rates.retention.value === null)) limitations.push(L("Too few delayed retention checks to compare retention.", "Kalıcılığı karşılaştırmak için çok az gecikmeli kontrol var."));
+  return {
+    hypothesis: exp.hypothesis,
+    design: L(`${exp.arms.map((a) => `"${a.label}"`).join(" vs ")}, alternating by session, at least ${exp.minSessionsPerArm} sessions each.`, `${exp.arms.map((a) => `"${a.label}"`).join(" ve ")}, oturum oturum dönüşümlü, her biri en az ${exp.minSessionsPerArm} oturum.`),
+    observed: [...c.arms.map((a) => `${a.arm.label}: ${a.sessions} ${L("sessions", "oturum")}, ${a.visits} ${L("visits", "ziyaret")}`), ...c.findings.map((f) => `${METRIC_LABEL[f.metric]}: ${f.text}`)].join("\n"),
+    result,
+    confidence: result === "INCONCLUSIVE" ? 0.2 : Math.min(0.85, 0.4 + 0.1 * leads.length + Math.min(0.2, sessions / 100)),
+    limitations,
+    createdAt: now,
+  };
+}
+
+/** Conclude and store the written report with the experiment. */
+export function concludeExperiment(db: LabDB, expId: ID, note?: string, now = Date.now()): ExperimentReport | null {
+  if (!db.experiments[expId]) return null;
+  setExperimentStatus(db, expId, "CONCLUDED", note);
+  const report = experimentReport(db, expId, now);
+  db.experiments[expId].report = report;
+  return report;
 }

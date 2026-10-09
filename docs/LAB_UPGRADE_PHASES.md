@@ -260,3 +260,43 @@ Tests: 2 yeni (YZ kendini doğrulayamaz + kişi doğrular; Thomas Calculus böl�
 Known limitations: URL'ler erişilebilirlik için denetlenmez (çevrimdışı uygulama).
 Next phase: Faz 14 — analitik genişletmeleri
 ```
+
+## Faz 14 — Analitik genişletmeleri
+
+```text
+PHASE STATUS: PASS
+Implemented: Olay modeli genişletildi (21 yeni olay, olaylarda kullanıcı ve kavram alanı — Faz 2). Ham olaylardan
+  türetilen metrikler (hiçbir sayı saklanmaz/sabit yazılmaz): Verimlilik (aktif süre, saat başına adım, oturum başına
+  soru ve deneme), Sebat (yeniden deneme, bırakma, devam etme oranı, oturum başına takılma), Öğrenme (ilk deneme
+  doğruluğu, dönemdeki ustalık kazanımı — beyan hariç, hata azalması, transfer başarısı), Kalıcılık (gecikmeli hatırlama,
+  kalıcılık kaybı = anlık − gecikmeli, tekrar etkinliği), Katılım (medyan oturum süresi, etkileşim yoğunluğu, seri,
+  kalem payı, kesinti), Derinlik (her boyutta ≥0.7 olan nesne payı, genişlik, ortalama derinlik — yalnızca doğrulanmış
+  kanıt), Ders (en güçlü/zayıf ders, en güçlü adım türü, en sık hata, en yüksek kalıcılık ve transfer). Oranlar Wilson
+  aralıklı ve az örnekte gizli. Katılım / Öğrenme / Kalıcılık ayrı seviyelerde (HIGH/MEDIUM/LOW/Yetersiz veri);
+  "çok çalıştın, iyi öğrendin" gibi bir çıkarım yapılmaz. Gözlemsel karşılaştırmalar nedensellik dili olmadan
+  (örn. kalem: "ölçülen doğruluk daha yüksekti … bu nedenini göstermez; Odak Lab deneyle sınayabilir").
+Modified files: —
+New files: src/adaptive/metrics.ts, src/adaptive/metrics.test.ts
+Data model changes: —
+Tests: 3 yeni (veri yokken "yetersiz veri", ham olaylardan türetme + katmanların ayrılığı + nedensellik dili yok,
+  hata ve transfer sayımı).
+Known limitations: Olay adları mevcut adlarla eşleştirildi (SESSION_START ≙ SESSION_STARTED vb.), yeniden adlandırılmadı.
+Next phase: Faz 15 — Odak Lab entegrasyonu
+```
+
+## Faz 15 — Odak Lab ve kişisel deneyler
+
+```text
+PHASE STATUS: PASS
+Implemented: Odak Lab'in sınadığı etkenler: adım uzunluğu, zorluk, etkileşim türü, kalem, geri bildirim zamanlaması,
+  meydan okuma, yenilik, ders, günün saati, YZ yardımı (mevcuttu) + yeni "adım granularity'si" (mikro / standart /
+  geniş-proje / doğrulayıcıya göre çok geniş). Kişisel deney sonucu artık yazılı rapor olarak saklanıyor: hipotez,
+  deney tasarımı, gözlenen veri, sonuç (SUPPORTED / NOT_SUPPORTED / INCONCLUSIVE), güven ve sınırlılıklar. Arayüzdeki
+  "Bitir" düğmesi raporu kaydediyor.
+Modified files: src/engines/statistics.ts, src/engines/focusLab.ts, src/engines/experiments.ts, src/ui/pages/ExperimentsSection.tsx
+New files: src/adaptive/focus.test.ts
+Data model changes: Experiment.report.
+Tests: 2 yeni (granularity etkeni; rapor alanları, yetersiz veride INCONCLUSIVE, bitirince saklanma).
+Known limitations: Tek öğrencili dönüşümlü tasarım; raporun kendisi bu sınırlılığı listeler.
+Next phase: Faz 16 — Feynman / Anlat modu
+```
