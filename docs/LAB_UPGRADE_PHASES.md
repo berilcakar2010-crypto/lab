@@ -101,3 +101,25 @@ Known limitations: Sözlük tabanlı; dili garip kurulmuş hedeflerde yanılabil
   bir adımı açıkça "yine de ekle" diyerek tutabilir (Faz 11/20).
 Next phase: Faz 6 — takılma algılama
 ```
+
+## Faz 6 — Takılma algılama (ve yardım hiyerarşisi)
+
+```text
+PHASE STATUS: PASS
+Implemented: Ham olay ve kayıtlardan takılma algılayıcı. Sinyaller: art arda yanlış, ipucu sayısı/düzeyi,
+  sorudaki uzun süre (en az 6 dk ya da kişisel medyanın 2.5 katı), aynı soruda çok deneme, YZ yardımı artışı,
+  düşük güven, aynı adımdan önceki çıkışlar, aynı tür hatanın tekrarı. Pencere son doğru cevapta yeniden başlar.
+  Yanlış pozitif koruması: yanlış cevap olmadan ve en az iki farklı sinyal olmadan asla STUCK denmez.
+  Durumlar OK / STRUGGLING / STUCK. Seçenekler: Yeniden dene, Küçük ipucu, Kavram açıklaması, Daha basit örnek,
+  Önkoşulu kontrol et (hata izinden hedefli), Strateji değiştir, Şimdilik atla, Çözümü gör (her zaman son,
+  asla önerilmez). Bağlama göre öneri işareti (dalgınlıkta "yeniden dene", önkoşul izinde "önkoşulu kontrol et").
+  Olay (STUCK_DETECTED tekil), seçim olayı, karar kaydı (STUCK_DETECTOR). Daha basit soru seçici.
+  Yardım hiyerarşisi zaten vardı (0–5, tek tek açılır, sınır + onay); artık her basamak kanıt değerini düşürüyor (Faz 3).
+Modified files: —
+New files: src/adaptive/stuck.ts, src/adaptive/stuck.test.ts
+Data model changes: —
+Tests: 5 yeni (spesifikasyondaki STUCK örneği, yalnız ipucu/uzun süre yanlış pozitif değil, tek yanlış en fazla
+  STRUGGLING, doğru cevap pencereyi sıfırlar, daha basit örnek).
+Known limitations: Eşikler sabit; Odak Lab verisiyle kişiselleştirme ileride yapılabilir.
+Next phase: Faz 7 — Path Planner
+```
