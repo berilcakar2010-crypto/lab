@@ -217,3 +217,52 @@ describe("backups and health", () => {
     expect(maintenanceSuggestions(db, g, T0).some((m) => m.kind === "WEAK_EVIDENCE")).toBe(true);
   });
 });
+
+import { addSource, markSourceChecked, sourceFreshness } from "../adaptive/provenance";
+import { researchReminders, createResearch } from "../adaptive/research";
+import { addSketch, removeSketch, MAX_SKETCHES } from "../study/actions";
+import { yearlyReflectionMarkdown } from "./portfolio";
+
+describe("partial items completed", () => {
+  it("sources carry edition/date and flag current information that has gone unchecked", () => {
+    const db = createEmptyDB(T0);
+    const book = addSource(db, { title: "University Physics", type: "TEXTBOOK", author: "Young", edition: "15th ed.", published: "2019" }, T0);
+    const rules = addSource(db, { title: "AP Physics C exam description", type: "OFFICIAL_DOCUMENT", published: "2025", timeSensitive: true }, T0);
+    expect(book.edition).toBe("15th ed.");
+    expect(sourceFreshness(book, T0 + 900 * DAY)).toBe("timeless");
+    expect(sourceFreshness(rules, T0 + 10 * DAY)).toBe("current");
+    expect(sourceFreshness(rules, T0 + 400 * DAY)).toBe("check");
+    markSourceChecked(db, rules.id, T0 + 400 * DAY);
+    expect(sourceFreshness(db.sources[rules.id], T0 + 401 * DAY)).toBe("current");
+  });
+
+  it("research reminders only for open research quiet for a week, at most two, without guilt", () => {
+    const db = createEmptyDB(T0);
+    createResearch(db, "Does noise help neurons fire?", [], T0);
+    const r = researchReminders(db, 19, 0, T0 + DAY);
+    expect(r).toHaveLength(1);
+    expect(r[0].at).toBeGreaterThanOrEqual(T0 + 7 * DAY);
+    expect(new Date(r[0].at).getHours()).toBe(19);
+    expect(r[0].body).not.toMatch(/fail|late|behind|başarısız|geç kaldın/i);
+    createResearch(db, "b", [], T0); createResearch(db, "c", [], T0);
+    expect(researchReminders(db, 19, 0, T0)).toHaveLength(2);
+  });
+
+  it("sketches are saved per topic, capped, and removable", () => {
+    const db = createEmptyDB(T0);
+    for (let i = 0; i < MAX_SKETCHES + 2; i++) addSketch(db, NEWTON, "data:image/jpeg;base64,AAAA", `s${i}`, T0 + i);
+    expect(db.notes[NEWTON].sketches).toHaveLength(MAX_SKETCHES);
+    expect(db.notes[NEWTON].sketches![0].caption).toBe("s2");
+    removeSketch(db, NEWTON, db.notes[NEWTON].sketches![0].id);
+    expect(db.notes[NEWTON].sketches).toHaveLength(MAX_SKETCHES - 1);
+    expect(() => addSketch(db, NEWTON, "javascript:alert(1)")).toThrow();
+  });
+
+  it("exports the yearly reflection as Markdown", () => {
+    const k = kit([NEWTON]);
+    for (const q of k.qs[k.ms[NEWTON]]) answer(k, q, true, { at: T0 });
+    const md = yearlyReflectionMarkdown(k.db, g, new Date(T0).getFullYear(), T0 + DAY);
+    expect(md).toMatch(/^# /);
+    expect(md).toContain(g.objects[NEWTON].title);
+  });
+});

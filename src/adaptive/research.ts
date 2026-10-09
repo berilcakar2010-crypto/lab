@@ -113,3 +113,31 @@ export async function researchGuideAI(host: AIHost, p: ResearchProject, step: Re
     summary: `research guide ${p.id} ${step}`,
   });
 }
+
+export interface ResearchReminder { researchId: ID; at: Millis; title: string; body: string }
+
+/**
+ * Opt-in reminders for open research left untouched for a week: at most two,
+ * at the learner's reminder time, worded as an invitation (never guilt).
+ */
+export function researchReminders(db: LabDB, hour: number, minute: number, now: Millis = Date.now(), quietDays = 7): ResearchReminder[] {
+  const slot = (t: Millis) => {
+    const d = new Date(t);
+    d.setHours(hour, minute, 0, 0);
+    if (d.getTime() <= t) d.setDate(d.getDate() + 1);
+    return d.getTime();
+  };
+  return Object.values(db.research)
+    .filter((p) => p.status === "OPEN" && nextStep(p))
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .slice(0, 2)
+    .map((p) => {
+      const step = nextStep(p)!;
+      return {
+        researchId: p.id,
+        at: slot(Math.max(now, p.updatedAt + quietDays * 86_400_000)),
+        title: L("Your research question is waiting", "Araştırma sorun seni bekliyor"),
+        body: L(`“${p.title}” — next: ${STEP_LABEL(step).toLowerCase()}. Whenever you like.`, `“${p.title}” — sıradaki: ${STEP_LABEL(step).toLocaleLowerCase("tr")}. Ne zaman istersen.`),
+      };
+    });
+}

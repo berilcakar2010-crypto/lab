@@ -7,7 +7,7 @@ import type { ID } from "../../domain/types";
 import { SOURCE_TYPES, type CurriculumProposal, type SourceType } from "../../domain/adaptive";
 import { fmtDate, L } from "../../i18n";
 import { getGraph } from "../../knowledge/graph";
-import { SOURCE_TYPE_LABEL, addSection, addSource, mapSection, provenanceOf, sourcesForObject, verifyProvenance } from "../../adaptive/provenance";
+import { SOURCE_TYPE_LABEL, addSection, addSource, mapSection, markSourceChecked, provenanceOf, sourcesForObject, verifyProvenance } from "../../adaptive/provenance";
 import { CHANGE_KIND_LABEL, decideProposal, reviewNotes, withDependencies } from "../../adaptive/generator";
 import { GRANULARITY_LABEL } from "../../adaptive/granularity";
 import { reviewProposalAI } from "../../ai/adaptiveAI";
@@ -24,13 +24,18 @@ export function SourcesBlock({ loId }: { loId: string }) {
   const [title, setTitle] = useState("");
   const [type, setType] = useState<SourceType>("TEXTBOOK");
   const [section, setSection] = useState("");
+  const [author, setAuthor] = useState("");
+  const [edition, setEdition] = useState("");
+  const [published, setPublished] = useState("");
+  const [url, setUrl] = useState("");
+  const [timeSensitive, setTimeSensitive] = useState(false);
   const add = () => {
     act((d) => {
-      const sid = srcId || addSource(d, { title, type }).id;
+      const sid = srcId || addSource(d, { title, type, author, edition, published, url, timeSensitive }).id;
       const { sectionId } = addSection(d, sid, section || title, [loId]);
       mapSection(d, sid, sectionId, [loId]);
     });
-    setAdding(false); setTitle(""); setSection(""); setSrcId("");
+    setAdding(false); setTitle(""); setSection(""); setSrcId(""); setAuthor(""); setEdition(""); setPublished(""); setUrl(""); setTimeSensitive(false);
     toast(L("Source linked to this topic.", "Kaynak bu konuya bağlandı."));
   };
   return (
@@ -50,8 +55,10 @@ export function SourcesBlock({ loId }: { loId: string }) {
             <div key={i} className="list-item small">
               <span className="grow stack" style={{ gap: 0, minWidth: 0 }}>
                 <span className="truncate">{s.url ? <a href={s.url} target="_blank" rel="noreferrer">{s.title}</a> : s.title}</span>
-                <span className="tiny muted">{SOURCE_TYPE_LABEL(s.type)}{s.section ? ` · ${s.section}` : ""} · {s.origin === "yours" ? L("your source", "senin kaynağın") : L("Lab list", "Lab listesi")}</span>
+                <span className="tiny muted">{SOURCE_TYPE_LABEL(s.type)}{s.author ? ` · ${s.author}` : ""}{s.edition ? ` · ${s.edition}` : ""}{s.published ? ` · ${s.published}` : ""}{s.section ? ` · ${s.section}` : ""} · {s.origin === "yours" ? L("your source", "senin kaynağın") : L("Lab list", "Lab listesi")}</span>
+                {s.freshness === "check" && <span className="tiny" style={{ color: "var(--review)" }}>{L("Current information — not checked for a year; it may be out of date.", "Güncel bilgi — bir yıldır kontrol edilmedi; eskimiş olabilir.")}</span>}
               </span>
+              {s.freshness === "check" && s.sourceId && <button className="btn small ghost" onClick={() => act((d) => markSourceChecked(d, s.sourceId!))}>{L("Still current", "Hâlâ güncel")}</button>}
             </div>
           ))}
         </div>
@@ -69,6 +76,17 @@ export function SourcesBlock({ loId }: { loId: string }) {
                 {SOURCE_TYPES.filter((t) => t !== "AI_GENERATED").map((t) => <option key={t} value={t}>{SOURCE_TYPE_LABEL(t)}</option>)}
               </select>
             </div>
+          )}
+          {!srcId && (
+            <>
+              <div className="row nowrap" style={{ gap: 6 }}>
+                <input className="input grow" value={author} onChange={(e) => setAuthor(e.target.value)} placeholder={L("Author (optional)", "Yazar (isteğe bağlı)")} aria-label={L("Author", "Yazar")} />
+                <input className="input" style={{ width: 110 }} value={edition} onChange={(e) => setEdition(e.target.value)} placeholder={L("Edition", "Baskı")} aria-label={L("Edition", "Baskı")} />
+                <input className="input" style={{ width: 90 }} value={published} onChange={(e) => setPublished(e.target.value)} placeholder={L("Year", "Yıl")} aria-label={L("Year", "Yıl")} />
+              </div>
+              <input className="input" value={url} onChange={(e) => setUrl(e.target.value)} placeholder={L("Link (optional)", "Bağlantı (isteğe bağlı)")} aria-label="URL" />
+              <label className="row nowrap small"><input type="checkbox" checked={timeSensitive} onChange={(e) => setTimeSensitive(e.target.checked)} /> {L("Current information that can change (exam rules, syllabus, guidelines)", "Değişebilen güncel bilgi (sınav kuralları, müfredat, yönergeler)")}</label>
+            </>
           )}
           <input className="input" value={section} onChange={(e) => setSection(e.target.value)} placeholder={L("Chapter / section (optional)", "Bölüm (isteğe bağlı)")} aria-label={L("Section", "Bölüm")} />
           <div className="row" style={{ gap: 6 }}>

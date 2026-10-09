@@ -130,6 +130,14 @@ iş için *Devam / Baştan / Gözden geçir / Değiştir*, **Beni şaşırt** (R
   aktarma (`data/exchange.ts`, API anahtarları hariç), günlük otomatik yerel anlık görüntüler
   ve bozuk kopyada otomatik kurtarma (`data/store.ts`), sistem sağlığı ve bakım önerileri.
 
+- **Python sandbox**: gerçek CPython 3 (Pyodide), uygulamanın içinde, çevrimdışı. Yalıtılmış bir
+  worker'da çalışır; ağa ve verilere erişemez, 15 sn sınırı var, `plot()` ile grafik çizer.
+  Derleme sırasında `scripts/copy-pyodide.mjs` dosyaları `public/pyodide`'a kopyalar.
+- **Anlamsal arama** (Gemini embedding'leri; yalnızca sorgu gönderilir), **YZ ile ayrıştırma ve
+  soru varyasyonu** (büyüklük ve kalite kontrollerinden geçen kabul edilir), kaynaklarda baskı /
+  yıl / güncellik, isteğe bağlı araştırma hatırlatması, konu başına kalemle çizimler, yıllık
+  değerlendirmenin Markdown olarak dışa aktarılması.
+
 Denetim: `LAB_FINAL_AUDIT.md` · Son rapor: `LAB_FINAL_COMPLETION_REPORT.md`.
 
 ## Bilgi grafiği — Lab Müfredatı v2.1

@@ -82,13 +82,17 @@ export function verifyProvenance(db: LabDB, loId: string, by = "learner", now: M
 // Learning sources (books, courses…) mapped onto the graph
 // ---------------------------------------------------------------------------
 
-export function addSource(db: LabDB, s: { title: string; type: SourceType; author?: string; url?: string }, now: Millis = Date.now()): LearningSource {
+export function addSource(db: LabDB, s: { title: string; type: SourceType; author?: string; url?: string; edition?: string; published?: string; timeSensitive?: boolean }, now: Millis = Date.now()): LearningSource {
   const src: LearningSource = {
     id: newId("src"),
     title: s.title.trim(),
     type: s.type,
     author: s.author?.trim() || undefined,
     url: s.url?.trim() || undefined,
+    edition: s.edition?.trim() || undefined,
+    published: s.published?.trim() || undefined,
+    timeSensitive: s.timeSensitive || undefined,
+    checkedAt: s.timeSensitive ? now : undefined,
     sections: [],
     provenance: makeProvenance(s.type === "AI_GENERATED" ? "AI_GENERATED" : s.type, { source: s.title, sourceUrl: s.url, sourceTitle: s.title }, now),
     createdAt: now,
@@ -116,11 +120,29 @@ export function mapSection(db: LabDB, sourceId: ID, sectionId: ID, loIds: string
   sec.loIds = [...new Set(loIds.filter((id) => g.objects[id]))];
 }
 
+/** A time-sensitive source not checked for a year (or with no date) may be out of date. Timeless knowledge never "expires". */
+export function sourceFreshness(s: LearningSource, now: Millis = Date.now()): "timeless" | "current" | "check" {
+  if (!s.timeSensitive) return "timeless";
+  return s.checkedAt && now - s.checkedAt < 365 * 86_400_000 ? "current" : "check";
+}
+
+export function markSourceChecked(db: LabDB, id: ID, now: Millis = Date.now()): void {
+  const s = db.sources[id];
+  if (!s) return;
+  s.checkedAt = now;
+  s.provenance = { ...s.provenance, lastVerifiedAt: now, verifiedBy: "learner", verification: "VERIFIED" };
+}
+
 export interface ObjectSource {
   title: string;
   type: SourceType;
   url?: string;
   section?: string;
+  author?: string;
+  edition?: string;
+  published?: string;
+  freshness?: "timeless" | "current" | "check";
+  sourceId?: ID;
   /** "yours" = a source you added; "builtin" = Lab's resource list. */
   origin: "yours" | "builtin";
   verification: Provenance["verification"];
@@ -129,10 +151,10 @@ export interface ObjectSource {
 /** Every source that teaches a graph object: yours (by section) and Lab's built-in resources. */
 export function sourcesForObject(db: LabDB, g: KnowledgeGraph, loId: string): ObjectSource[] {
   const out: ObjectSource[] = [];
-  for (const s of Object.values(db.sources)) for (const sec of s.sections) if (sec.loIds.includes(loId)) out.push({ title: s.title, type: s.type, url: s.url, section: sec.title, origin: "yours", verification: s.provenance.verification });
+  for (const s of Object.values(db.sources)) for (const sec of s.sections) if (sec.loIds.includes(loId)) out.push({ title: s.title, type: s.type, url: s.url, section: sec.title, author: s.author, edition: s.edition, published: s.published, freshness: sourceFreshness(s), sourceId: s.id, origin: "yours", verification: s.provenance.verification });
   for (const rid of g.objects[loId]?.recommendedResources ?? []) {
     const r = g.resources[rid];
-    if (r) out.push({ title: r.title, type: KIND_TO_TYPE[r.kind], url: r.url, origin: "builtin", verification: "UNVERIFIED" });
+    if (r) out.push({ title: r.title, type: KIND_TO_TYPE[r.kind], url: r.url, author: r.author, origin: "builtin", verification: "UNVERIFIED" });
   }
   return out;
 }

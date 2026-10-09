@@ -692,11 +692,19 @@ export default async function flows({ page, step, shot, click, BASE }) {
   });
 
   await step("Python sandbox runs real Python offline, isolated, and plots", async () => {
+    // Serve the runtime the way some Android WebViews do: without the application/wasm type.
+    let wrongMime = 0;
+    await page.context().route("**/pyodide.asm.wasm", async (route) => {
+      const resp = await route.fetch();
+      wrongMime++;
+      await route.fulfill({ response: resp, headers: { ...resp.headers(), "content-type": "application/octet-stream" } });
+    });
     await page.goto(`${BASE}#/graph?lo=phys.mech.kinematics-1d&tab=lab`);
     await page.getByRole("button", { name: "Python", exact: true }).first().click();
     await page.getByLabel("Python kodu").waitFor();
     await page.getByRole("button", { name: "Çalıştır" }).first().click();
-    await page.getByText(/period ≈ 2\.006 s/).waitFor({ timeout: 90_000 });
+    await page.getByText(/period ≈ 2\.006 s/).first().waitFor({ timeout: 90_000 });
+    if (!wrongMime) throw new Error("wasm request was not intercepted; MIME fallback not exercised");
     await shot("50-python");
     await page.getByLabel("Python kodu").fill("import js");
     await page.getByRole("button", { name: "Çalıştır" }).first().click();
@@ -732,6 +740,29 @@ export default async function flows({ page, step, shot, click, BASE }) {
     await page.unroute("https://generativelanguage.googleapis.com/**");
   });
 
+  await step("sketch with a pen on a topic, and a source with edition, year and 'current information'", async () => {
+    await page.goto(`${BASE}#/graph?lo=phys.mech.newton&tab=notes`);
+    await page.getByRole("button", { name: /Kalemle ya da parmakla çiz/ }).click();
+    const canvas = page.locator("canvas").last();
+    const box = await canvas.boundingBox();
+    await page.mouse.move(box.x + 40, box.y + 40);
+    await page.mouse.down();
+    for (let i = 1; i <= 12; i++) await page.mouse.move(box.x + 40 + i * 15, box.y + 40 + Math.sin(i / 2) * 30);
+    await page.mouse.up();
+    await page.getByLabel("Açıklama").fill("Serbest cisim");
+    await page.getByRole("button", { name: "Çizimi kaydet" }).click();
+    await page.locator("figure.sketch img").first().waitFor();
+    await shot("52-sketch");
+    await page.getByRole("tab", { name: "Genel" }).click();
+    await page.getByRole("button", { name: /Bunu anlatan bir kitap ya da kurs/ }).click();
+    await page.getByLabel("Başlık", { exact: true }).last().fill("University Physics");
+    await page.getByLabel("Yazar").fill("Young & Freedman");
+    await page.getByLabel("Baskı").fill("15. baskı");
+    await page.getByLabel("Yıl").fill("2019");
+    await page.getByRole("button", { name: "Bağla" }).click();
+    await page.getByText(/Young & Freedman · 15\. baskı · 2019/).waitFor();
+  });
+
   await step("question bank lists every question with its state", async () => {
     await page.goto(`${BASE}#/study?tab=questions`);
     await page.getByText(/soru\. Uzun zaman önce/).waitFor();
@@ -751,6 +782,20 @@ export default async function flows({ page, step, shot, click, BASE }) {
     await page.goto(`${BASE}#/settings`);
     await click("Bütünlüğü kontrol et");
     await page.getByText("Bütünlük kontrolü geçti").waitFor();
+  });
+
+  await step("Scenario C: coming back after three months — the state line says so and review comes first", async () => {
+    await page.waitForTimeout(800); // let the last write land
+    const later = await page.context().newPage();
+    await later.clock.install({ time: new Date(Date.now() + 92 * 86_400_000) });
+    await later.goto(`${BASE}#/`);
+    await later.locator(".state-line").waitFor();
+    const line = await later.locator(".state-line").textContent();
+    const days = Number((line ?? "").match(/(\d+) gün oldu/)?.[1] ?? 0);
+    if (days < 80) throw new Error(`state line after 3 months: ${line}`);
+    await later.getByText(/Şimdi tek şey/).first().waitFor();
+    await later.screenshot({ path: "smoke-shots/53-three-months-later.png" });
+    await later.close();
   });
 
   for (const [w, h, label] of [[390, 844, "phone"], [1180, 820, "tablet-landscape"], [820, 1180, "tablet-portrait"]]) {

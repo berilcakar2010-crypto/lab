@@ -167,7 +167,7 @@ export interface UserPreference {
   /** Interface and content language. English is the default. */
   language: Lang;
   /** Daily spaced-repetition reminder (local notification). */
-  reminders: { enabled: boolean; hour: number; minute: number; /** Notifications before school exams and deadlines. */ exams: boolean };
+  reminders: { enabled: boolean; hour: number; minute: number; /** Notifications before school exams and deadlines. */ exams: boolean; /** A gentle note about research left untouched for a week (opt-in). */ research?: boolean };
   /** NORMAL: understanding, mastery, retention, transfer. EXAM: a temporary layer of exam priorities over the same graph. */
   studyMode: StudyMode;
   /** The exam whose priorities apply in EXAM mode. */
@@ -798,6 +798,8 @@ export interface StudyNote {
   text: string;
   /** Extra mind-map branches the learner added. */
   mapItems: string[];
+  /** Handwritten sketches / annotations (stylus or finger), newest last; JPEG data URLs kept small. */
+  sketches?: { id: string; at: Millis; image: string; caption?: string }[];
   updatedAt: Millis;
 }
 

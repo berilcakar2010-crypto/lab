@@ -20,7 +20,8 @@ import { ISSUE_LABEL, SEVERITY_LABEL, summarize, validateGraph, type Issue } fro
 import { applyPlan, CHANGE_LABEL, diffUpdate, exportGraph, knownIds, parseUpdate, type UpdatePlan } from "../../knowledge/planner";
 import { CHANGELOG } from "../../knowledge/registry";
 import { domainMindMap, objectMindMap } from "../../study/mindmap";
-import { addMapItem, removeMapItem, setNoteText } from "../../study/actions";
+import { addMapItem, addSketch, removeMapItem, removeSketch, setNoteText } from "../../study/actions";
+import { DrawingCanvas } from "../components/DrawingCanvas";
 import { cardStats } from "../../study/flashcards";
 import { fmtDate, getLang, L, lower } from "../../i18n";
 import { navigate, store, toast, useDB } from "../state";
@@ -630,6 +631,7 @@ function NotesTab({ db, id }: { db: LabDB; id: string }) {
       <textarea className="textarea" style={{ minHeight: 180 }} value={text} onChange={(e) => setText(e.target.value)} aria-label={L("Your notes", "Notların")}
         onBlur={() => text !== (n?.text ?? "") && store.transact((d) => setNoteText(d, id, text))}
         placeholder={L("Your own notes, formulas, examples… (saved automatically)", "Kendi notların, formüllerin, örneklerin… (otomatik kaydedilir)")} />
+      <Sketches db={db} id={id} />
       {!!n?.mapItems.length && (
         <div className="stack" style={{ gap: 4 }}>
           <span className="eyebrow">{L("Your mind-map branches", "Zihin haritası dalların")}</span>
@@ -776,6 +778,42 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
     <section className="stack" style={{ gap: 6 }}>
       <h3 style={{ margin: 0 }}>{title}</h3>
       {children}
+    </section>
+  );
+}
+
+/** Handwritten sketches and annotations for this topic — stylus or finger, saved with the topic. */
+function Sketches({ db, id }: { db: LabDB; id: string }) {
+  const list = db.notes[id]?.sketches ?? [];
+  const [drawing, setDrawing] = useState(false);
+  const [caption, setCaption] = useState("");
+  const [grab, setGrab] = useState<(() => string) | null>(null);
+  const [strokes, setStrokes] = useState(0);
+  return (
+    <section className="stack" style={{ gap: 6 }}>
+      <div className="row between"><span className="eyebrow">{L("Sketches", "Çizimler")}</span>
+        {!drawing && <button className="btn small ghost" onClick={() => setDrawing(true)}>{L("+ Sketch with pen or finger", "+ Kalemle ya da parmakla çiz")}</button>}</div>
+      {drawing && (
+        <div className="stack" style={{ gap: 6 }}>
+          <DrawingCanvas height={300} label={L("Sketch", "Çizim")} onChange={(st, toDataURL) => { setStrokes(st.strokes); setGrab(() => toDataURL); }} />
+          <input className="input" value={caption} onChange={(e) => setCaption(e.target.value)} placeholder={L("Caption (optional)", "Açıklama (isteğe bağlı)")} aria-label={L("Caption", "Açıklama")} />
+          <div className="row" style={{ gap: 6 }}>
+            <button className="btn small primary" disabled={!grab || !strokes} onClick={() => { const img = grab!(); store.transact((d) => addSketch(d, id, img, caption)); setDrawing(false); setCaption(""); setGrab(null); setStrokes(0); toast(L("Sketch saved with this topic.", "Çizim bu konuyla birlikte kaydedildi.")); }}>{L("Save sketch", "Çizimi kaydet")}</button>
+            <button className="btn small ghost" onClick={() => { setDrawing(false); setGrab(null); }}>{L("Cancel", "Vazgeç")}</button>
+          </div>
+        </div>
+      )}
+      {list.length > 0 && (
+        <div className="sketch-grid">
+          {[...list].reverse().map((s) => (
+            <figure key={s.id} className="sketch">
+              <img src={s.image} alt={s.caption ?? L("Sketch", "Çizim")} />
+              <figcaption className="tiny muted row between nowrap"><span className="truncate">{s.caption ?? fmtDate(s.at)}</span>
+                <button className="btn small ghost" aria-label={L("Delete sketch", "Çizimi sil")} onClick={() => confirm(L("Delete this sketch?", "Bu çizim silinsin mi?")) && store.transact((d) => removeSketch(d, id, s.id))}>×</button></figcaption>
+            </figure>
+          ))}
+        </div>
+      )}
     </section>
   );
 }

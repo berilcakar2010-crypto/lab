@@ -128,3 +128,20 @@ export function studyExport(db: LabDB): string {
     exams: Object.values(db.exams),
   }, null, 2);
 }
+
+export const MAX_SKETCHES = 8;
+
+/** Save a handwritten sketch for a topic (oldest dropped beyond the cap). */
+export function addSketch(db: LabDB, loId: string, image: string, caption?: string, now = Date.now()): void {
+  if (!image.startsWith("data:image/")) throw new Error("Not an image");
+  const n = note(db, loId);
+  n.sketches = [...(n.sketches ?? []), { id: `sk_${now.toString(36)}`, at: now, image, caption: caption?.trim() || undefined }].slice(-MAX_SKETCHES);
+  n.updatedAt = now;
+}
+
+export function removeSketch(db: LabDB, loId: string, id: string): void {
+  const n = db.notes[loId];
+  if (!n?.sketches) return;
+  n.sketches = n.sketches.filter((s) => s.id !== id);
+  n.updatedAt = Date.now();
+}

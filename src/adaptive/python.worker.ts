@@ -8,6 +8,22 @@ import { execute, prepare, type PyodideLike } from "./pythonCore";
 let py: PyodideLike | null = null;
 let loading: Promise<PyodideLike> | null = null;
 
+// Some WebViews (Android's local asset server) serve .wasm without the
+// application/wasm type, which makes streaming compilation fail. Fall back to
+// compiling from the downloaded bytes.
+const streaming = WebAssembly.instantiateStreaming?.bind(WebAssembly);
+if (streaming) {
+  WebAssembly.instantiateStreaming = async (source, imports) => {
+    const res = await source;
+    const copy = res.clone();
+    try {
+      return await streaming(res, imports);
+    } catch {
+      return WebAssembly.instantiate(await copy.arrayBuffer(), imports);
+    }
+  };
+}
+
 async function load(indexURL: string): Promise<PyodideLike> {
   const mod = (await import(/* @vite-ignore */ `${indexURL}pyodide.mjs`)) as { loadPyodide: (o: { indexURL: string }) => Promise<PyodideLike> };
   const p = await mod.loadPyodide({ indexURL });

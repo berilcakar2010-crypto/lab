@@ -16,7 +16,8 @@ import { ARTIFACT_LABEL, JOURNAL_LABEL, PROJECT_LABEL, PROJECT_STATUS_LABEL, add
 import { GOAL_STATUS_LABEL, createGoal, decomposeGoal, pathForGoal, suggestGoalObjects, updateGoal } from "../../academic/goals";
 import { restoreVersion } from "../../academic/versioning";
 import { SUBJECT_KIND_LABEL, addGrade, addSchoolSubject, deleteGrade, subjectSummary } from "../../academic/school";
-import { portfolio, timeline, yearlyReflection, type TimelineKind } from "../../academic/portfolio";
+import { portfolio, timeline, yearlyReflection, yearlyReflectionMarkdown, type TimelineKind } from "../../academic/portfolio";
+import { saveTextFile } from "../native";
 import { competitionReport } from "../../academic/layers";
 import { globalSearch } from "../../adaptive/search";
 
@@ -416,7 +417,8 @@ function Timeline({ db, g }: { db: LabDB; g: KnowledgeGraph }) {
     <div className="stack" style={{ gap: 12 }}>
       {years.length > 1 && <select className="input small" style={{ width: "auto" }} value={year} onChange={(e) => setYear(Number(e.target.value))} aria-label={L("Year", "Yıl")}>{years.map((x) => <option key={x} value={x}>{x}</option>)}</select>}
       <section className="card stack" style={{ gap: 6 }}>
-        <h2>{L(`What I learned in ${year}`, `${year} yılında ne öğrendim`)}</h2>
+        <div className="row between"><h2 style={{ margin: 0 }}>{L(`What I learned in ${year}`, `${year} yılında ne öğrendim`)}</h2>
+          <button className="btn small ghost" onClick={() => void saveTextFile(`lab-${year}.md`, yearlyReflectionMarkdown(db, g, year), "text/markdown")}>{L("Export (Markdown)", "Dışa aktar (Markdown)")}</button></div>
         {y.empty ? <p className="small muted">{L("Not enough data yet for this year.", "Bu yıl için henüz yeterli veri yok.")}</p> : (
           <ul className="small text-2 tight">
             <li>{L(`${y.newConcepts.length} new concepts`, `${y.newConcepts.length} yeni kavram`)}{y.checksPassed ? L(` (${y.checksPassed} shown in short checks)`, ` (${y.checksPassed} tanesi kısa kontrollerde gösterildi)`) : ""}</li>

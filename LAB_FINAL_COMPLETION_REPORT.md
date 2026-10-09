@@ -7,9 +7,9 @@ Dal: `ccr-2af93b6d-f90t4l` · Tarih: 2026-10-09 · Denetim: `LAB_FINAL_AUDIT.md`
 | Kontrol | Sonuç |
 |---|---|
 | Typecheck (`tsc --noEmit`) | **PASS** |
-| Birim + entegrasyon testleri (`vitest`) | **PASS** — 34 dosyada 215 test (öncesi: 183) |
-| Üretim derlemesi (`vite build`) | **PASS** — ana paket 2,33 MB (ikincil ekranlar ayrı parçalarda); boyut uyarısı sürüyor |
-| Gerçek tarayıcıda uçtan uca akışlar (`npm run smoke`) | **PASS** — 57 adım (öncesi: 48); telefon, yatay ve dikey tablette yatay taşma yok |
+| Birim + entegrasyon testleri (`vitest`) | **PASS** — 36 dosyada 227 test (öncesi: 183); gerçek CPython testleri dahil |
+| Üretim derlemesi (`vite build`) | **PASS** — ana paket 2,35 MB (gzip ≈ 750 KB); ikincil ekranlar ve Python ayrı parçalarda |
+| Gerçek tarayıcıda uçtan uca akışlar (`npm run smoke`) | **PASS** — 61 adım (öncesi: 48); A–F senaryolarının hepsi; telefon, yatay ve dikey tablette yatay taşma yok |
 | Müfredat doğrulayıcısı (yerleşik grafik) | 0 hata · 0 uyarı (sağlık testi bunu doğruluyor) |
 
 ---
@@ -78,20 +78,27 @@ Bunlar yeniden yazılmadı; bu sistemlerin üzerine inşa edildi.
 | Spesifikasyona aykırı olanlar | "Seri (streak)" göstergeleri kaldırıldı; yerine "Etkin gün" ve "Dokunulan fikir" geldi. "Kilitli" yerine "Önizleme" kullanılıyor. | — |
 | Performans | Ana sayfa ve oturum dışındaki ekranlar ihtiyaç halinde yükleniyor (9 ekran). | `ui/App.tsx` |
 
-## 4. Kısmen desteklenenler (PARTIAL)
+## 4. Telafi turu: önceki kısmi ve engellenen maddeler
 
-- **Sandbox'ta Python**: ifade taraması, ODE ve veri analizi gerçek çalışıyor. Python yorumlayıcısı yok (bkz. BLOCKED).
-- **YZ ile ayrıştırma ve soru varyasyonu**: ayrıştırma ve varyasyonlar yerel ve gerçek. YZ ile daha zengin varyasyon yalnızca mevcut soru üretici üzerinden (kalite kontrolü var); ayrı bir "YZ ayrıştırıcı" çağrısı eklenmedi.
-- **Embedding**: arayüzde yetenek olarak tanımlı, hiçbir sağlayıcıda uygulanmadı; arama yerel.
-- **Kaynak meta verisi**: yazar, URL, tür ve doğrulama var. Baskı / sürüm / tarih alanları yok.
-- **Bildirimler**: sınav ve tekrar hatırlatmaları var. "Yarım kalan araştırma" hatırlatması eklenmedi; uygulama içi giriş ekranında öneriliyor.
-- **Kalem**: çizim ve el yazısı cevap mevcut. Grafik üzerine not alma (annotation) yok.
-- **Paket boyutu**: ikincil ekranlar ayrıldı. Ana paket 2,33 MB çünkü iki dilde 482 nesnelik içerik başta yükleniyor.
+| Madde | Önceki durum | Şimdi | Nasıl |
+|---|---|---|---|
+| **Python sandbox** | BLOCKED | **DONE** | Pyodide (CPython 3, WebAssembly) npm paketinden uygulamanın içine kopyalanıyor (`scripts/copy-pyodide.mjs`), yani **çevrimdışı** çalışıyor. Yalnızca Python açıldığında yükleniyor. **Web Worker** içinde çalışıyor; Python'dan `js` ve ağa erişim kapalı, worker'dan fetch / XHR / WebSocket / IndexedDB kaldırılıyor. Çıktı sınırlı, 15 sn sonra worker sonlandırılıyor. `plot()` sandbox grafiğine çiziyor; kaydedilen çalıştırma yorumla birlikte kanıt oluyor. Android'de `.wasm` yanlış MIME türüyle sunulursa bayt dizisinden derlemeye düşülüyor (smoke testinde yanlış MIME ile doğrulandı). |
+| **Embedding + anlamsal arama** | BLOCKED | **DONE (Gemini)** | `text-embedding-004` (256 boyut). Nesne vektörleri grafik sürümü başına bir kez hesaplanıp yerelde önbelleğe alınıyor; her arama yalnızca **sorguyu** gönderiyor. Komut paletinde "Anlama göre ara (YZ)" var. Groq embedding sunmadığı için orada `embed: false`. Smoke testinde günlük metninin gönderilmediği doğrulanıyor. |
+| **YZ ile ayrıştırma** | PARTIAL | **DONE** | `decomposeAI`: her adımın hedefi büyüklük doğrulayıcısından, her sorusu kalite kontrolünden geçiyor; geçemeyenler eleniyor, hiçbiri geçmezse Lab'ın yerel planına düşülüyor. Oturumda "YZ ile böl" düğmesi. |
+| **YZ ile soru varyasyonu** | PARTIAL | **DONE** | `varyQuestionAI`: aynı beceri, başka sayı / bağlam / gösterim. Kalite kontrolü var; orijinali otomatik değerlendirilebiliyorsa varyasyonun da öyle olması şart. Soru bankasında "YZ varyasyonu" düğmesi. |
+| **Kaynak meta verisi** | PARTIAL | **DONE** | Baskı / sürüm, yayın yılı, URL, yazar. "Değişebilen güncel bilgi" işareti: bir yıl kontrol edilmeyen güncel kaynak "eskimiş olabilir" diye uyarılıyor; "Hâlâ güncel" ile doğrulanıyor. Zamansız bilgi hiç "eskimiş" sayılmıyor. |
+| **Yarım kalan araştırma bildirimi** | PARTIAL | **DONE (isteğe bağlı)** | Bir hafta dokunulmamış açık araştırma için en fazla 2 nazik not, seçilen saatte (Android yerel bildirim; tarayıcıda açılışta). Suçlayıcı dil yok. |
+| **Kalemle not alma** | PARTIAL | **DONE** | Her konunun Notlar sekmesinde kalem ya da parmakla çizim ve açıklama; JPEG olarak saklanıyor, en fazla 8 çizim, silinebilir, dışa aktarmaya dahil. Grafik haritasının *üzerine* çizim hâlâ yok; çizimler konuya bağlı ayrı tuvallerde. |
+| **Yıllık değerlendirme dışa aktarma** | (borç) | **DONE** | Zaman çizelgesiyle birlikte Markdown olarak. |
+| **Senaryo C (3 ay sonra dönüş)** | yalnız birim testi | **DONE** | Gerçek tarayıcıda saat ~3 ay ileri alınarak: durum cümlesi aradaki günü söylüyor, ilk öneri tekrar, diğer seçenekler açık. |
 
-## 5. Engellenenler (BLOCKED) ve nedeni
+## 5. Hâlâ kısmi olanlar (dürüst durum)
 
-- **Python çalıştırma**: uygulama çevrimdışı çalışan bir Capacitor/WebView uygulaması ve içinde Python çalışma ortamı yok. Pyodide yaklaşık 10 MB+ indirme ve ağ gerektirir; çevrimdışı ve düşük bellek hedefiyle çelişiyor. Sahte çalıştırma üretilmedi.
-- **Sağlayıcı embedding'leri**: Gemini ve Groq istemcilerinde uç nokta çağrısı yok ve anahtar olmadan test edilemiyor. Arayüzde `embed: false` olarak dürüstçe bildiriliyor.
+- **Paket boyutu**: ana paket 2,35 MB (gzip ≈ 750 KB) ve APK içinden yerel olarak yükleniyor. Varsayılan dil İngilizce olduğu için Türkçe temel içerik ve İngilizce katman açılışta birlikte gerekiyor; dile göre bölmek yalnızca Türkçe kullanıcılara ~%40 kazandırırdı ve dil değiştirme akışını eşzamansız hale getirmeyi gerektirirdi. Teknik borç olarak duruyor.
+- **APK boyutu**: Python ortamı uygulamayı yaklaşık 14 MB büyütüyor (yalnızca kullanılınca belleğe yükleniyor).
+- **Python paketleri**: yalnızca standart kütüphane var (math, statistics, random, fractions…). numpy veya matplotlib yok; bunlar ağdan paket indirmeyi gerektirir.
+- **Anlamsal arama**: yalnızca Gemini ile çalışıyor; diğer sağlayıcılarda sözcük tabanlı arama devam ediyor.
+- **Grafik haritasının üzerine çizim**: yok.
 
 ## 6. Mimari
 
@@ -223,28 +230,27 @@ Teknik borç: içerik verisinin dil bazında tembel yüklenmesi.
 ## 18. Testler
 
 - `src/adaptive/final.test.ts` (21 test): kontroller, ayrıştırma, derinlik, Open Lab, keşif, soru bankası, stratejiler, kişisel model, arama, v4 göçü, What Next güven değeri, dil ve yarışma katmanları.
-- `src/academic/academic.test.ts` (11 test): kayıtlar ve sürümleme, hedefler, okul, portfolyo, dışa / içe aktarma, kullanıcı kavramları ve geri alma, YZ önbelleği / üslup / bağlam bütçesi, anlık görüntüler, sağlık.
-- Smoke: 57 adım. Spesifikasyon §170 senaryolarının karşılığı:
+- `src/adaptive/python.test.ts` (4 test): gerçek CPython; çıktı, grafik serileri, hata izi, JavaScript/ağ erişiminin engellenmesi, çıktı sınırı.
+- `src/ai/generative.test.ts` (4 test): YZ ayrıştırma (kontrollerden geçmeyen adımlar elenir, yerel yedek), YZ varyasyonu (cevap anahtarını kaybeden reddedilir), anlamsal arama (dizin bir kez kurulur, yalnızca sorgu gönderilir).
+- `src/academic/academic.test.ts` (15 test): kayıtlar ve sürümleme, hedefler, okul, portfolyo, dışa / içe aktarma, kullanıcı kavramları ve geri alma, YZ önbelleği / üslup / bağlam bütçesi, anlık görüntüler, sağlık.
+- Smoke: 61 adım; Python (yanlış MIME ile bile), anlamsal arama (gizlilik kontrolüyle), kalemle çizim, kaynak meta verisi ve 3 ay sonra dönüş dahil. Spesifikasyon §170 senaryolarının karşılığı:
   - **A**: aç → tek şey → başla → derin çalışma → oturum sonu. Hata → onarım → ustalık akışı önceki adımlarda ve birim testlerinde.
   - **B**: komut paletinden "öğren Fourier dönüşümü" → grafik önerisi → onay → ilk soru.
-  - **C**: 90 gün sonra dönüş — birim testinde (tarayıcı saatini ileri almak yerine).
+  - **C**: 3 ay sonra dönüş — birim testinde ve gerçek tarayıcıda saat ileri alınarak.
   - **D**: Beni şaşırt.
   - **E**: "Ne çalışacağımı bilmiyorum".
   - **F**: YZ hatasında çevrimdışı yedek davranış (Gemini hata adımı).
 
 ## 19. Derleme durumu
 
-Typecheck, 215 test, üretim derlemesi ve 57 adımlık smoke testi geçiyor.
+Typecheck, 227 test, üretim derlemesi ve 61 adımlık smoke testi geçiyor.
 
 ## 20. Kalan teknik borç
 
-- İçerik verisini dil bazında parçalara bölmek (ana paket 2,33 MB).
-- Kaynaklar için baskı / sürüm / tarih alanları.
-- Python sandbox (BLOCKED).
-- YZ ile ayrıştırma ve varyasyon için ayrı roller.
-- Yarım kalan araştırma için isteğe bağlı bildirim.
-- Grafik üzerine kalemle not alma.
-- Yıllık değerlendirmenin dışa aktarılması.
+- İçerik verisini dil bazında parçalara bölmek (ana paket 2,35 MB, gzip ≈ 750 KB).
+- Python için isteğe bağlı paket (numpy) desteği; ağ gerektirir.
+- Groq gibi embedding sunmayan sağlayıcılar için anlamsal arama.
+- Grafik haritası üzerine doğrudan çizim.
 
 ## 21. Gelecekte genişletilebilirlik
 
@@ -268,23 +274,23 @@ Her yeni özellik Kullanıcı → Hedef → Grafik → Rota → Meydan okuma →
 | Rota planlayıcı + rota geçmişi | DONE |
 | What Next (8 seçenek, gerekçe, güven) | DONE |
 | Adım sistemi + uzunluk + dinamik ayrıştırma | DONE |
-| Soru sistemi + soru bankası + kalite + varyasyon | DONE (YZ varyasyonu PARTIAL) |
+| Soru sistemi + soru bankası + kalite + varyasyon (yerel + YZ) | DONE |
 | Önce soru döngüsü / Open Lab / tek şey / odak akışı | DONE |
 | Ustalık profili + derinlik + kanıt + denetim | DONE |
 | "Biliyorum" → kısa test | DONE |
 | Hata grafiği + takılma tespiti | DONE |
 | Kalıcılık (strateji arayüzü) + transfer | DONE |
 | YZ öğretmen, müfredat kurucu, adım üretici, büyüklük doğrulayıcı | DONE |
-| Sağlayıcı soyutlaması + yetenekler + önbellek + gizlilik | DONE (embedding BLOCKED) |
+| Sağlayıcı soyutlaması + yetenekler + önbellek + gizlilik + embedding | DONE (embedding yalnızca Gemini) |
 | Okul / Sınav / AP / Yarışma / Diller | DONE |
 | Araştırma / Projeler / Eserler / Portfolyo / Günlük | DONE |
 | Hedefler + ayrıştırma | DONE |
-| Kaynaklar | PARTIAL (baskı ve tarih alanları yok) |
+| Kaynaklar (baskı, tarih, güncellik) | DONE |
 | Göç / dışa aktarma / içe aktarma / kurtarma / yedek | DONE |
 | Analitik: katılım, öğrenme, kalıcılık, derinlik, hatalar, deneyler, içgörüler, rekorlar | DONE |
 | Keşif / Beni şaşırt / bilmiyorum / önizleme / neden önemli / nereye götürür | DONE |
 | Derin çalışma / devam / kesinti kurtarma / oturum sonu | DONE |
 | Arama + hızlı komut | DONE |
 | Sistem sağlığı + bakım önerileri | DONE |
-| Sandbox | PARTIAL (Python BLOCKED) |
-| Dikey tablet öncelikli, kalem dostu, erişilebilir | DONE (grafik üzerine not alma PARTIAL) |
+| Sandbox (formül, ODE, veri, **gerçek Python, çevrimdışı**) | DONE (yalnızca standart kütüphane) |
+| Dikey tablet öncelikli, kalem dostu (konu başına çizimler), erişilebilir | DONE (harita üzerine çizim PARTIAL) |

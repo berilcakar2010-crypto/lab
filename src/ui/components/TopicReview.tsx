@@ -163,16 +163,18 @@ export function ReminderSettings({ db }: { db: LabDB }) {
   const save = async (next: Partial<LabDB["preferences"]["reminders"]>) => {
     let enabled = next.enabled ?? r.enabled;
     let exams = next.exams ?? r.exams;
-    if (next.enabled || next.exams) {
+    let research = next.research ?? r.research ?? false;
+    if (next.enabled || next.exams || next.research) {
       const p = await notificationPermission(true).catch(() => "unsupported" as PermissionState);
       setPerm(p);
       if (p !== "granted") {
         toast(p === "unsupported" ? L("Notifications are not available here.", "Burada bildirim kullanılamıyor.") : L("Notifications are not allowed. Allow them in the system settings.", "Bildirimlere izin verilmedi. Sistem ayarlarından izin ver."), "error");
         if (next.enabled) enabled = false;
         if (next.exams) exams = false;
+        if (next.research) research = false;
       }
     }
-    store.transact((d) => { d.preferences.reminders = { ...d.preferences.reminders, ...next, enabled, exams }; });
+    store.transact((d) => { d.preferences.reminders = { ...d.preferences.reminders, ...next, enabled, exams, research }; });
     const n = await refreshReminders(store.state).catch(() => 0);
     setPlanned(n);
     if (next.enabled) toast(isNative() ? L(`Reminders on — ${n} planned for the next two weeks.`, `Hatırlatmalar açık — önümüzdeki iki hafta için ${n} tane planlandı.`) : L("Reminders on — you'll be notified when you open Lab and something is due.", "Hatırlatmalar açık — Lab'i açtığında tekrar edilecek bir şey varsa bildirim gelir."));
@@ -187,6 +189,10 @@ export function ReminderSettings({ db }: { db: LabDB }) {
       <label className="row nowrap" style={{ gap: 10 }}>
         <input type="checkbox" checked={r.exams} onChange={(e) => void save({ exams: e.target.checked })} />
         <span>{L("Exam reminders (on the days you choose for each exam)", "Sınav hatırlatmaları (her sınav için seçtiğin günlerde)")}</span>
+      </label>
+      <label className="row nowrap" style={{ gap: 10 }}>
+        <input type="checkbox" checked={!!r.research} onChange={(e) => void save({ research: e.target.checked })} />
+        <span>{L("A gentle note when a research question has waited a week", "Bir araştırma sorusu bir hafta beklediğinde nazik bir not")}</span>
       </label>
       <label className="row nowrap small" style={{ gap: 10 }}>
         <span>{L("Time", "Saat")}</span>

@@ -16,6 +16,7 @@ import { L } from "../i18n";
 import { dueCards } from "../study/flashcards";
 import { dueTopics, reminderForecast, reminderText } from "../study/topics";
 import { examReminders } from "../study/exams";
+import { researchReminders } from "../adaptive/research";
 import { getGraph } from "../knowledge/graph";
 import { isNative } from "./native";
 
@@ -24,6 +25,7 @@ const DAYS = 14;
 const CHANNEL = "lab-review";
 const EXAM_ID = 7100;
 const EXAM_CHANNEL = "lab-exams";
+const RESEARCH_ID = 7300;
 
 export type PermissionState = "granted" | "denied" | "prompt" | "unsupported";
 
@@ -43,10 +45,10 @@ export async function refreshReminders(db: LabDB): Promise<number> {
   if (!isNative()) return 0;
   const { LocalNotifications } = await import("@capacitor/local-notifications");
   const pending = await LocalNotifications.getPending();
-  const ours = pending.notifications.filter((n) => n.id >= BASE_ID && n.id < BASE_ID + 200);
+  const ours = pending.notifications.filter((n) => n.id >= BASE_ID && n.id < BASE_ID + 400);
   if (ours.length) await LocalNotifications.cancel({ notifications: ours.map((n) => ({ id: n.id })) });
-  const { enabled, hour, minute, exams } = db.preferences.reminders;
-  if (!enabled && !exams) return 0;
+  const { enabled, hour, minute, exams, research } = db.preferences.reminders;
+  if (!enabled && !exams && !research) return 0;
   if ((await notificationPermission()) !== "granted") return 0;
   try {
     await LocalNotifications.createChannel({ id: CHANNEL, name: L("Review reminders", "Tekrar hatırlatmaları"), importance: 4, description: L("Daily spaced-repetition reminder", "Günlük aralıklı tekrar hatırlatması") });
@@ -56,7 +58,8 @@ export async function refreshReminders(db: LabDB): Promise<number> {
   }
   const slots = enabled ? reminderForecast(db, hour, minute, Date.now(), DAYS).filter((s) => s.cards + s.topics > 0) : [];
   const examSlots = exams ? examReminders(db, getGraph(db.knowledge), hour, minute).slice(0, 100) : [];
-  if (!slots.length && !examSlots.length) return 0;
+  const researchSlots = research ? researchReminders(db, hour, minute) : [];
+  if (!slots.length && !examSlots.length && !researchSlots.length) return 0;
   await LocalNotifications.schedule({
     notifications: [
       ...slots.map((s, i) => {
@@ -64,9 +67,10 @@ export async function refreshReminders(db: LabDB): Promise<number> {
         return { id: BASE_ID + i, title: t.title, body: t.body, schedule: { at: new Date(s.at), allowWhileIdle: true }, channelId: CHANNEL, extra: { route: "/study" } };
       }),
       ...examSlots.map((r, i) => ({ id: EXAM_ID + i, title: r.title, body: r.body, schedule: { at: new Date(r.at), allowWhileIdle: true }, channelId: EXAM_CHANNEL, extra: { route: `/study?tab=exams&exam=${r.examId}` } })),
+      ...researchSlots.map((r, i) => ({ id: RESEARCH_ID + i, title: r.title, body: r.body, schedule: { at: new Date(r.at), allowWhileIdle: true }, channelId: CHANNEL, extra: { route: `/study?tab=research&res=${r.researchId}` } })),
     ],
   });
-  return slots.length + examSlots.length;
+  return slots.length + examSlots.length + researchSlots.length;
 }
 
 /** Open the Study page when a reminder is tapped (native). */
@@ -84,8 +88,8 @@ const WEB_KEY = "lab-last-web-reminder";
 /** Browser: one notification per day on opening the app, if something is due or an exam reminder day has come. */
 export function webReminderOnOpen(db: LabDB): void {
   if (isNative() || typeof Notification === "undefined" || Notification.permission !== "granted") return;
-  const { enabled, exams } = db.preferences.reminders;
-  if (!enabled && !exams) return;
+  const { enabled, exams, research } = db.preferences.reminders;
+  if (!enabled && !exams && !research) return;
   const today = new Date().toDateString();
   try {
     if (localStorage.getItem(WEB_KEY) === today) return;
@@ -103,6 +107,10 @@ export function webReminderOnOpen(db: LabDB): void {
   if (enabled) {
     const slot = { at: Date.now(), cards: dueCards(db).length, topics: dueTopics(db).length };
     if (slot.cards || slot.topics) notes.push({ ...reminderText(slot), tag: "lab-review" });
+  }
+  if (research) {
+    const r = researchReminders(db, 0, 0, Date.now() - 86_400_000).find((x) => x.at <= Date.now() + 86_400_000);
+    if (r) notes.push({ title: r.title, body: r.body, tag: "lab-research" });
   }
   if (!notes.length) return;
   try {

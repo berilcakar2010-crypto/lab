@@ -241,6 +241,14 @@ export interface LearningSource {
   type: SourceType;
   author?: string;
   url?: string;
+  /** Edition or version, e.g. "3rd ed." or "2025 syllabus". */
+  edition?: string;
+  /** Publication or last-update date as written (e.g. "2019", "2025-09"). */
+  published?: string;
+  /** The content is current information (exam rules, syllabi, guidelines) that can go out of date — not timeless knowledge. */
+  timeSensitive?: boolean;
+  /** When the learner last checked it is still current. */
+  checkedAt?: Millis;
   sections: { id: ID; title: string; loIds: string[] }[];
   provenance: Provenance;
   createdAt: Millis;
