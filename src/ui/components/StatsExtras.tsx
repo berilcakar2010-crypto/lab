@@ -10,6 +10,7 @@ import { getGraph } from "../../knowledge/graph";
 import { depthAnalytics, DEPTH_SCALE, personalRecords } from "../../academic/portfolio";
 import { academicProfile, observedPreferences, trendInsights } from "../../adaptive/personalModel";
 import { useDB } from "../state";
+import { SKILL_LABEL, competitionReport, languageReports } from "../../academic/layers";
 import { StatTile } from "./Stats";
 import { Bar } from "./common";
 
@@ -71,6 +72,45 @@ export function RecordsAndInsights() {
                 <Bar value={p.meanVerified} mastered={p.meanVerified >= 0.7} />
               </div>
             ))}
+          </div>
+        </section>
+      )}
+    </>
+  );
+}
+
+export function LanguagesAndCompetition() {
+  const db = useDB();
+  const g = getGraph(db.knowledge);
+  const langs = useMemo(() => languageReports(db, g), [db.events.length, g]);
+  const comp = useMemo(() => competitionReport(db, g), [db.events.length, g]);
+  return (
+    <>
+      {langs.length > 0 && (
+        <section className="stack">
+          <h2>{L("Languages", "Diller")}</h2>
+          {langs.map((r) => (
+            <div key={r.domain} className="card stack" style={{ gap: 6 }}>
+              <strong className="small">{r.label}</strong>
+              {r.skills.map((s) => (
+                <div key={s.skill} className="stack" style={{ gap: 2 }}>
+                  <div className="row between tiny"><span>{SKILL_LABEL(s.skill)}</span><span className="muted">{s.meanVerified === null ? L(`no evidence · ${s.objects} topics`, `kanıt yok · ${s.objects} konu`) : L(`${pct(s.meanVerified)} · ${s.touched}/${s.objects} topics`, `${pct(s.meanVerified)} · ${s.objects} konunun ${s.touched} tanesi`)}</span></div>
+                  <Bar value={s.meanVerified ?? 0} mastered={(s.meanVerified ?? 0) >= 0.7} />
+                </div>
+              ))}
+            </div>
+          ))}
+        </section>
+      )}
+      {comp.attempts > 0 && (
+        <section className="stack">
+          <h2>{L("Competition practice", "Yarışma pratiği")}</h2>
+          <p className="tiny muted">{L("Kept apart from mastery: speed and accuracy under competition conditions are a different skill.", "Ustalıktan ayrı tutulur: yarışma koşullarında hız ve doğruluk başka bir beceridir.")}</p>
+          <div className="grid-3">
+            <StatTile label={L("First-try accuracy", "İlk deneme doğruluğu")} value={pct(comp.accuracy)} needed={L("needs 5 attempts", "5 deneme gerekli")} note={L(`${comp.attempts} attempts`, `${comp.attempts} deneme`)} />
+            <StatTile label={L("Median time", "Medyan süre")} value={comp.medianSeconds === null ? null : `${Math.round(comp.medianSeconds)} s`} needed={L("needs 5 timed answers", "5 süreli cevap gerekli")} />
+            <StatTile label={L("Hardest solved", "Çözülen en zor")} value={comp.hardestSolved === null ? null : `${comp.hardestSolved}/5`} needed={L("nothing solved yet", "henüz çözülen yok")} />
+            <StatTile label={L("Solution quality", "Çözüm kalitesi")} value={pct(comp.solutionQuality)} needed={L("needs 5 written solutions", "5 yazılı çözüm gerekli")} note={comp.topError ? L(`most common error: ${comp.topError}`, `en sık hata: ${comp.topError}`) : undefined} />
           </div>
         </section>
       )}

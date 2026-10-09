@@ -5,7 +5,7 @@ import { L, fmtNum, lower, pick } from "../../i18n";
 import { Icon } from "../components/common";
 import { LearningLayers } from "../components/Adaptive";
 import { RateBars, RateTile, StatTile } from "../components/Stats";
-import { DepthOfKnowledge, RecordsAndInsights } from "../components/StatsExtras";
+import { DepthOfKnowledge, LanguagesAndCompetition, RecordsAndInsights } from "../components/StatsExtras";
 
 const GROUPS: GroupKey[] = ["subject", "topic", "milestoneType", "interaction", "difficulty", "duration", "inputMethod", "stylus"];
 
@@ -104,6 +104,7 @@ export function StatisticsPage() {
       </section>
 
       <RecordsAndInsights />
+      <LanguagesAndCompetition />
     </div>
   );
 }

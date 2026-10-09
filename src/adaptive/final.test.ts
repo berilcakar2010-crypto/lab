@@ -298,3 +298,33 @@ describe("schema v4 migration", () => {
     expect(hydrateDB(null).preferences.firstRunAt).toBeUndefined();
   });
 });
+
+import { whatNext } from "./whatNext";
+import { competitionReport, languageReports, skillsOf } from "../academic/layers";
+
+describe("what next: every option carries a confidence; explore uses real links", () => {
+  it("adds confidence to all options", () => {
+    const k = kit([NEWTON]);
+    for (const q of k.qs[k.ms[NEWTON]]) answer(k, q, true, { at: T0 });
+    const opts = whatNext(k.db, g, { justCompletedMilestoneId: k.ms[NEWTON], now: T0 + 1000 });
+    expect(opts.length).toBeGreaterThan(0);
+    for (const o of opts) expect(o.confidence).toBeGreaterThan(0);
+    for (const o of opts.filter((x) => x.kind === "EXPLORE")) expect(g.objects[o.target.loId!]).toBeTruthy();
+  });
+});
+
+describe("language and competition layers", () => {
+  it("break languages down by capability and keep competition apart from mastery", () => {
+    const lang = g.order.find((id) => g.objects[id].domain === "INGILIZCE" && skillsOf(g.objects[id]).includes("grammar"))!;
+    expect(lang).toBeTruthy();
+    const k = kit([lang]);
+    answer(k, k.qs[k.ms[lang]][0], true, { at: T0 });
+    const r = languageReports(k.db, g, T0 + 1000);
+    expect(r[0].domain).toBe("INGILIZCE");
+    expect(r[0].skills.find((s) => s.skill === "grammar")!.touched).toBe(1);
+    expect(languageReports(createEmptyDB(T0), g, T0)).toEqual([]);
+    const c = competitionReport(k.db, g, [lang]);
+    expect(c.attempts).toBe(1);
+    expect(c.accuracy).toBeNull(); // too few attempts to say
+  });
+});

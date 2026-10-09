@@ -9,6 +9,10 @@
  *   E Transfer   — use the same idea in another field
  *   F Switch     — move to another subject or path
  *   G Research   — turn the topic into an open question
+ *   H Explore    — a real connection into a field not touched yet
+ *
+ * Every option carries its reasons and a confidence (how strongly the data
+ * supports it).
  */
 import type { ID, LabDB, Millis } from "../domain/types";
 import { logEvent } from "../engines/analytics";
@@ -20,9 +24,10 @@ import { masteryProfile, staleObjects } from "./mastery";
 import { repairQueue } from "./errors";
 import { activePath, currentStep } from "./pathPlanner";
 import { dueTopics } from "../study/topics";
+import { discoveries } from "./discovery";
 
-export type NextKind = "CONTINUE" | "CHALLENGE" | "REPAIR" | "REVIEW" | "TRANSFER" | "SWITCH" | "RESEARCH";
-export const NEXT_LETTER: Record<NextKind, string> = { CONTINUE: "A", CHALLENGE: "B", REPAIR: "C", REVIEW: "D", TRANSFER: "E", SWITCH: "F", RESEARCH: "G" };
+export type NextKind = "CONTINUE" | "CHALLENGE" | "REPAIR" | "REVIEW" | "TRANSFER" | "SWITCH" | "RESEARCH" | "EXPLORE";
+export const NEXT_LETTER: Record<NextKind, string> = { CONTINUE: "A", CHALLENGE: "B", REPAIR: "C", REVIEW: "D", TRANSFER: "E", SWITCH: "F", RESEARCH: "G", EXPLORE: "H" };
 
 export interface NextOption {
   kind: NextKind;
@@ -31,7 +36,11 @@ export interface NextOption {
   target: { milestoneId?: ID; loId?: string; courseId?: ID; pathId?: ID };
   score: number;
   reasons: string[];
+  /** 0..1 — how strongly the data supports this option. */
+  confidence: number;
 }
+
+const DEFAULT_CONFIDENCE: Record<NextKind, number> = { CONTINUE: 0.75, CHALLENGE: 0.55, REPAIR: 0.6, REVIEW: 0.75, TRANSFER: 0.5, SWITCH: 0.4, RESEARCH: 0.35, EXPLORE: 0.4 };
 
 export const NEXT_LABEL = (k: NextKind): string =>
   ({
@@ -42,6 +51,7 @@ export const NEXT_LABEL = (k: NextKind): string =>
     TRANSFER: L("Transfer", "Transfer"),
     SWITCH: L("Switch area", "Alan değiştir"),
     RESEARCH: L("Research", "Araştırma"),
+    EXPLORE: L("Explore", "Keşfe çık"),
   })[k];
 
 const milestoneFor = (db: LabDB, loId: string): ID | undefined => {
@@ -65,7 +75,7 @@ export function whatNext(db: LabDB, g: KnowledgeGraph, ctx: { justCompletedMiles
   const examLos = new Set<string>();
   if (db.preferences.studyMode === "EXAM" && db.preferences.focusExamId) for (const id of db.exams[db.preferences.focusExamId]?.loIds ?? []) examLos.add(id);
   const examBoost = (lo?: string) => (lo && examLos.has(lo) ? 0.5 : 0);
-  const out: NextOption[] = [];
+  const out: (Omit<NextOption, "confidence"> & { confidence?: number })[] = [];
 
   // A — continue
   const path = activePath(db);
@@ -96,7 +106,7 @@ export function whatNext(db: LabDB, g: KnowledgeGraph, ctx: { justCompletedMiles
   const rep = repairQueue(db)[0];
   if (rep) {
     const conf = Math.round(rep.confidence * 100);
-    out.push({ kind: "REPAIR", title: title(rep.loId), detail: rep.errors[0].trace?.reason ?? "", target: { loId: rep.loId, milestoneId: rep.errors[0].trace?.repairMilestoneId ?? milestoneFor(db, rep.loId) }, score: 0.8 + Math.min(0.6, rep.errors.length * 0.2) * rep.confidence + examBoost(rep.loId), reasons: [L(`${rep.errors.length} recent errors point here (confidence ${conf}%)`, `Son ${rep.errors.length} hata buraya işaret ediyor (güven %${conf})`)] });
+    out.push({ kind: "REPAIR", title: title(rep.loId), detail: rep.errors[0].trace?.reason ?? "", target: { loId: rep.loId, milestoneId: rep.errors[0].trace?.repairMilestoneId ?? milestoneFor(db, rep.loId) }, score: 0.8 + Math.min(0.6, rep.errors.length * 0.2) * rep.confidence + examBoost(rep.loId), confidence: rep.confidence, reasons: [L(`${rep.errors.length} recent errors point here (confidence ${conf}%)`, `Son ${rep.errors.length} hata buraya işaret ediyor (güven %${conf})`)] });
   }
 
   // D — review
@@ -142,7 +152,11 @@ export function whatNext(db: LabDB, g: KnowledgeGraph, ctx: { justCompletedMiles
     out.push({ kind: "RESEARCH", title: g.objects[rLo].researchApplications[0], detail: L(`An open question around "${title(rLo)}"`, `"${title(rLo)}" çevresinde açık bir soru`), target: { loId: rLo }, score: 0.35 + (p.depth >= 4 ? 0.3 : 0), reasons: [p.depth >= 4 ? L("Your mastery here is deep enough for open-ended work", "Buradaki ustalığın açık uçlu çalışma için yeterince derin") : L("For when you want to go beyond exercises", "Alıştırmaların ötesine geçmek istediğinde")] });
   }
 
-  return out.sort((a, b) => b.score - a.score);
+  // H — explore: a real link from what is known into an untouched field.
+  const disc = discoveries(db, g, now, 4).find((d) => d.kind === "CONNECTION" || d.kind === "ADJACENT");
+  if (disc && !out.some((o) => o.target.loId === disc.loId)) out.push({ kind: "EXPLORE", title: disc.title, detail: disc.detail, target: { loId: disc.loId, milestoneId: milestoneFor(db, disc.loId) }, score: 0.38, reasons: [disc.detail] });
+
+  return out.map((o) => ({ ...o, confidence: o.confidence ?? DEFAULT_CONFIDENCE[o.kind] })).sort((a, b) => b.score - a.score);
 }
 
 export function logWhatNextShown(db: LabDB, options: NextOption[], ctx: { milestoneId?: ID; sessionId?: ID; now?: Millis } = {}): void {

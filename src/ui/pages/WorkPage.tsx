@@ -17,6 +17,7 @@ import { GOAL_STATUS_LABEL, createGoal, decomposeGoal, pathForGoal, suggestGoalO
 import { restoreVersion } from "../../academic/versioning";
 import { SUBJECT_KIND_LABEL, addGrade, addSchoolSubject, deleteGrade, subjectSummary } from "../../academic/school";
 import { portfolio, timeline, yearlyReflection, type TimelineKind } from "../../academic/portfolio";
+import { competitionReport } from "../../academic/layers";
 import { globalSearch } from "../../adaptive/search";
 
 type Tab = "goals" | "projects" | "journal" | "portfolio" | "school" | "timeline";
@@ -379,6 +380,7 @@ function SubjectCard({ id, db, g }: { id: ID; db: LabDB; g: KnowledgeGraph }) {
           <span className="tiny muted">{L("grades", "notlar")}</span>
         </span>
       </div>
+      {s.subject.kind === "COMPETITION" && (() => { const c = competitionReport(db, g, s.subject.loIds.length ? s.subject.loIds : undefined); return c.attempts ? <span className="tiny text-2">{L(`Competition practice: ${c.attempts} attempts · first-try ${c.accuracy === null ? "—" : pctText(c.accuracy)} · median ${c.medianSeconds === null ? "—" : `${Math.round(c.medianSeconds)} s`} · hardest ${c.hardestSolved ?? "—"}/5`, `Yarışma pratiği: ${c.attempts} deneme · ilk deneme ${c.accuracy === null ? "—" : pctText(c.accuracy)} · medyan ${c.medianSeconds === null ? "—" : `${Math.round(c.medianSeconds)} sn`} · en zor ${c.hardestSolved ?? "—"}/5`)}</span> : null; })()}
       {s.mastery !== null && <span className="tiny text-2">{L(`Verified mastery of its topics: ${pctText(s.mastery)} — grades and mastery are kept apart.`, `Konularındaki doğrulanmış ustalık: ${pctText(s.mastery)} — notlar ve ustalık ayrı tutulur.`)}</span>}
       <ConceptPicker g={g} value={s.subject.loIds} onChange={(ids) => act((d) => { d.schoolSubjects[id].loIds = ids; })} />
       {s.grades.map((gr) => (

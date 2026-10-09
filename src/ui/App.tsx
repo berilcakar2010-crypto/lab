@@ -1,21 +1,23 @@
-import type { ReactNode } from "react";
+import { lazy, Suspense, type ReactNode } from "react";
 import { useDB, useRoute } from "./state";
 import { L, setLang } from "../i18n";
 import { Icon, Toasts } from "./components/common";
 import { HomePage } from "./pages/HomePage";
-import { BuilderPage } from "./pages/BuilderPage";
 import { CoursePage } from "./pages/CoursePage";
 import { SessionPage } from "./pages/SessionPage";
-import { SettingsPage } from "./pages/SettingsPage";
-import { StatisticsPage } from "./pages/StatisticsPage";
-import { FocusLabPage } from "./pages/FocusLabPage";
-import { RetentionPage } from "./pages/RetentionPage";
 import { ErrorBoundary } from "./components/ErrorBoundary";
-import { KnowledgePage } from "./pages/KnowledgePage";
-import { StudyPage } from "./pages/StudyPage";
-import { SummaryPage } from "./pages/SummaryPage";
-import { WorkPage } from "./pages/WorkPage";
 import { CommandPalette } from "./components/CommandPalette";
+
+// Screens other than Home and the session load on demand, so Lab opens fast.
+const BuilderPage = lazy(() => import("./pages/BuilderPage").then((m) => ({ default: m.BuilderPage })));
+const SettingsPage = lazy(() => import("./pages/SettingsPage").then((m) => ({ default: m.SettingsPage })));
+const StatisticsPage = lazy(() => import("./pages/StatisticsPage").then((m) => ({ default: m.StatisticsPage })));
+const FocusLabPage = lazy(() => import("./pages/FocusLabPage").then((m) => ({ default: m.FocusLabPage })));
+const RetentionPage = lazy(() => import("./pages/RetentionPage").then((m) => ({ default: m.RetentionPage })));
+const KnowledgePage = lazy(() => import("./pages/KnowledgePage").then((m) => ({ default: m.KnowledgePage })));
+const StudyPage = lazy(() => import("./pages/StudyPage").then((m) => ({ default: m.StudyPage })));
+const SummaryPage = lazy(() => import("./pages/SummaryPage").then((m) => ({ default: m.SummaryPage })));
+const WorkPage = lazy(() => import("./pages/WorkPage").then((m) => ({ default: m.WorkPage })));
 
 const NAV = (): { path: string; label: string; icon: () => ReactNode; match: string[] }[] => [
   { path: "/", label: L("Home", "Ana sayfa"), icon: Icon.home, match: ["", "course", "build"] },
@@ -54,7 +56,7 @@ export function App() {
     <div className={`app ${db.preferences.reduceMotion || db.preferences.animation !== "full" ? "reduce-motion" : ""} ${db.preferences.animation === "off" ? "no-motion" : ""} ${inSession && db.preferences.deepWork ? "deep-work" : ""}`}>
       <div className="ambient" aria-hidden><span /><span /></div>
       <main className={`main ${inSession ? "focus" : ""}`}>
-        <ErrorBoundary key={route.join("/")}>{page}</ErrorBoundary>
+        <ErrorBoundary key={route.join("/")}><Suspense fallback={<div className="skeleton" style={{ height: 240 }} aria-label={L("Loading", "Yükleniyor")} />}>{page}</Suspense></ErrorBoundary>
       </main>
       {!inSession && (
         <nav className="nav" aria-label={L("Main menu", "Ana menü")}>

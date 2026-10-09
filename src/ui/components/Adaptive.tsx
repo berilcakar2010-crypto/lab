@@ -195,7 +195,7 @@ export function WhatNextPanel({ justCompletedMilestoneId, sessionId, onChosen }:
           <button className="row nowrap next-main" onClick={() => { onChosen?.(o); followNext(o, { milestoneId: justCompletedMilestoneId, sessionId }); }}>
             <span className="next-letter" aria-hidden>{NEXT_LETTER[o.kind]}</span>
             <span className="stack grow" style={{ gap: 2, minWidth: 0, textAlign: "left" }}>
-              <span className="eyebrow">{NEXT_LABEL(o.kind)}</span>
+              <span className="eyebrow">{NEXT_LABEL(o.kind)} <span className="muted" title={L("How strongly the data supports this", "Verinin bunu ne kadar desteklediği")}>· {L("confidence", "güven")} {Math.round(o.confidence * 100)}%</span></span>
               <span className="truncate">{o.title}</span>
               {o.detail && <span className="tiny muted truncate">{o.detail}</span>}
             </span>
