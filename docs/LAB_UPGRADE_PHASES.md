@@ -123,3 +123,25 @@ Tests: 5 yeni (spesifikasyondaki STUCK örneği, yalnız ipucu/uzun süre yanlı
 Known limitations: Eşikler sabit; Odak Lab verisiyle kişiselleştirme ileride yapılabilir.
 Next phase: Faz 7 — Path Planner
 ```
+
+## Faz 7 — Path Planner
+
+```text
+PHASE STATUS: PASS
+Implemented: Grafik üzerinde geçici, önerilen öğrenme rotası (müfredatı değiştirmez). Girdi: hedef(ler), doğrulanmış
+  ustalık profilleri, kendi beyan, açık hatalar (onarım), kalıcılık durumu, zorluk tercihi (nazik/normal/zorlayıcı),
+  yumuşak önkoşulları da izleme seçeneği, sınav modu öncelikleri. Bilinen ve taze nesneler rotaya girmez; bayatlar
+  "tekrar", yalnızca beyan edilenler "kısa kontrol", hataların işaret ettikleri "onarım" rolünde. Her adımda gerekçe
+  kodları: PREREQUISITE, MASTERY_GAP, IMPORTANCE (bağımlı nesne sayısı), CENTRALITY (doğrudan açtığı nesneler),
+  RECENT_ERRORS, RETENTION, GOAL_RELEVANCE (hedefe uzaklık), SELF_DECLARED, EXAM — hepsi gerçek veriden.
+  Sıralama önkoşullara uyar; bağımsız düğümler arasında onarım, sınav önceliği (önkoşullara miras) ve puan öne çıkar.
+  Kullanıcı: adım atla/geri al, ekle (önkoşullarından sonra yerleşir), serbestçe yukarı/aşağı taşı, duraklat, terk et,
+  devam et. Yeni kanıtla adımlar DONE olur, hedefler bitince rota COMPLETED. Tek etkin rota. Olaylar + karar kaydı.
+Modified files: —
+New files: src/adaptive/pathPlanner.ts, src/adaptive/pathPlanner.test.ts
+Data model changes: paths tablosu kullanılıyor (adımlar, gerekçeler, seçenekler, geçmiş).
+Tests: 5 yeni (doğru rota ve gerekçeler, bilinen/beyan/onarım, alternatif rota + sınav önceliği, kullanıcı
+  geçersiz kılması + olaylar, kanıtla ilerleme ve tamamlanma).
+Known limitations: Grafik yapısı (bağımlı sayıları) grafik başına önbellekte; rota oluşturulurken bir kez hesaplanır.
+Next phase: Faz 8 — What Next motoru
+```
