@@ -15,6 +15,7 @@ import { countdown, TodayForExams } from "../components/Exams";
 import { DiscoverStrip, FirstRun, OpenLabView } from "../components/OpenLab";
 import { openPalette } from "../components/CommandPalette";
 import { passedDeadlines } from "../../academic/school";
+import { openLab } from "../../adaptive/entry";
 
 /** Due flashcards: a two-minute habit that keeps what you learned. */
 function StudyCard({ db }: { db: LabDB }) {
@@ -96,6 +97,7 @@ export function HomePage() {
   const firstRun = !db.preferences.firstRunAt && !courses.length && !Object.keys(db.attempts).length && !Object.keys(db.academicGoals).length;
   const passed = passedDeadlines(db, g);
   const nextExam = upcomingExams(db)[0];
+  const primaryLo = firstRun ? undefined : openLab(db, g).primary?.target.loId;
 
   return (
     <div className="stack-lg rise">
@@ -117,9 +119,9 @@ export function HomePage() {
       ))}
       {nextExam && daysUntil(nextExam) <= 14 && <ExamsCard db={db} />}
 
-      {!firstRun && <DiscoverStrip db={db} g={g} />}
+      {!firstRun && <DiscoverStrip db={db} g={g} exclude={primaryLo} />}
 
-      <details className="library" open={!firstRun && courses.length > 0 && courses.length <= 2}>
+      <details key={firstRun ? "first" : `lib${courses.length > 2 ? "many" : "few"}`} className="library" open={!firstRun && courses.length <= 2}>
         <summary className="row between"><h2 style={{ margin: 0 }}>{L("Library", "Kütüphane")}</h2><span className="tiny muted">{L(`${courses.length} courses`, `${courses.length} ders`)}</span></summary>
         <div className="stack" style={{ gap: 10, marginTop: 10 }}>
           {courses.map((c) => {

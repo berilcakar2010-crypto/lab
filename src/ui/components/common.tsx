@@ -34,8 +34,14 @@ export const Icon = {
 export function Sheet({ title, onClose, children, wide }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    // Moving to another screen (a link inside the sheet, the back button) closes the sheet.
+    const onRoute = () => onClose();
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("hashchange", onRoute);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("hashchange", onRoute);
+    };
   }, [onClose]);
   // Close only on a tap that both starts and ends on the backdrop: a drag that
   // begins inside the sheet (a map pan, a text selection) and is released

@@ -30,7 +30,7 @@ export function StudyPage() {
   const g = getGraph(db.knowledge);
   const query = new URLSearchParams(window.location.hash.split("?")[1] ?? "");
   const wanted = query.get("tab");
-  const [tab, setTab] = useState<Tab>(wanted === "exams" || wanted === "errors" || wanted === "research" ? wanted : "topics");
+  const [tab, setTab] = useState<Tab>((["topics", "exams", "errors", "research", "questions", "review", "calendar", "cards", "explain", "chats", "export"] as const).find((t) => t === wanted) ?? "topics");
   const openErrorCount = openErrors(db).length;
   const examsSoon = upcomingExams(db).length;
   const [topicReview, setTopicReview] = useState(false);

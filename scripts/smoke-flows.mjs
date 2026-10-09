@@ -2,7 +2,8 @@
 export default async function flows({ page, step, shot, click, BASE }) {
   await step("English is the default language", async () => {
     await page.goto(BASE);
-    await page.getByRole("heading", { name: "What's next?" }).waitFor();
+    // A new Lab opens with the first-run question, not a dashboard.
+    await page.getByRole("heading", { name: "What do you want to understand?" }).waitFor();
     await page.getByRole("link", { name: "Study" }).waitFor();
     await shot("00-home-english");
   });
@@ -10,8 +11,10 @@ export default async function flows({ page, step, shot, click, BASE }) {
   await step("home renders with empty state", async () => {
     // The rest of the flows run in Turkish (the option); ?lang=tr switches and persists.
     await page.goto(`${BASE}?lang=tr`);
-    await page.getByRole("heading", { name: "Sırada ne var?" }).waitFor();
+    await page.getByRole("heading", { name: "Neyi anlamak istiyorsun?" }).waitFor();
     await shot("01-home-empty");
+    await click("Geç — kendim keşfedeceğim");
+    await page.getByText("Haritan henüz boş").waitFor();
   });
 
   await step("build Calculus 1 offline and accept", async () => {
@@ -143,15 +146,17 @@ export default async function flows({ page, step, shot, click, BASE }) {
     await page.getByText("Bunun sonunda şunu yapabileceksin").waitFor();
   });
 
-  await step("locked milestone can be opened with an explicit override", async () => {
+  await step("a milestone with missing prerequisites opens as a preview and can be started anyway", async () => {
     await page.goto(`${BASE}#/`);
+    await page.evaluate(() => document.querySelector("details.library")?.setAttribute("open", ""));
     await page.getByRole("button", { name: /Mekanik/ }).first().click();
     await page.getByRole("tab", { name: "Harita" }).click();
     await page.getByRole("button", { name: /Serbest cisim diyagramı çiz/ }).first().click();
     await shot("11-map-sheet");
     await click("İçine bak");
-    await page.getByText("Bu adım, henüz tamamlamadığın adımlar üzerine kurulu:").waitFor();
-    await click("Yine de aç");
+    await page.getByText("Önizleme", { exact: true }).waitFor();
+    await page.getByText(/Henüz göstermediğin adımlar üzerine kurulu/).waitFor();
+    await click("Yine de başla");
     await page.getByText("Bunun sonunda şunu yapabileceksin").waitFor();
   });
 
@@ -180,6 +185,7 @@ export default async function flows({ page, step, shot, click, BASE }) {
 
   await step("offline guide asks a question without giving the answer", async () => {
     await page.goto(`${BASE}#/`);
+    await page.evaluate(() => document.querySelector("details.library")?.setAttribute("open", ""));
     await page.getByRole("button", { name: /Mekanik/ }).first().click();
     await page.getByRole("button", { name: /Vektörleri bileşenleriyle topla/ }).first().click();
     await page.getByLabel("Sayısal cevap").fill("1");
@@ -200,11 +206,12 @@ export default async function flows({ page, step, shot, click, BASE }) {
     await shot("18-summary");
   });
 
-  await step("home shows objective, progress, next actions and recent progress", async () => {
+  await step("Open Lab: where you stand, one thing now with its question, and the library", async () => {
     await page.goto(`${BASE}#/`);
-    await page.getByRole("heading", { name: "Sırada ne var?" }).waitFor();
-    await page.getByRole("heading", { name: "Son ilerlemeler" }).waitFor();
-    await page.getByRole("heading", { name: "Dersler" }).waitFor();
+    await page.locator(".state-line").waitFor();
+    await page.getByText(/Şimdi tek şey/).first().waitFor();
+    await page.locator(".one-thing .challenge").waitFor();
+    await page.getByRole("heading", { name: "Kütüphane" }).waitFor();
     await shot("19-home");
   });
 
@@ -282,11 +289,12 @@ export default async function flows({ page, step, shot, click, BASE }) {
 
   await step("boss milestone: open via the map with an override and solve an equation", async () => {
     await page.goto(`${BASE}#/`);
+    await page.evaluate(() => document.querySelector("details.library")?.setAttribute("open", ""));
     await page.getByRole("button", { name: /Mekanik/ }).first().click();
     await page.getByRole("tab", { name: "Harita" }).click();
     await page.getByRole("button", { name: /çember fırlatıcısı/ }).first().click();
     await click("İçine bak");
-    await click("Yine de aç");
+    await click("Yine de başla");
     await page.getByText("Final", { exact: true }).first().waitFor();
     await page.getByLabel("İfade cevabı").fill("5R/2");
     await click("Kontrol et");
@@ -423,7 +431,8 @@ export default async function flows({ page, step, shot, click, BASE }) {
     await page.getByRole("button", { name: "English" }).first().click();
     await page.getByRole("heading", { name: "Settings" }).waitFor();
     await page.goto(`${BASE}#/`);
-    await page.getByRole("heading", { name: "What's next?" }).waitFor();
+    await page.getByRole("heading", { name: "Library" }).waitFor();
+    await page.evaluate(() => document.querySelector("details.library")?.setAttribute("open", ""));
     await page.getByText("Mechanics — Physics Olympiad Track").first().waitFor();
     await shot("29-english-home");
     await page.goto(`${BASE}#/graph?lo=neuro.comp.hh-model`);
@@ -434,12 +443,13 @@ export default async function flows({ page, step, shot, click, BASE }) {
     await page.getByRole("heading", { name: "Ayarlar" }).waitFor();
   });
 
-  await step("study calendar: topics by date, streak and daily reminders", async () => {
+  await step("study calendar: topics by date, ideas touched and daily reminders (no streak)", async () => {
     await page.context().grantPermissions(["notifications"]);
     await page.goto(`${BASE}#/study`);
     await page.getByRole("tab", { name: "Takvim" }).click();
     await page.getByRole("grid", { name: "Çalışma takvimi" }).waitFor();
-    await page.getByText("Seri").waitFor();
+    await page.getByText("Dokunulan fikir (14 g)").waitFor();
+    if (await page.getByText("Seri", { exact: true }).count()) throw new Error("streak shown");
     await page.getByRole("button", { name: /Newton yasaları/ }).first().waitFor();
     await shot("30-calendar");
     await page.getByRole("tab", { name: /^Konular/ }).click();
@@ -526,7 +536,7 @@ export default async function flows({ page, step, shot, click, BASE }) {
     await page.locator(".path-step").first().getByRole("button", { name: "Atla" }).click();
     await page.locator(".path-step.skipped").first().waitFor();
     await page.goto(`${BASE}#/`);
-    await page.getByText("Şu an").first().waitFor();
+    await page.getByText(/Şimdi tek şey/).first().waitFor();
   });
 
   await step("adaptive: errors, research and learning layers", async () => {
@@ -556,12 +566,143 @@ export default async function flows({ page, step, shot, click, BASE }) {
     await page.getByText(/Uygulandı/).waitFor();
   });
 
+  await step("Scenario B: 'teach me' from the command palette → graph proposal → approval → first question", async () => {
+    await page.goto(`${BASE}#/`);
+    await page.keyboard.press("Control+k");
+    const pal = page.getByRole("dialog", { name: "Arama ve hızlı komutlar" });
+    await pal.getByLabel("Ara").fill("öğren Fourier dönüşümü");
+    await pal.locator(".palette-action").waitFor();
+    await shot("40-palette");
+    await page.keyboard.press("Enter");
+    await page.getByLabel("Neyde ustalaşmak istiyorsun?").waitFor();
+    if ((await page.getByLabel("Neyde ustalaşmak istiyorsun?").inputValue()) !== "Fourier dönüşümü") throw new Error("request not carried over");
+    await page.getByRole("button", { name: /Bilgi grafiği üzerinden öner/ }).click();
+    const dlg = page.getByRole("dialog", { name: "Müfredat önerisi" });
+    await dlg.locator(".diff-row").first().waitFor();
+    await dlg.getByRole("button", { name: "Geçerlilerin tümünü onayla" }).click();
+    await page.waitForURL(/#\/course\//);
+    await page.locator("main .card.clickable").first().click();
+    await page.getByText("Bunun sonunda şunu yapabileceksin").waitFor();
+    await shot("41-first-question");
+  });
+
+  await step("'I know this' is a short check, not a claim", async () => {
+    await page.goto(`${BASE}#/graph?lo=phys.mech.kinematics-1d`);
+    if (await page.getByRole("button", { name: /kendi beyanım/ }).count()) throw new Error("bare claim button still present");
+    await page.reload();
+    await page.getByRole("button", { name: "Biliyorum — kontrol et" }).last().click();
+    const dlg = page.getByRole("dialog").last();
+    await dlg.getByText(/Kısa kontrol · 1\//).waitFor();
+    await shot("42-check");
+    for (let i = 0; i < 4; i++) {
+      if (await dlg.getByText(/Gösterildi|Henüz değil/).count()) break;
+      const dunno = dlg.getByRole("button", { name: "Bilmiyorum" });
+      if (await dunno.count()) await dunno.click();
+      await dlg.getByRole("button", { name: /Sonraki|Sonucu gör/ }).click();
+    }
+    await dlg.getByText(/Henüz değil/).waitFor();
+    await dlg.getByRole("button", { name: "Tamam" }).click();
+  });
+
+  await step("Scenarios D and E: surprise me, and 'I don't know what to study'", async () => {
+    await page.goto(`${BASE}#/`);
+    await page.getByRole("radio", { name: "Zor", exact: true }).click();
+    await page.getByRole("button", { name: /Beni şaşırt/ }).click();
+    await page.getByRole("button", { name: /^Git/ }).first().waitFor();
+    await shot("43-surprise");
+    await page.getByRole("button", { name: "Ne çalışacağımı bilmiyorum" }).click();
+    const dlg = page.getByRole("dialog", { name: "Ne çalışacağından emin değil misin?" });
+    await dlg.getByRole("button", { name: /^Git/ }).nth(1).waitFor();
+    await shot("44-unsure");
+    const before = page.url();
+    await dlg.getByRole("button", { name: /^Git/ }).first().click();
+    await page.waitForFunction((u) => location.href !== u, before);
+  });
+
+  await step("Scenario A: start the one thing now, work in deep work mode, end with the session story", async () => {
+    await page.goto(`${BASE}#/`);
+    await page.locator(".one-thing").getByRole("button", { name: /Başla/ }).click();
+    await page.getByRole("button", { name: /Oturumu bitir/ }).waitFor();
+    const deep = page.getByRole("button", { name: /Derin çalışma/ });
+    if (await deep.count()) {
+      await deep.click();
+      await page.waitForTimeout(200);
+      if (await page.getByRole("button", { name: /^Bağlam/ }).count()) throw new Error("context panel visible in deep work");
+      await shot("45-deep-work");
+      await deep.click();
+    }
+    await page.getByRole("button", { name: "Oturumu bitir" }).click();
+    await page.getByText("İki kısa soru (isteğe bağlı)").waitFor();
+  });
+
+  await step("Work: a goal decomposed over the graph, journal, project and school", async () => {
+    await page.goto(`${BASE}#/work`);
+    await page.getByLabel("Hedef").fill("Nörobilimde güçlenmek");
+    await page.locator("main .card").first().getByRole("button").last().click();
+    await page.getByRole("button", { name: "Rota planla" }).waitFor();
+    await shot("46-goal");
+    await page.getByRole("tab", { name: "Günlük" }).click();
+    await page.getByLabel("Günlük kaydı").fill("Aksiyon potansiyeli neden hep aynı büyüklükte?");
+    await page.getByRole("button", { name: "Kaydet" }).click();
+    await page.getByText("Aksiyon potansiyeli neden hep aynı büyüklükte?").waitFor();
+    await page.getByRole("tab", { name: "Projeler" }).click();
+    await page.getByLabel("Proje başlığı").fill("LIF nöron modeli");
+    await page.locator("main .card").first().getByRole("button").last().click();
+    await page.getByLabel("Amaç").waitFor();
+    await page.getByRole("tab", { name: "Okul" }).click();
+    await page.getByLabel("Ders", { exact: true }).fill("AP Physics C");
+    await page.locator("main .card").first().getByRole("button").last().click();
+    await page.getByLabel("Not başlığı").fill("Quiz");
+    await page.getByLabel("Puan").fill("8");
+    await page.getByLabel("Üzerinden").fill("10");
+    await page.getByLabel("Üzerinden").press("Tab");
+    await page.locator("main section.card").first().getByRole("button").last().click();
+    await page.getByText("%80").first().waitFor();
+    await page.getByRole("tab", { name: "Zaman çizelgesi" }).click();
+    await page.getByRole("heading", { name: /yılında ne öğrendim/ }).waitFor();
+    await shot("47-timeline");
+  });
+
+  await step("your own concept: validated, versioned and rollbackable", async () => {
+    await page.goto(`${BASE}#/graph?view=surum&add=Sönümlü sarkaç`);
+    await page.getByLabel("Hedefler").fill("Bir sarkacın sönüm süresini tahmin eder");
+    await page.getByRole("button", { name: "Doğrula ve ekle" }).click();
+    await page.getByRole("dialog", { name: "Sönümlü sarkaç" }).waitFor();
+    await page.keyboard.press("Escape");
+    await page.goto(`${BASE}#/graph?view=surum`);
+    await page.getByRole("button", { name: /sürümünü geri al/ }).waitFor();
+  });
+
+  await step("statistics: depth of knowledge, records and insights (honest when data is thin)", async () => {
+    await page.goto(`${BASE}#/stats`);
+    await page.getByRole("heading", { name: "Bilginin derinliği" }).waitFor();
+    await page.getByRole("heading", { name: "Kişisel rekorlar" }).waitFor();
+    await page.getByRole("heading", { name: "İçgörüler" }).waitFor();
+    await shot("48-depth");
+  });
+
+  await step("settings: AI style, local snapshots and system health", async () => {
+    await page.goto(`${BASE}#/settings`);
+    await page.getByRole("button", { name: "Daha kısa" }).click();
+    await page.getByRole("button", { name: "Şimdi anlık görüntü al" }).click();
+    await page.getByText("Anlık görüntü alındı.").waitFor();
+    await page.getByRole("button", { name: /Sistem sağlığı/ }).click();
+    await page.getByText(/Şema: v4/).waitFor();
+    await shot("49-health");
+  });
+
+  await step("question bank lists every question with its state", async () => {
+    await page.goto(`${BASE}#/study?tab=questions`);
+    await page.getByText(/soru\. Uzun zaman önce/).waitFor();
+    await page.locator("main article.card").first().waitFor();
+  });
+
   await step("unknown and stale routes degrade gracefully", async () => {
     for (const r of ["#/nonsense", "#/course/missing", "#/session/missing", "#/summary/missing"]) {
       await page.goto(`${BASE}${r}`);
       await page.waitForTimeout(150);
       const body = await page.textContent("body");
-      if (!/Sırada ne var\?|bulunamadı|artık yok/i.test(body)) throw new Error(`route ${r} rendered nothing useful`);
+      if (!/Şimdi tek şey|Kütüphane|bulunamadı|artık yok/i.test(body)) throw new Error(`route ${r} rendered nothing useful`);
     }
   });
 
@@ -574,13 +715,14 @@ export default async function flows({ page, step, shot, click, BASE }) {
   for (const [w, h, label] of [[390, 844, "phone"], [1180, 820, "tablet-landscape"], [820, 1180, "tablet-portrait"]]) {
     await step(`no horizontal overflow at ${label} (${w}px)`, async () => {
       await page.setViewportSize({ width: w, height: h });
-      for (const r of ["#/", "#/graph", "#/graph?view=harita", "#/study", "#/study?tab=exams", "#/study?tab=errors", "#/study?tab=research", "#/graph?view=rota", "#/stats", "#/focus", "#/retention", "#/settings", "#/build"]) {
+      for (const r of ["#/", "#/graph", "#/graph?view=harita", "#/study", "#/study?tab=exams", "#/study?tab=errors", "#/study?tab=research", "#/graph?view=rota", "#/stats", "#/focus", "#/retention", "#/settings", "#/build", "#/work", "#/work?tab=timeline", "#/work?tab=school", "#/study?tab=questions", "#/graph?view=kesif"]) {
         await page.goto(`${BASE}${r}`);
         await page.waitForTimeout(250);
         const over = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
         if (over > 1) throw new Error(`${r} overflows by ${over}px`);
       }
       await page.goto(`${BASE}#/`);
+      await page.evaluate(() => document.querySelector("details.library")?.setAttribute("open", ""));
       await page.getByRole("button", { name: /Mekanik/ }).first().click();
       await page.getByRole("tab", { name: "Harita" }).click();
       const over = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);

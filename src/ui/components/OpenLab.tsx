@@ -107,8 +107,8 @@ export function UnsureSheet({ g, onClose }: { g: KnowledgeGraph; onClose: () => 
   );
 }
 
-export function DiscoverStrip({ db, g, limit = 3 }: { db: LabDB; g: KnowledgeGraph; limit?: number }) {
-  const ds = useMemo(() => discoveries(db, g, Date.now(), limit), [db.events.length, g]);
+export function DiscoverStrip({ db, g, limit = 3, exclude }: { db: LabDB; g: KnowledgeGraph; limit?: number; exclude?: string }) {
+  const ds = useMemo(() => discoveries(db, g, Date.now(), limit + 1).filter((d) => d.loId !== exclude).slice(0, limit), [db.events.length, g, exclude]);
   useEffect(() => {
     if (ds.length) act((d) => logEvent(d, "DISCOVERY_SHOWN", {}, { loIds: ds.map((x) => x.loId), kinds: ds.map((x) => x.kind) }));
   }, [ds.map((x) => x.loId).join()]);
