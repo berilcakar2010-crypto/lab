@@ -143,7 +143,7 @@ export function indexedDBAdapter(dbName = "lab"): StorageAdapter {
   };
 }
 
-export function memoryAdapter(initial: string | null = null): StorageAdapter & { value: string | null } {
+export function memoryAdapter(initial: string | null = null): StorageAdapter & { value: string | null; snapshots: SnapshotStore } {
   const snaps = new Map<string, { s: string; at: number }>();
   const a = {
     name: "memory",

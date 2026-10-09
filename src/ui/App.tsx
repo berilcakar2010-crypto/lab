@@ -14,11 +14,14 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { KnowledgePage } from "./pages/KnowledgePage";
 import { StudyPage } from "./pages/StudyPage";
 import { SummaryPage } from "./pages/SummaryPage";
+import { WorkPage } from "./pages/WorkPage";
+import { CommandPalette } from "./components/CommandPalette";
 
 const NAV = (): { path: string; label: string; icon: () => ReactNode; match: string[] }[] => [
   { path: "/", label: L("Home", "Ana sayfa"), icon: Icon.home, match: ["", "course", "build"] },
   { path: "/graph", label: L("Graph", "Grafik"), icon: Icon.atlas, match: ["graph"] },
   { path: "/study", label: L("Study", "Çalış"), icon: Icon.memory, match: ["study", "retention"] },
+  { path: "/work", label: L("Work", "Çalışmalar"), icon: Icon.desk, match: ["work"] },
   { path: "/stats", label: L("Stats", "İstatistik"), icon: Icon.stats, match: ["stats", "focus"] },
   { path: "/settings", label: L("Settings", "Ayarlar"), icon: Icon.gear, match: ["settings"] },
 ];
@@ -43,11 +46,12 @@ export function App() {
     case "study": page = <StudyPage key={window.location.hash} />; break;
     case "retention": page = <RetentionPage />; break;
     case "summary": page = <SummaryPage sessionId={a} />; break;
+    case "work": page = <WorkPage key={window.location.hash} />; break;
     default: page = <HomePage />;
   }
 
   return (
-    <div className={`app ${db.preferences.reduceMotion ? "reduce-motion" : ""}`}>
+    <div className={`app ${db.preferences.reduceMotion || db.preferences.animation !== "full" ? "reduce-motion" : ""} ${db.preferences.animation === "off" ? "no-motion" : ""} ${inSession && db.preferences.deepWork ? "deep-work" : ""}`}>
       <div className="ambient" aria-hidden><span /><span /></div>
       <main className={`main ${inSession ? "focus" : ""}`}>
         <ErrorBoundary key={route.join("/")}>{page}</ErrorBoundary>
@@ -65,6 +69,7 @@ export function App() {
         </nav>
       )}
       <Toasts />
+      <CommandPalette />
     </div>
   );
 }

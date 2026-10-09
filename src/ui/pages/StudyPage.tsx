@@ -18,11 +18,11 @@ import { Icon } from "../components/common";
 import { ReviewSession, exportCards } from "../components/Flashcards";
 import { MathText } from "../components/MathText";
 import { ExamsPanel } from "../components/Exams";
+import { QuestionBankTab } from "../components/QuestionBank";
 import { upcomingExams } from "../../study/exams";
 import { saveTextFile } from "../native";
 import { fmtNum } from "../../i18n";
-
-type Tab = "topics" | "exams" | "errors" | "research" | "review" | "calendar" | "cards" | "explain" | "chats" | "export";
+type Tab = "topics" | "exams" | "errors" | "research" | "questions" | "review" | "calendar" | "cards" | "explain" | "chats" | "export";
 
 /** Everything you study with: spaced-repetition cards, your explanations, AI conversations and exports. */
 export function StudyPage() {
@@ -63,6 +63,7 @@ export function StudyPage() {
     ["exams", L(`Exams${examsSoon ? ` · ${examsSoon}` : ""}`, `Sınavlar${examsSoon ? ` · ${examsSoon}` : ""}`)],
     ["errors", L(`Errors${openErrorCount ? ` · ${openErrorCount}` : ""}`, `Hatalar${openErrorCount ? ` · ${openErrorCount}` : ""}`)],
     ["research", L("Research", "Araştırma")],
+    ["questions", L("Question bank", "Soru bankası")],
     ["review", L(`Card review${stats.due ? ` · ${stats.due}` : ""}`, `Kart tekrarı${stats.due ? ` · ${stats.due}` : ""}`)],
     ["calendar", L("Calendar", "Takvim")],
     ["cards", L("Cards", "Kartlar")],
@@ -111,6 +112,7 @@ export function StudyPage() {
       {tab === "exams" && <ExamsPanel db={db} g={g} initial={query.get("exam") ?? undefined} />}
 
       {tab === "errors" && <ErrorsTab />}
+      {tab === "questions" && <QuestionBankTab />}
       {tab === "research" && <ResearchTab db={db} g={g} initial={query.get("res") ?? undefined} />}
 
       {tab === "calendar" && <StudyCalendar db={db} g={g} />}

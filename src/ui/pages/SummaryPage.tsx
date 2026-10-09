@@ -4,7 +4,12 @@ import { dueRetentionChecks } from "../../engines/progress";
 import { reflectSession, reflectSessionAI } from "../../ai/tutor";
 import { aiHost, navigate, store, useAsync, useDB } from "../state";
 import { Bar, Empty, Icon } from "../components/common";
-import { NextOptions } from "../components/NextOptions";
+import { WhatNextPanel } from "../components/Adaptive";
+import { getGraph } from "../../knowledge/graph";
+import { buildProfile, evidenceFor } from "../../adaptive/mastery";
+import { ERROR_LABEL } from "../../adaptive/errors";
+import { addJournal } from "../../academic/records";
+import { act } from "../state";
 import { StatTile, pct } from "../components/Stats";
 import { courseProgress } from "./CoursePage";
 import { L } from "../../i18n";
@@ -53,6 +58,9 @@ export function SummaryPage({ sessionId }: { sessionId: string }) {
         </div>
       )}
 
+      <SessionStory sessionId={sessionId} />
+      <Reflect sessionId={sessionId} />
+
       <section className="card stack" style={{ gap: 8 }}>
         <div className="row between">
           <h2>{L("Reflection", "Değerlendirme notları")}</h2>
@@ -72,10 +80,69 @@ export function SummaryPage({ sessionId }: { sessionId: string }) {
       {courseId && (
         <section className="stack">
           <h2>{L("What's next?", "Sırada ne var?")}</h2>
-          <NextOptions courseId={courseId} justCompletedId={completed[completed.length - 1]?.milestoneId} onChoose={(id) => navigate(`/session/${id}`)} compact limit={3} />
+          <WhatNextPanel justCompletedMilestoneId={completed[completed.length - 1]?.milestoneId} sessionId={sessionId} />
         </section>
       )}
       <button className="btn" onClick={() => navigate("/")}>{L("Home", "Ana sayfa")}</button>
     </div>
+  );
+}
+
+/** What was attempted, what was learned, what evidence was produced, what changed, what is still uncertain. */
+function SessionStory({ sessionId }: { sessionId: string }) {
+  const db = useDB();
+  const g = getGraph(db.knowledge);
+  const s = db.sessions[sessionId];
+  const atts = Object.values(db.attempts).filter((a) => a.sessionId === sessionId);
+  if (!s || !atts.length) return null;
+  const start = Math.min(...atts.map((a) => a.createdAt));
+  const los = [...new Set(atts.flatMap((a) => db.milestones[a.milestoneId]?.learningObjectIds ?? []))].filter((id) => g.objects[id]);
+  const changes = los.map((lo) => {
+    const items = evidenceFor(db, lo);
+    const before = buildProfile(db, lo, items.filter((e) => e.at < start)).verified;
+    const after = buildProfile(db, lo, items).verified;
+    return { lo, before, after, n: items.filter((e) => e.at >= start).length };
+  }).filter((c) => c.n > 0);
+  const errors = Object.values(db.errors).filter((e) => e.sessionId === sessionId && e.resolution !== "RESOLVED");
+  const attempted = [...new Set(atts.map((a) => db.milestones[a.milestoneId]?.title).filter(Boolean))];
+  return (
+    <section className="card stack" style={{ gap: 8 }}>
+      <h2>{L("What happened", "Ne oldu")}</h2>
+      <div className="small"><strong>{L("Attempted: ", "Denendi: ")}</strong><span className="text-2">{attempted.join(" · ")}</span></div>
+      <div className="small"><strong>{L("Evidence: ", "Kanıt: ")}</strong><span className="text-2">{L(`${atts.length} answers, ${atts.filter((a) => a.correct).length} correct, ${atts.filter((a) => a.correct && a.hintLevelUsed === 0).length} without hints`, `${atts.length} cevap, ${atts.filter((a) => a.correct).length} doğru, ${atts.filter((a) => a.correct && a.hintLevelUsed === 0).length} ipucusuz`)}</span></div>
+      {changes.length > 0 && (
+        <div className="stack" style={{ gap: 2 }}>
+          <strong className="small">{L("What changed", "Ne değişti")}</strong>
+          {changes.map((c) => <div key={c.lo} className="row nowrap small"><span className="grow truncate">{g.objects[c.lo].title}</span><span className="mono">{Math.round(c.before * 100)}% → {Math.round(c.after * 100)}%</span></div>)}
+        </div>
+      )}
+      {errors.length > 0 && (
+        <div className="small"><strong>{L("Still uncertain: ", "Hâlâ belirsiz: ")}</strong><span className="text-2">{[...new Set(errors.map((e) => `${ERROR_LABEL(e.category)}${e.trace?.repairLoId && g.objects[e.trace.repairLoId] ? ` (${g.objects[e.trace.repairLoId].title})` : ""}`))].join(" · ")}</span></div>
+      )}
+    </section>
+  );
+}
+
+/** Two optional questions; answers go to the journal, linked to what was studied. */
+function Reflect({ sessionId }: { sessionId: string }) {
+  const db = useDB();
+  const [clicked, setClicked] = useState("");
+  const [unclear, setUnclear] = useState("");
+  const done = Object.values(db.journal).some((j) => j.sessionId === sessionId && j.kind === "REFLECTION");
+  const los = [...new Set(Object.values(db.attempts).filter((a) => a.sessionId === sessionId).flatMap((a) => db.milestones[a.milestoneId]?.learningObjectIds ?? []))];
+  if (done) return <p className="small muted">{L("Reflection saved to your journal.", "Yansıtma günlüğüne kaydedildi.")}</p>;
+  return (
+    <details className="card">
+      <summary className="small" style={{ cursor: "pointer" }}>{L("Two short questions (optional)", "İki kısa soru (isteğe bağlı)")}</summary>
+      <div className="stack" style={{ gap: 8, marginTop: 8 }}>
+        <label className="field"><span>{L("What clicked?", "Ne yerine oturdu?")}</span><input className="input" value={clicked} onChange={(e) => setClicked(e.target.value)} /></label>
+        <label className="field"><span>{L("What still feels unclear?", "Hâlâ ne belirsiz geliyor?")}</span><input className="input" value={unclear} onChange={(e) => setUnclear(e.target.value)} /></label>
+        <button className="btn small" style={{ alignSelf: "flex-start" }} disabled={!clicked.trim() && !unclear.trim()} onClick={() => act((d) => {
+          if (clicked.trim()) addJournal(d, { kind: "REFLECTION", text: `${L("Clicked", "Oturdu")}: ${clicked.trim()}`, loIds: los, sessionId });
+          if (unclear.trim()) addJournal(d, { kind: "CONFUSION", text: unclear.trim(), loIds: los, sessionId });
+          if (!clicked.trim()) addJournal(d, { kind: "REFLECTION", text: L("(only an open question this time)", "(bu sefer yalnızca açık bir soru)"), loIds: los, sessionId });
+        })}>{L("Save to journal", "Günlüğe kaydet")}</button>
+      </div>
+    </details>
   );
 }

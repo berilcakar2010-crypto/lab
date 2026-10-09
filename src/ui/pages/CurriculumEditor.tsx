@@ -8,7 +8,8 @@ import {
 } from "../../engines/curriculum";
 import { dependsOn } from "../../engines/graph";
 import { replaceTopicMilestones, sanitizeQuestion, type MilestoneSpec } from "../../engines/curriculumSpec";
-import { grantMastery, revokeMastery, skipMilestone, unskipMilestone } from "../../engines/progress";
+import { revokeMastery, skipMilestone, unskipMilestone } from "../../engines/progress";
+import { QuickCheck } from "../components/QuickCheck";
 import { generateQuestionsAI, generateTopicMilestonesAI, splitMilestoneAI } from "../../ai/curriculumAI";
 import { calibrateDifficultyAI, difficultySignal } from "../../ai/tutor";
 import { INTERACTION_TR } from "../../engines/statistics";
@@ -142,6 +143,7 @@ export function MilestoneSheet({ milestone: m, onClose }: { milestone: Milestone
     topicId: m.topicId,
   });
   const [split, setSplit] = useState<SplitPart[] | null>(null);
+  const [checking, setChecking] = useState(false);
   const { busy, run } = useAsync();
   const others = courseMilestones(db, courseId).filter((x) => x.id !== m.id);
   const pm = useMemo(() => prereqMap(db, courseId), [db, courseId]);
@@ -277,7 +279,8 @@ export function MilestoneSheet({ milestone: m, onClose }: { milestone: Milestone
             : !m.masteredAt && <button className="btn" onClick={() => editCurriculum(courseId, "skip", (d) => skipMilestone(d, m.id))}>{L("Skip", "Atla")}</button>}
           {m.masteredAt
             ? <button className="btn" onClick={() => editCurriculum(courseId, "revoke", (d) => revokeMastery(d, m.id))}>{L("Undo mastery", "Ustalığı geri al")}</button>
-            : <button className="btn" onClick={() => editCurriculum(courseId, "self-attest", (d) => void grantMastery(d, m.id, [], false, true), L("Marked as mastered (self-attested).", "Ustalaşıldı olarak işaretlendi (kendi beyanın)."))}>{L("I already know this", "Bunu zaten biliyorum")}</button>}
+            : <button className="btn" onClick={() => setChecking(true)}>{L("I already know this — check me", "Bunu zaten biliyorum — kontrol et")}</button>}
+          {checking && <QuickCheck target={{ milestoneId: m.id }} title={m.title} onClose={() => setChecking(false)} />}
           <span className="grow" />
           <button className="btn danger" onClick={() => {
             if (confirm(L(`Delete "${m.title}"? Milestones after it will inherit its prerequisites.`, `"${m.title}" silinsin mi? Sonraki adımlar onun ön koşullarını devralır.`))) {

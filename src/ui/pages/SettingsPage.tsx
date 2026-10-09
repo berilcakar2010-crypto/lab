@@ -3,7 +3,9 @@ import type { AIProviderId, HintLevel } from "../../domain/types";
 import { HINT_LEVELS } from "../../domain/types";
 import { act, store, toast, useAsync, useDB } from "../state";
 import { makeProvider } from "../../ai/providers";
-import { hydrateDB } from "../../data/db";
+import { fullExport, importFull } from "../../data/exchange";
+import { getGraph } from "../../knowledge/graph";
+import { BackupsPanel, LearningPreferences, SystemHealth } from "../components/SettingsExtras";
 import { recomputeAll } from "../../engines/progress";
 import { auditDatabase } from "../../engines/integrity";
 import { saveTextFile } from "../native";
@@ -37,7 +39,7 @@ export function SettingsPage() {
   });
 
   const exportData = () =>
-    run(() => saveTextFile(`${L("lab-backup", "lab-yedek")}-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(store.state), "application/json"));
+    run(() => saveTextFile(`${L("lab-backup", "lab-yedek")}-${new Date().toISOString().slice(0, 10)}.json`, fullExport(store.state, { graphVersion: getGraph(store.state.knowledge).version }), "application/json"));
 
   const exportEvents = () => {
     const cols = ["at", "type", "sessionId", "subjectId", "courseId", "unitId", "topicId", "milestoneId", "questionId", "data"];
@@ -51,10 +53,17 @@ export function SettingsPage() {
 
   const importData = async (file: File) => {
     try {
-      const parsed = JSON.parse(await file.text());
-      if (!parsed || typeof parsed !== "object" || !("milestones" in parsed)) throw new Error(L("This is not a Lab backup file.", "Bu bir Lab yedek dosyası değil."));
-      if (!confirm(L("Replace all current data with this backup? Export first if unsure.", "Mevcut tüm veriler bu yedekle değiştirilsin mi? Emin değilsen önce dışa aktar."))) return;
-      const db2 = hydrateDB(parsed);
+      let res;
+      try {
+        res = importFull(await file.text());
+      } catch {
+        throw new Error(L("This is not a Lab backup file.", "Bu bir Lab yedek dosyası değil."));
+      }
+      if (!confirm(L("Replace all current data with this backup? The current state is snapshotted first.", "Mevcut tüm veriler bu yedekle değiştirilsin mi? Mevcut durumun önce anlık görüntüsü alınır."))) return;
+      await store.snapshotNow("before-import");
+      const db2 = res.db;
+      // API keys are not part of exports; keep the ones on this device.
+      db2.preferences.apiKeys = { ...store.state.preferences.apiKeys, ...db2.preferences.apiKeys };
       recomputeAll(db2);
       store.replace(db2);
       toast(L("Backup restored.", "Yedek geri yüklendi."));
@@ -111,13 +120,14 @@ export function SettingsPage() {
           <label htmlFor="ret">{L("Days before the first delayed retention check", "İlk gecikmeli kalıcılık kontrolüne kadar gün")}</label>
           <input id="ret" className="input" type="number" min={1} max={30} value={prefs.retentionDelayDays} onChange={(e) => act((d) => void (d.preferences.retentionDelayDays = Math.max(1, Math.min(30, Number(e.target.value) || 3))))} />
         </div>
-        <label className="row nowrap"><input type="checkbox" checked={prefs.reduceMotion} onChange={(e) => act((d) => void (d.preferences.reduceMotion = e.target.checked))} style={{ width: 20, height: 20 }} /> {L("Reduce motion", "Hareketi azalt")}</label>
         <label className="row nowrap"><input type="checkbox" checked={prefs.experimentsEnabled} onChange={(e) => act((d) => void (d.preferences.experimentsEnabled = e.target.checked))} style={{ width: 20, height: 20 }} /> {L("Allow personal experiments to vary session conditions", "Kişisel deneylerin oturum koşullarını değiştirmesine izin ver")}</label>
       </section>
 
+      <LearningPreferences />
+
       <section className="card stack">
         <h2>{L("Your data", "Verilerin")}</h2>
-        <p className="small text-2">{L("Everything lives on this device. Export a backup regularly; raw events are included so statistics can be recalculated.", "Her şey bu cihazda durur. Düzenli yedek al; istatistikler yeniden hesaplanabilsin diye ham olaylar da yedeğe dahildir.")}</p>
+        <p className="small text-2">{L("Everything lives on this device. The backup is a versioned, documented JSON export of your whole academic state (curriculum, mastery, attempts, errors, paths, goals, projects, research, sources, experiments, journal, raw events) — readable without Lab. API keys are never included.", "Her şey bu cihazda durur. Yedek, tüm akademik durumunun (müfredat, ustalık, denemeler, hatalar, rotalar, hedefler, projeler, araştırmalar, kaynaklar, deneyler, günlük, ham olaylar) sürümlü ve belgelenmiş bir JSON dışa aktarımıdır — Lab olmadan da okunabilir. API anahtarları asla dahil edilmez.")}</p>
         <div className="small muted">{L(`${Object.keys(db.milestones).length} milestones · ${Object.keys(db.attempts).length} attempts · ${db.events.length} raw events · stored in ${store.backend}`, `${Object.keys(db.milestones).length} adım · ${Object.keys(db.attempts).length} deneme · ${db.events.length} ham olay · depolama: ${store.backend}`)}</div>
         {store.lastSaveError && <div className="banner error">{L(`Last save failed: ${store.lastSaveError}. Export a backup now.`, `Son kayıt başarısız: ${store.lastSaveError}. Hemen bir yedek al.`)}</div>}
         <div className="row">
@@ -130,6 +140,8 @@ export function SettingsPage() {
           <label className="btn" style={{ cursor: "pointer" }}>{L("Restore backup", "Yedeği geri yükle")}<input type="file" accept="application/json,.json" hidden onChange={(e) => e.target.files?.[0] && importData(e.target.files[0])} /></label>
         </div>
       </section>
+      <BackupsPanel />
+      <SystemHealth />
     </div>
   );
 }

@@ -13,7 +13,7 @@ import { rate, type Rate } from "../engines/statistics";
 import { L } from "../i18n";
 import { allProfiles } from "./mastery";
 import { ERROR_LABEL } from "./errors";
-import { studyLog, streak } from "../study/topics";
+import { studyLog, dayKey } from "../study/topics";
 
 const DAY = 86_400_000;
 
@@ -30,7 +30,7 @@ export interface LearningMetrics {
   persistence: { retryRate: Rate; abandonmentRate: Rate; continuationRate: Rate; stuckPerSession: Num };
   learning: { immediateAccuracy: Rate; masteryGain: Num; errorReduction: Num; transferSuccess: Rate };
   retention: { delayedRecall: Rate; retentionDecay: Num; reviewEffectiveness: Rate };
-  engagement: { medianSessionMinutes: Num; interactionDensity: Num; streakDays: number; stylusShare: Rate; interruptionsPerSession: Num };
+  engagement: { medianSessionMinutes: Num; interactionDensity: Num; /** Days with any study in the window — a description of activity, never a streak to keep. */ activeDays: number; stylusShare: Rate; interruptionsPerSession: Num };
   depth: Record<(typeof MASTERY_DIMENSIONS)[number], Num> & { breadth: number; meanDepth: Num };
   subject: { strongest?: string; weakest?: string; strongestMilestoneType?: string; mostCommonError?: string; highestRetention?: string; highestTransfer?: string };
   layers: { engagement: Level; learning: Level; retention: Level };
@@ -101,7 +101,7 @@ export function learningMetrics(db: LabDB, opts: { now?: Millis; days?: number }
   const engagement = {
     medianSessionMinutes: num(median(mins), mins.length),
     interactionDensity: num(activeMs > 0 ? ev.filter((e) => e.type !== "ACTIVITY_TICK").length / (activeMs / 60_000) : null, activeMs > 0 ? ev.length : 0),
-    streakDays: streak(studyLog(db), now),
+    activeDays: studyLog(db).filter((d) => d.day >= dayKey(from) && d.day <= dayKey(now)).length,
     stylusShare: rate(atts.filter((a) => a.usedStylus).length, atts.length),
     interruptionsPerSession: num(times.length ? times.reduce((s, t) => s + t.interruptions, 0) / times.length : null, times.length),
   };

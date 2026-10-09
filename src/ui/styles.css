@@ -567,3 +567,47 @@ button.plain { background: none; border: 0; padding: 0; color: inherit; font: in
 .proposal-diff .diff-row.invalid { opacity: 0.75; background: var(--danger-soft); }
 .diff-kind { font-size: 0.72rem; color: var(--accent); white-space: nowrap; }
 @media (max-width: 420px) { .mastery-profile .mp-split { grid-template-columns: 1fr; } }
+
+/* ---------------------------------------------------------------------------
+   Academic OS: Open Lab, focus, discovery, depth, work, palette
+   --------------------------------------------------------------------------- */
+.state-line { font-size: 1.35rem; line-height: 1.35; margin: 0; color: var(--text); }
+.one-thing { border-color: var(--border-strong); box-shadow: 0 0 0 1px var(--accent-soft), 0 18px 40px -28px rgba(226, 138, 154, 0.45); }
+.one-thing .btn.primary { min-height: 48px; padding: 0 22px; font-size: 1rem; }
+.challenge { padding: 10px 12px; border-left: 2px solid var(--margin-rule); background: var(--accent-soft); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+.seg { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 3px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+.seg button { min-height: 36px; padding: 0 12px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font: inherit; font-weight: 600; cursor: pointer; }
+.seg.small button { min-height: 32px; padding: 0 10px; font-size: 0.85rem; }
+.seg button.on { background: var(--raised-2); color: var(--text); box-shadow: inset 0 -2px 0 var(--accent); }
+.library > summary { list-style: none; cursor: pointer; padding: 6px 0; }
+.library > summary::-webkit-details-marker { display: none; }
+.discover-card { border-left: 2px solid var(--boss); }
+.discovery-moment { padding: 10px 12px; border-radius: var(--radius-sm); background: var(--boss-soft); border: 1px solid rgba(167, 163, 239, 0.35); }
+.progress-story .rise { animation-duration: 0.5s; }
+.smaller-steps { border-style: dashed; }
+
+.depth-ladder { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; counter-reset: lvl; }
+.depth-ladder li { counter-increment: lvl; font-size: 0.72rem; line-height: 1.25; padding: 6px 6px 6px 22px; border-radius: 8px; border: 1px solid var(--border); color: var(--muted); position: relative; }
+.depth-ladder li::before { content: counter(lvl); position: absolute; left: 7px; top: 6px; font-family: var(--mono); opacity: 0.7; }
+.depth-ladder li.on { color: var(--text); border-color: rgba(156, 197, 161, 0.55); background: var(--mastered-soft); }
+@media (max-width: 520px) { .depth-ladder { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+.timeline { display: flex; flex-direction: column; gap: 2px; border-left: 1px solid var(--border-strong); margin-left: 6px; padding-left: 12px; }
+.tl-item { display: flex; flex-direction: column; padding: 4px 0; position: relative; }
+.tl-item::before { content: ""; position: absolute; left: -16px; top: 10px; width: 7px; height: 7px; border-radius: 50%; background: var(--border-strong); }
+.tl-item.k-CONCEPT::before, .tl-item.k-CHECK::before { background: var(--mastered); }
+.tl-item.k-DOMAIN::before { background: var(--boss); }
+.tl-item.k-PROJECT::before, .tl-item.k-RESEARCH::before, .tl-item.k-ARTIFACT::before { background: var(--accent); }
+
+.sheet-backdrop.palette-backdrop { align-items: flex-start; padding-top: max(8vh, env(safe-area-inset-top)); }
+.palette { max-width: 640px; width: calc(100% - 2 * var(--gutter)); display: flex; flex-direction: column; gap: 10px; max-height: 76vh; }
+.palette-list { overflow-y: auto; }
+.palette-list .list-item { width: 100%; background: none; border: 0; color: inherit; font: inherit; cursor: pointer; gap: 10px; }
+.palette-list .list-item:hover, .palette-action { background: var(--accent-soft); }
+
+/* Deep work: the problem and nothing else. */
+.deep-work .ambient { opacity: 0.25; }
+.deep .card:not(.accent):not(.error-card):not(.stuck-card):not(.raised) { border-color: transparent; }
+.no-motion .ambient { display: none; }
+.hide-narrow { display: inline; }
+@media (max-width: 480px) { .hide-narrow { display: none; } }

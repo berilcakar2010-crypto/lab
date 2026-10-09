@@ -1,11 +1,6 @@
 import type { ID } from "../../domain/types";
-import { courseMilestones } from "../../engines/curriculum";
-import { dueRetentionChecks } from "../../engines/progress";
-import { recommendNext, topPicks } from "../../engines/progression";
-import { engagementLift } from "../../engines/statistics";
-import { logEvent } from "../../engines/analytics";
-import { act, navigate, useDB } from "../state";
-import { Bar, Icon, KindChip, TYPE_LABEL, minutes } from "../components/common";
+import { navigate, useDB } from "../state";
+import { Bar, Icon } from "../components/common";
 import { courseProgress } from "./CoursePage";
 import { getGraph } from "../../knowledge/graph";
 import { personalGraph, recommendObjects } from "../../knowledge/state";
@@ -17,7 +12,9 @@ import { cardStats } from "../../study/flashcards";
 import { dueTopics } from "../../study/topics";
 import { daysUntil, examReadiness, upcomingExams } from "../../study/exams";
 import { countdown, TodayForExams } from "../components/Exams";
-import { NowCard } from "../components/Adaptive";
+import { DiscoverStrip, FirstRun, OpenLabView } from "../components/OpenLab";
+import { openPalette } from "../components/CommandPalette";
+import { passedDeadlines } from "../../academic/school";
 
 /** Due flashcards: a two-minute habit that keeps what you learned. */
 function StudyCard({ db }: { db: LabDB }) {
@@ -82,127 +79,63 @@ function GraphCard({ db }: { db: LabDB }) {
   );
 }
 
-/** Home: the current objective, the one thing in progress, what's next. Not a dashboard. */
+/**
+ * Home is Open Lab: where you stand, one thing to do now (starting with the
+ * actual question), a way back into unfinished work, discovery — and, below,
+ * the library of courses. Not a dashboard of tasks.
+ */
 export function HomePage() {
   const db = useDB();
+  const g = getGraph(db.knowledge);
   const courses = Object.values(db.courses).filter((c) => !c.archived);
-  // Most recently touched course first.
   const lastTouch = (id: ID) => {
     for (let i = db.events.length - 1; i >= 0; i--) if (db.events[i].courseId === id) return db.events[i].at;
     return db.courses[id].createdAt;
   };
   courses.sort((a, b) => lastTouch(b.id) - lastTouch(a.id));
-  const due = dueRetentionChecks(db).filter((r) => r.kind !== "IMMEDIATE");
-
-  if (!courses.length) {
-    return (
-      <div className="stack-lg rise">
-        <header className="stack" style={{ gap: 4 }}>
-          <div className="row between nowrap"><span className="eyebrow">{L("Lab · research notebook", "Lab · araştırma defteri")}</span><LanguageToggle compact /></div>
-          <h1>{L("What's next?", "Sırada ne var?")}</h1>
-        </header>
-        <div className="card stack">
-          <h2>{L("Start with a big goal", "Büyük bir hedefle başla")}</h2>
-          <p className="text-2">{L("Name a course or paste a syllabus. Lab turns it into the next meaningful thing you can actually do — then you attempt it, get feedback, master it, and see yourself move forward.", "Bir ders adı yaz ya da müfredat yapıştır. Lab bunu şu an gerçekten yapabileceğin bir sonraki anlamlı adıma dönüştürür — sen dener, geri bildirim alır, ustalaşır ve ilerlediğini görürsün.")}</p>
-          <button className="btn primary" onClick={() => navigate("/build")}><Icon.plus /> {L("New course", "Yeni ders")}</button>
-        </div>
-        <NowCard db={db} g={getGraph(db.knowledge)} />
-        <ExamsCard db={db} />
-        <GraphCard db={db} />
-      </div>
-    );
-  }
-
-  const focus = courses[0];
-  const inProgress = courseMilestones(db, focus.id)
-    .filter((m) => m.status === "ACTIVE" || m.status === "ATTEMPTED")
-    .sort((a, b) => lastMilestoneTouch(b.id) - lastMilestoneTouch(a.id))[0];
-  function lastMilestoneTouch(id: ID) {
-    for (let i = db.events.length - 1; i >= 0; i--) if (db.events[i].milestoneId === id) return db.events[i].at;
-    return 0;
-  }
-  const picks = topPicks(recommendNext(db, focus.id, { engagementLift: engagementLift(db) }), 3).filter((r) => r.milestoneId !== inProgress?.id);
-  const recent = Object.values(db.mastery).sort((a, b) => b.achievedAt - a.achievedAt).slice(0, 4).filter((r) => db.milestones[r.milestoneId]);
-  const fp = courseProgress(db, focus.id);
-  const open = (id: ID, kind?: string) => {
-    if (kind) act((d) => logEvent(d, "RECOMMENDATION_CHOSEN", { milestoneId: id, courseId: focus.id }, { kind, from: "home" }));
-    navigate(`/session/${id}`);
-  };
+  const firstRun = !db.preferences.firstRunAt && !courses.length && !Object.keys(db.attempts).length && !Object.keys(db.academicGoals).length;
+  const passed = passedDeadlines(db, g);
+  const nextExam = upcomingExams(db)[0];
 
   return (
     <div className="stack-lg rise">
-      <header className="stack" style={{ gap: 6 }}>
-        <div className="row between nowrap"><span className="eyebrow">{fmtDate(Date.now(), { day: "numeric", month: "long" })} · {focus.title}</span><LanguageToggle compact /></div>
-        <h1>{L("What's next?", "Sırada ne var?")}</h1>
-        <p className="text-2">{focus.goal}</p>
-        <Bar value={fp.requiredTotal ? fp.requiredMastered / fp.requiredTotal : 0} mastered />
-        <span className="small muted">{L(`${fp.requiredMastered} of ${fp.requiredTotal} core milestones mastered`, `${fp.requiredTotal} temel adımın ${fp.requiredMastered} tanesinde ustalaşıldı`)}</span>
+      <header className="row between nowrap">
+        <span className="eyebrow">{fmtDate(Date.now(), { weekday: "long", day: "numeric", month: "long" })}</span>
+        <span className="row nowrap" style={{ gap: 6 }}>
+          <button className="btn small ghost" onClick={() => openPalette()} aria-label={L("Search and quick actions", "Arama ve hızlı komutlar")}><Icon.search /> <span className="hide-narrow">{L("Search", "Ara")}</span></button>
+          <LanguageToggle compact />
+        </span>
       </header>
 
-      <NowCard db={db} g={getGraph(db.knowledge)} />
+      {firstRun ? <FirstRun g={g} /> : <OpenLabView db={db} g={g} />}
 
-      {inProgress && (
-        <button className="card accent clickable stack" style={{ textAlign: "left", color: "inherit", font: "inherit", gap: 6 }} onClick={() => open(inProgress.id)}>
-          <span className="eyebrow">{L("In progress", "Devam eden")}</span>
-          <span className="serif" style={{ fontSize: "1.2rem" }}>{inProgress.title}</span>
-          <span className="small text-2">{inProgress.learningObjective}</span>
-          <span className="row small" style={{ color: "var(--accent)", gap: 6 }}>{L("Continue", "Devam et")} <Icon.arrow /></span>
-        </button>
-      )}
+      {passed.slice(0, 1).map((p) => (
+        <div key={p.examId} className="banner info row between" style={{ gap: 8 }}>
+          <span className="small">{p.message}</span>
+          <button className="btn small" onClick={() => navigate(`/study?tab=exams&exam=${p.examId}`)}>{L("Add the result", "Sonucu ekle")}</button>
+        </div>
+      ))}
+      {nextExam && daysUntil(nextExam) <= 14 && <ExamsCard db={db} />}
 
-      {due.length > 0 && (
-        <button className="banner warn row between" style={{ textAlign: "left", color: "inherit", font: "inherit", cursor: "pointer" }} onClick={() => navigate("/retention")}>
-          <span>{L(`${due.length} retention check${due.length > 1 ? "s" : ""} due — a few minutes to see what stuck.`, `${due.length} kalıcılık kontrolü bekliyor — neyin aklında kaldığını görmek birkaç dakika sürer.`)}</span>
-          <Icon.arrow />
-        </button>
-      )}
+      {!firstRun && <DiscoverStrip db={db} g={g} />}
 
-      {picks.length > 0 && (
-        <section className="stack" style={{ gap: 10 }}>
-          <h2>{inProgress ? L("Or choose", "Ya da seç") : L("Recommended", "Önerilenler")}</h2>
-          {picks.map((r, i) => {
-            const m = db.milestones[r.milestoneId];
+      <details className="library" open={!firstRun && courses.length > 0 && courses.length <= 2}>
+        <summary className="row between"><h2 style={{ margin: 0 }}>{L("Library", "Kütüphane")}</h2><span className="tiny muted">{L(`${courses.length} courses`, `${courses.length} ders`)}</span></summary>
+        <div className="stack" style={{ gap: 10, marginTop: 10 }}>
+          {courses.map((c) => {
+            const p = courseProgress(db, c.id);
             return (
-              <button key={r.milestoneId} className={`card clickable ${!inProgress && i === 0 ? "accent" : ""}`} style={{ textAlign: "left", color: "inherit", font: "inherit" }} onClick={() => open(m.id, r.kind)}>
-                <div className="row between nowrap" style={{ marginBottom: 4 }}><KindChip kind={r.kind} /><span className="tiny muted">{TYPE_LABEL[m.milestoneType]} · {minutes(m.estimatedDuration)}</span></div>
-                <div className="serif" style={{ fontSize: "1.05rem" }}>{m.title}</div>
-                <div className="tiny muted" style={{ marginTop: 4 }}>{r.reasons[0]}</div>
+              <button key={c.id} className="card clickable stack" style={{ textAlign: "left", color: "inherit", font: "inherit", gap: 6 }} onClick={() => navigate(`/course/${c.id}`)}>
+                <div className="row between nowrap"><strong className="truncate">{c.title}</strong><span className="small muted mono">{p.requiredMastered}/{p.requiredTotal}</span></div>
+                <Bar value={p.requiredTotal ? p.requiredMastered / p.requiredTotal : 0} mastered />
               </button>
             );
           })}
-          <button className="btn ghost small" style={{ alignSelf: "flex-start" }} onClick={() => navigate(`/course/${focus.id}?tab=map`)}>{L("Open the map", "Haritayı aç")} <Icon.arrow /></button>
-        </section>
-      )}
-
-      <ExamsCard db={db} />
-      <GraphCard db={db} />
-      <StudyCard db={db} />
-
-      <section className="stack" style={{ gap: 10 }}>
-        <div className="row between"><h2>{L("Courses", "Dersler")}</h2><button className="btn small" onClick={() => navigate("/build")}><Icon.plus /> {L("New", "Yeni")}</button></div>
-        {courses.map((c) => {
-          const p = courseProgress(db, c.id);
-          return (
-            <button key={c.id} className="card clickable stack" style={{ textAlign: "left", color: "inherit", font: "inherit", gap: 6 }} onClick={() => navigate(`/course/${c.id}`)}>
-              <div className="row between nowrap"><strong className="truncate">{c.title}</strong><span className="small muted mono">{p.requiredMastered}/{p.requiredTotal}</span></div>
-              <Bar value={p.requiredTotal ? p.requiredMastered / p.requiredTotal : 0} mastered />
-            </button>
-          );
-        })}
-      </section>
-
-      {recent.length > 0 && (
-        <section className="stack" style={{ gap: 6 }}>
-          <h2>{L("Recent progress", "Son ilerlemeler")}</h2>
-          {recent.map((r) => (
-            <div key={r.id} className="row small nowrap">
-              <span style={{ color: "var(--mastered)" }}>✓</span>
-              <span className="grow truncate">{db.milestones[r.milestoneId].title}</span>
-              <span className="muted">{r.selfAttested ? L("self-attested", "kendi beyanın") : fmtDate(r.achievedAt)}</span>
-            </div>
-          ))}
-        </section>
-      )}
+          <button className="btn small" style={{ alignSelf: "flex-start" }} onClick={() => navigate("/build")}><Icon.plus /> {L("New course", "Yeni ders")}</button>
+          <GraphCard db={db} />
+          <StudyCard db={db} />
+        </div>
+      </details>
     </div>
   );
 }

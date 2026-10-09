@@ -2,6 +2,9 @@ import { summarizeIssues, validateCurriculum } from "../../adaptive/validation";
 import { PathView } from "../components/PathView";
 import { LabTab } from "../components/LabTools";
 import { MasteryProfileCard } from "../components/Adaptive";
+import { QuickCheck } from "../components/QuickCheck";
+import { AddConceptForm, ConceptAdmin, DepthCard, RollbackButton, WhyAndWhere, YourWork } from "../components/GraphExtras";
+import { DiscoverStrip } from "../components/OpenLab";
 import { SourcesBlock } from "../components/Curation";
 import { useMemo, useState, type ReactNode } from "react";
 import type { LabDB } from "../../domain/types";
@@ -44,9 +47,10 @@ function usePersonal(): { db: LabDB; g: KnowledgeGraph; pg: PersonalGraph } {
   return { db, g, pg: personalGraph(db, g) };
 }
 
-type View = "baglam" | "rota" | "harita" | "yollar" | "disiplin" | "esleme" | "dogrulama" | "surum";
+type View = "baglam" | "kesif" | "rota" | "harita" | "yollar" | "disiplin" | "esleme" | "dogrulama" | "surum";
 const VIEWS = (): [View, string][] => [
   ["baglam", L("Context", "Bağlam")],
+  ["kesif", L("Discover", "Keşfet")],
   ["rota", L("My path", "Rotam")],
   ["harita", L("Map", "Harita")],
   ["yollar", L("Paths", "Yollar")],
@@ -89,6 +93,7 @@ export function KnowledgePage() {
         ))}
       </div>
       {view === "baglam" && <ContextView db={db} pg={pg} onOpen={setOpen} />}
+      {view === "kesif" && <DiscoverStrip db={db} g={g} limit={8} />}
       {view === "rota" && <PathView db={db} g={g} onOpen={setOpen} />}
       {view === "harita" && <MapView pg={pg} onOpen={setOpen} />}
       {view === "yollar" && <PathsView db={db} pg={pg} onOpen={setOpen} />}
@@ -145,6 +150,7 @@ function ContextView({ db, pg, onOpen }: { db: LabDB; pg: PersonalGraph; onOpen:
   const basics = ready ? ready.requiredGaps.filter((id) => g.objects[id].difficulty <= 1 && (pg.progress.get(id)?.milestones.length ?? 0) === 0) : [];
   const known = g.order.filter((id) => pg.satisfied(id));
   const [q, setQ] = useState("");
+  const [basicsCheck, setBasicsCheck] = useState(false);
   const results = useMemo(() => {
     const needle = lower(q.trim());
     if (needle.length < 2) return [];
@@ -187,10 +193,11 @@ function ContextView({ db, pg, onOpen }: { db: LabDB; pg: PersonalGraph; onOpen:
               )}
               {basics.length > 0 && (
                 <div className="stack" style={{ gap: 4 }}>
-                  <span className="tiny muted">{L(`If you already know some of the basics you don't have to go back: mark ${basics.length} introductory objects as known (your own claim) and undo any of them later.`, `Temel önkoşullardan bazılarını zaten biliyorsan geri dönmek zorunda değilsin: ${basics.length} giriş düzeyi nesneyi kendi beyanınla işaretleyebilir, sonra tek tek geri alabilirsin.`)}</span>
-                  <button className="btn small" style={{ alignSelf: "flex-start" }} onClick={() => store.transact((d) => { for (const id of basics) setSelfAttested(d, id, true); })}>
-                    {L(`I know the introductory level (${basics.length})`, `Giriş düzeyini biliyorum (${basics.length})`)}
+                  <span className="tiny muted">{L(`If you already know some of the basics you don't have to go back: a short check over ${basics.length} introductory objects marks the ones you show as known.`, `Temel önkoşullardan bazılarını zaten biliyorsan geri dönmek zorunda değilsin: ${basics.length} giriş düzeyi nesne üzerinde kısa bir kontrol, gösterdiklerini bilinen olarak işaretler.`)}</span>
+                  <button className="btn small" style={{ alignSelf: "flex-start" }} onClick={() => setBasicsCheck(true)}>
+                    {L(`I know the introductory level — check me (${basics.length})`, `Giriş düzeyini biliyorum — kontrol et (${basics.length})`)}
                   </button>
+                  {basicsCheck && <QuickCheck target={{ loIds: basics.slice(0, 4) }} title={L("The basics", "Temeller")} onClose={() => setBasicsCheck(false)} />}
                 </div>
               )}
             </div>
@@ -499,11 +506,13 @@ function VersionView({ db, g }: { db: LabDB; g: KnowledgeGraph }) {
   };
   return (
     <div className="stack-lg">
+      <AddConceptForm g={g} initial={new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("add") ?? undefined} />
       <section className="stack" style={{ gap: 10 }}>
         <h2>{L("Version history", "Sürüm geçmişi")}</h2>
+        <RollbackButton />
         {[...db.knowledge.history].reverse().map((h) => (
           <div key={h.id} className="card stack" style={{ gap: 4 }}>
-            <strong>v{h.toVersion} <span className="tiny muted">· {fmtDate(h.at)}</span></strong>
+            <strong>v{h.toVersion} <span className="tiny muted">· {fmtDate(h.at)}{h.rolledBackAt ? L(" · rolled back", " · geri alındı") : ""}</span></strong>
             <span className="small text-2">{h.summary}</span>
             <span className="tiny muted">{L(`${h.added.length} new · ${h.modified.length} changed · ${h.retired.length} retired`, `${h.added.length} yeni · ${h.modified.length} değişen · ${h.retired.length} kullanım dışı`)}{h.relinkedMilestones ? L(` · ${h.relinkedMilestones} steps relinked`, ` · ${h.relinkedMilestones} adım yeniden bağlandı`) : ""}</span>
           </div>
@@ -577,7 +586,7 @@ function LOSheet({ id, db, pg, onOpen, onClose }: { id: string; db: LabDB; pg: P
   const { g } = pg;
   const o: LearningObject = g.objects[id];
   const p = pg.progress.get(id)!;
-  const [tab, setTab] = useState<Tab>("overview");
+  const [tab, setTab] = useState<Tab>(() => { const t = new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("tab"); return TABS().some(([k]) => k === t) ? (t as Tab) : "overview"; });
   const due = cardStats(db, Date.now(), id).due;
   return (
     <Sheet title={o.title} onClose={() => { stopSpeaking(); onClose(); }} wide>
@@ -642,6 +651,7 @@ function Overview({ o, db, pg, onOpen }: { o: LearningObject; db: LabDB; pg: Per
   const maps = mappingsFor(g, id);
   const isGoal = db.knowledge.goals.includes(id);
   const attested = !!db.knowledge.selfAttested[id];
+  const [checking, setChecking] = useState(false);
   const existing = courseForObject(db, id);
   const study = (withGaps: boolean) => {
     try {
@@ -681,7 +691,11 @@ function Overview({ o, db, pg, onOpen }: { o: LearningObject; db: LabDB; pg: Per
       <Section title={L("Why does it matter?", "Neden önemli?")}><p className="small text-2">{o.whyItMatters}</p></Section>
       {o.coreQuestions.length > 0 && <Section title={L("Questions it answers", "Cevapladığı sorular")}><ul className="small text-2 tight">{o.coreQuestions.map((q) => <li key={q}>{q}</li>)}</ul></Section>}
       <Section title={L("You'll be able to", "Bunu yapabileceksin")}><ul className="small text-2 tight">{o.learningObjectives.map((q) => <li key={q}>{q}</li>)}</ul></Section>
+      {p.missingRequired.length > 0 && (
+        <div className="banner info small">{L(`Preview — ${p.missingRequired.length} required prerequisite(s) not shown yet: `, `Önizleme — henüz gösterilmemiş ${p.missingRequired.length} zorunlu önkoşul: `)}{p.missingRequired.slice(0, 3).map((x) => g.objects[x]?.title).join(", ")}. {L("You can still look around and start.", "Yine de göz atabilir ve başlayabilirsin.")}</div>
+      )}
       <MasteryProfileCard loId={o.id} />
+      <DepthCard loId={o.id} />
       <Section title={L("Evidence that you've learned it", "Öğrendiğinin kanıtı")}>
         <div className="row" style={{ gap: 4 }}>{o.evidenceTypes.map((e) => <span key={e} className="chip">{evidenceLabel(e)}</span>)}</div>
         <ul className="small text-2 tight">{o.masteryCriteria.map((c) => <li key={c}>{c}</li>)}</ul>
@@ -694,7 +708,7 @@ function Overview({ o, db, pg, onOpen }: { o: LearningObject; db: LabDB; pg: Per
         <p className={`small ${ready.requiredGaps.length ? "" : "muted"}`}>{ready.message}</p>
       </Section>
 
-      {o.unlocks.length > 0 && <Section title={L("Where it leads", "Açtığı yollar")}><p className="tiny muted">{L("Possible next steps; none of them is required.", "Bunlar olası sonraki adımlar; hiçbiri zorunlu değil.")}</p><div className="list">{o.unlocks.map((u) => link(u))}</div></Section>}
+      <WhyAndWhere db={db} g={g} loId={o.id} onOpen={onOpen} />
       {(o.interdisciplinaryLinks.length > 0 || incoming.length > 0) && (
         <Section title={L("Interdisciplinary links", "Disiplinlerarası bağlantılar")}>
           <div className="list">
@@ -734,7 +748,10 @@ function Overview({ o, db, pg, onOpen }: { o: LearningObject; db: LabDB; pg: Per
         </Section>
       )}
 
+      <YourWork loId={o.id} />
       <SourcesBlock loId={o.id} />
+      <ConceptAdmin key={o.title} g={getBaseGraph(db.knowledge)} loId={o.id} />
+      {checking && <QuickCheck target={{ loId: id }} title={o.title} onClose={() => setChecking(false)} />}
       <div className="stack sheet-actions">
         {existing ? (
           <button className="btn primary block" onClick={() => navigate(`/course/${existing}`)}>{L("Go to the course", "Derse git")} <Icon.arrow /></button>
@@ -745,7 +762,8 @@ function Overview({ o, db, pg, onOpen }: { o: LearningObject; db: LabDB; pg: Per
           </div>
         )}
         <div className="row nowrap">
-          <button className="btn grow small" onClick={() => store.transact((d) => setSelfAttested(d, id, !attested))}>{attested ? L("Undo my claim", "Beyanımı geri al") : L("I know this (self-reported)", "Biliyorum (kendi beyanım)")}</button>
+          {p.state === "KONTROL" || p.state === "USTALASILDI" ? null : <button className="btn grow small" onClick={() => setChecking(true)}>{attested ? L("Confirm my earlier claim — check me", "Eski beyanımı doğrula — kontrol et") : L("I know this — check me", "Biliyorum — kontrol et")}</button>}
+          {attested && <button className="btn small ghost" onClick={() => store.transact((d) => setSelfAttested(d, id, false))}>{L("Remove the claim", "Beyanı kaldır")}</button>}
           <button className="btn grow small" onClick={() => { const on = store.transact((d) => toggleGoal(d, id)); toast(on ? L("Added to your goals.", "Hedeflerine eklendi.") : L("Removed from your goals.", "Hedeflerinden çıkarıldı.")); }}>{isGoal ? L("Remove goal", "Hedeften çıkar") : L("Make it a goal", "Hedef yap")}</button>
         </div>
       </div>

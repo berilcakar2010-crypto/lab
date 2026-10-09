@@ -4,7 +4,7 @@ import type { LabDB, TopicGrade } from "../../domain/types";
 import { fmtDate, L } from "../../i18n";
 import { domainLabel, type KnowledgeGraph } from "../../knowledge/schema";
 import { adaptiveReviewTopic, prioritizedDueTopics } from "../../adaptive/retention";
-import { dayKey, LADDER_DAYS, startOfDay, streak, studyLog, TOPIC_GRADE_LABELS, upcomingTopics, type StudyKind } from "../../study/topics";
+import { dayKey, LADDER_DAYS, startOfDay, studyLog, TOPIC_GRADE_LABELS, upcomingTopics, type StudyKind } from "../../study/topics";
 import { cardStats } from "../../study/flashcards";
 import { navigate, store, toast } from "../state";
 import { notificationPermission, refreshReminders, type PermissionState } from "../reminders";
@@ -105,7 +105,7 @@ export function StudyCalendar({ db, g }: { db: LabDB; g: KnowledgeGraph }) {
   return (
     <div className="stack">
       <div className="grid-3">
-        <div className="card stat"><span className="eyebrow">{L("Streak", "Seri")}</span><span className="serif stat-n"><CountUp value={streak(log)} /></span><span className="tiny muted">{L("days", "gün")}</span></div>
+        <div className="card stat"><span className="eyebrow">{L("Ideas touched (14 d)", "Dokunulan fikir (14 g)")}</span><span className="serif stat-n"><CountUp value={new Set(log.slice(0, 14).flatMap((d) => d.topics.map((t) => t.loId))).size} /></span></div>
         <div className="card stat"><span className="eyebrow">{L("Topics studied", "Çalışılan konu")}</span><span className="serif stat-n"><CountUp value={Object.keys(db.topicReviews).length} /></span></div>
         <div className="card stat"><span className="eyebrow">{L("Study days (35)", "Çalışılan gün (35)")}</span><span className="serif stat-n">{cells.filter((c) => byDay.has(dayKey(c))).length}</span></div>
       </div>

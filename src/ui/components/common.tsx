@@ -26,6 +26,9 @@ export const Icon = {
   up: () => <svg viewBox="0 0 24 24" {...P}><path d="M6 15l6-6 6 6" /></svg>,
   atlas: () => <svg viewBox="0 0 24 24" {...P}><circle cx="12" cy="5" r="2" /><circle cx="5" cy="12" r="2" /><circle cx="19" cy="12" r="2" /><circle cx="12" cy="19" r="2" /><path d="M10.6 6.4L6.4 10.6M13.4 6.4l4.2 4.2M6.4 13.4l4.2 4.2M17.6 13.4l-4.2 4.2M7 12h10" /></svg>,
   down: () => <svg viewBox="0 0 24 24" {...P}><path d="M6 9l6 6 6-6" /></svg>,
+  search: () => <svg viewBox="0 0 24 24" {...P}><circle cx="11" cy="11" r="6.5" /><path d="M20 20l-4.2-4.2" /></svg>,
+  desk: () => <svg viewBox="0 0 24 24" {...P}><path d="M4 19V8l8-4 8 4v11" /><path d="M8 19v-6h8v6M4 19h16" /></svg>,
+  focus: () => <svg viewBox="0 0 24 24" {...P}><circle cx="12" cy="12" r="3" /><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3" /></svg>,
 };
 
 export function Sheet({ title, onClose, children, wide }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean }) {

@@ -31,7 +31,7 @@ interface Draft {
 
 export function BuilderPage() {
   const db = useDB();
-  const [request, setRequest] = useState("");
+  const [request, setRequest] = useState(() => new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("q") ?? "");
   const [syllabus, setSyllabus] = useState("");
   const [showSyllabus, setShowSyllabus] = useState(false);
   const [draft, setDraft] = useState<Draft | null>(null);
