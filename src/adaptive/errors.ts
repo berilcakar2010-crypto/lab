@@ -226,7 +226,8 @@ export function recordError(db: LabDB, a: Attempt, c: Classification = classifyE
     createdAt: a.createdAt,
   };
   db.errors[err.id] = err;
-  logEvent(db, "ERROR_IDENTIFIED", { sessionId: a.sessionId, milestoneId: a.milestoneId, questionId: a.questionId, at: a.createdAt }, {
+  // Migrated (legacy) records are derived from old data: they add no raw events.
+  if (source !== "legacy") logEvent(db, "ERROR_IDENTIFIED", { sessionId: a.sessionId, milestoneId: a.milestoneId, questionId: a.questionId, at: a.createdAt }, {
     errorId: err.id, category: err.category, confidence: err.confidence, source, suspectedSkill: err.trace?.suspectedSkill, traceConfidence: err.trace?.confidence,
   });
   if (source !== "legacy") {
@@ -273,7 +274,7 @@ export function dismissError(db: LabDB, errorId: ID): void {
  * answer to the same question or milestone, or verified mastery of the repair
  * target recorded after the error. Returns the ids resolved.
  */
-export function updateRepairs(db: LabDB, now: Millis = Date.now()): ID[] {
+export function updateRepairs(db: LabDB, now: Millis = Date.now(), quiet = false): ID[] {
   const resolved: ID[] = [];
   const open = Object.values(db.errors).filter((e) => e.resolution === "OPEN" || e.resolution === "REPAIRING");
   if (!open.length) return resolved;
@@ -293,7 +294,7 @@ export function updateRepairs(db: LabDB, now: Millis = Date.now()): ID[] {
     e.resolvedAt = now;
     if (e.repair) e.repair.completedAt = now;
     resolved.push(e.id);
-    logEvent(db, "REPAIR_COMPLETED", { milestoneId: e.milestoneId, at: now, loIds: target ? [target] : undefined }, { errorId: e.id, how });
+    if (!quiet) logEvent(db, "REPAIR_COMPLETED", { milestoneId: e.milestoneId, at: now, loIds: target ? [target] : undefined }, { errorId: e.id, how });
   }
   return resolved;
 }
@@ -372,7 +373,7 @@ export function migrateLegacyErrors(db: LabDB, now: Millis = Date.now()): number
     recordError(db, a, classifyError(db, a), "legacy");
     n++;
   }
-  if (n) updateRepairs(db, now);
+  if (n) updateRepairs(db, now, true);
   db.knowledge.migrations.push({ id, at: now, note: `${n} eski yanlış cevap hata kaydına dönüştürüldü (kaynak: legacy). | ${n} earlier wrong answers became error records (source: legacy).` });
   return n;
 }

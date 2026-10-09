@@ -405,3 +405,20 @@ Tests: Duman testine 4 yeni adım + mevcut adımlarda hata analizi ve A–G pane
 Known limitations: NextOptions bileşeni ders sayfası için korunuyor; tamamlama ekranında yerini A–G paneli aldı.
 Next phase: Faz 21 — taşıma
 ```
+
+## Faz 21 — Taşıma (migration)
+
+```text
+PHASE STATUS: PASS
+Implemented: eski veri → hydrateDB → şema 3. Eksik yeni tablolar boş olarak eklenir, çalışma modu NORMAL olur,
+  eski yanlış cevaplar tek seferlik "v3-error-records" taşımasıyla hata kaydına dönüşür (kaynak: legacy; sonradan
+  düzeltilmiş olanlar RESOLVED). Taşıma ham olay üretmez (geçmiş uydurulmaz). Mevcut ID'ler, ustalık kayıtları,
+  oturumlar, denemeler, kalıcılık kontrolleri ve müfredat aynen korunur. Taşıma idempotenttir; geri yüklenen
+  yedeklerde de aynı şekilde çalışır.
+Modified files: src/adaptive/errors.ts (legacy kayıtlar için olaysız mod)
+New files: src/adaptive/migration.test.ts
+Data model changes: SCHEMA_VERSION 3 (Faz 2).
+Tests: 3 yeni (ID/ustalık/oturum/müfredat korunur; yeni alanlar + legacy hata kayıtları; üç kez taşıma = aynı sonuç).
+Known limitations: —
+Next phase: Faz 22 — testler
+```
