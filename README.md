@@ -98,6 +98,40 @@ ustalık → transfer → sıradaki seçim.
 
 Ayrıntılar: `LAB_UPGRADE_AUDIT.md`, `docs/LAB_UPGRADE_PHASES.md`, `LAB_UPGRADE_FINAL_REPORT.md`.
 
+## Akademik işletim sistemi katmanı (`src/academic/`, şema v4)
+
+Lab açıldığında bir pano değil, **Open Lab** görünür: nerede olduğunu söyleyen tek bir cümle,
+gerekçesi ve güven değeriyle **tek bir "şimdi bunu yap"** (asıl soruyla başlar), yarım kalan
+iş için *Devam / Baştan / Gözden geçir / Değiştir*, **Beni şaşırt** (Rahat → En zor) ve
+**Ne çalışacağımı bilmiyorum**. Yeni bir Lab "Neyi anlamak istiyorsun?" sorusuyla açılır.
+
+- **"Biliyorum" artık kısa bir test.** 2–3 soru, ipucusuz: önce Lab'ın kendi değerlendirdiği
+  sorular, sonra ölçütlere göre değerlendirilen açık sorular (YZ varsa YZ, yoksa öğrenci).
+  Geçince konu *kontrolü geçti* sayılır ve önkoşulları karşılar; eski beyanlar silinmez,
+  doğrulanmamış olarak kalır (`src/adaptive/checks.ts`, `ui/components/QuickCheck.tsx`).
+- **Dinamik ayrıştırma**: zorlanılan bir adım geçici, grafiği kirletmeyen küçük adımlara
+  bölünür; asıl adımda ustalaşılınca arşivlenir (`adaptive/decompose.ts`).
+- **Ustalık derinliği**: 8 seviye (gördüm → araştırmada kullanabiliyorum), beyan / gözlendi /
+  doğrulandı / bayat ayrımı, sınav ustalığı ≠ araştırma ustalığı, güven kalibrasyonu ve
+  "neden değişti" denetimi (`adaptive/depth.ts`).
+- **Keşif**: gerçek grafik bağlantılarından "neden önemli / nereye götürür", dönen kısa bir
+  keşif listesi, "az önce bağladın" anı, olası keşif soruları (`adaptive/discovery.ts`).
+- **Çalışmalar** sayfası: hedefler (alan → yetenek → kavram → adım → kanıt ayrıştırması,
+  sürümlü), projeler (sürümlü), günlük, portfolyo/eserler, okul (ders, AP, yarışma, notlar —
+  grafikten ayrı), zaman çizelgesi ve yıllık değerlendirme (`academic/*`).
+- **Soru bankası** (durumlar, favoriler, birebir değerlendirilebilen varyasyonlar, kalite
+  kontrolü), **genel arama + hızlı komutlar** (Ctrl/⌘ K ya da `/`: "öğren X", "pratik X",
+  "beni şaşırt"…), **derin çalışma modu**, oturum sonu hikâyesi ve iki yansıtma sorusu.
+- **Kalıcılık stratejileri** değiştirilebilir (`RetentionStrategy`: genişleyen merdiven,
+  SM-2, Leitner). **YZ**: sağlayıcı yetenek bildirimi, aynı istek için önbellek, öğrenci
+  üslup tercihi, bağlam bütçesi, rol bazlı yükleme mesajları.
+- **Uzun ömür**: şema v4 göçü (deterministik, idempotent), kendi kavramın / yeniden adlandırma
+  (ID sabit, eski ad takma ad olur) / arşivleme / son güncellemeyi geri alma, sürümlü tam dışa
+  aktarma (`data/exchange.ts`, API anahtarları hariç), günlük otomatik yerel anlık görüntüler
+  ve bozuk kopyada otomatik kurtarma (`data/store.ts`), sistem sağlığı ve bakım önerileri.
+
+Denetim: `LAB_FINAL_AUDIT.md` · Son rapor: `LAB_FINAL_COMPLETION_REPORT.md`.
+
 ## Bilgi grafiği — Lab Müfredatı v2.1
 
 Lab'in merkezinde zamandan bağımsız, yaşayan bir **bilgi grafiği** vardır (`src/knowledge/`).
