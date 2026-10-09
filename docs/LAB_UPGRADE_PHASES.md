@@ -145,3 +145,23 @@ Tests: 5 yeni (doğru rota ve gerekçeler, bilinen/beyan/onarım, alternatif rot
 Known limitations: Grafik yapısı (bağımlı sayıları) grafik başına önbellekte; rota oluşturulurken bir kez hesaplanır.
 Next phase: Faz 8 — What Next motoru
 ```
+
+## Faz 8 — What Next motoru
+
+```text
+PHASE STATUS: PASS
+Implemented: Bir adım bittiğinde (ya da her istendiğinde) yedi tür seçenek değerlendirilir ve gerekçeleriyle
+  sıralanır; hiçbiri kullanıcı adına seçilmez: A Devam (etkin rotanın adımı / dersteki doğal devam / grafikte
+  açtığı konu), B Meydan okuma (CHALLENGE/BOSS adımı ya da bir kademe zor nesne), C Önkoşul onarımı (hataların
+  işaret ettiği beceri, güven yüzdesiyle), D Tekrar (kalıcılık kontrolü / tekrar takvimi / bayatlayan ustalık),
+  E Transfer (disiplinlerarası bağlantıyla başka alanda kullanım; profilde transfer zayıfsa öne çıkar),
+  F Alan değiştir (en uzun süredir çalışılmayan ders ya da duraklatılmış rota), G Araştırma (nesnenin araştırma
+  uygulamalarından açık soru; derinlik yüksekse öne çıkar). Sınav modunda sınav konuları yükseltilir.
+  WHAT_NEXT_SHOWN / WHAT_NEXT_CHOSEN olayları.
+Modified files: —
+New files: src/adaptive/whatNext.ts, src/adaptive/whatNext.test.ts
+Data model changes: —
+Tests: 3 yeni (A–G seçenekleri, sıralama ama seçmeme, gerekçeler, transfer/araştırma, etkin rota, tekrar).
+Known limitations: Mevcut ders içi "Sırada ne var?" önerileri (recommendNext) korunuyor ve A/B/D için kaynak olarak kullanılıyor.
+Next phase: Faz 9 — Normal / Sınav modu
+```
