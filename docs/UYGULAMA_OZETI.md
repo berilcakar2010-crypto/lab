@@ -39,19 +39,21 @@ BÜYÜK HEDEF → MİKRO ADIM → AKTİF DENEME → ANINDA GERİ BİLDİRİM →
 
 ## 3. Ana ekranlar
 
-Alt menüde beş bölüm var: Ana sayfa · Grafik · Çalış · İstatistik · Ayarlar.
+Alt menüde altı bölüm var: Ana sayfa · Grafik · Çalış · Çalışmalar · İstatistik · Ayarlar.
+Her yerden **Ctrl/⌘ K** ya da `/` ile genel arama ve hızlı komut paleti açılır.
 
 | Ekran | İçerik |
 |---|---|
-| **Ana sayfa** | Sırada ne var, önerilen adımlar, sıradaki sınav ve geri sayımı, "Bugün, sınavların için" önerileri, bilgi grafiği önerisi, tekrar bekleyen konu/kart sayısı, dersler ve son ilerlemeler, EN/TR düğmesi. |
+| **Ana sayfa (Open Lab)** | Pano değil: nerede olduğunu söyleyen tek cümle ve gerekçesi, güven değeriyle **tek bir "şimdi bunu yap"**, yarım kalan iş için Devam / Baştan / Gözden geçir / Değiştir, **Beni şaşırt** ve **Ne çalışacağımı bilmiyorum**. Altında: sırada ne var, önerilen adımlar, sıradaki sınav ve geri sayımı, "Bugün, sınavların için" önerileri, bilgi grafiği önerisi, tekrar bekleyen konu/kart sayısı, dersler ve son ilerlemeler, EN/TR düğmesi. |
 | **Ders oluşturucu** | Ders adı yazılır ya da müfredat yapıştırılır. Lab ünite → konu → mikro adım yapısına çevirir. Önce bilgi grafiğinde eşleşen yol ya da nesne aranır. |
 | **Ders sayfası** | Ünite ve adım haritası, ilerleme, müfredat düzenleyici. |
 | **Oturum** | Bir adım üzerinde aktif çalışma: soru, deneme, ipucu, geri bildirim, yeniden deneme. Ustalık kontrolünden geçince kutlama gösterilir. Ardından oturum özeti gelir. |
 | **Grafik (bilgi grafiği)** | Bağlam, Harita, Yollar, Alanlar, Eşlemeler, Doğrulama ve Sürüm görünümleri. Her nesne bir alt pencerede açılır. |
 | **Çalış** | Konular (aralıklı tekrar), Sınavlar, Kart tekrarı, Takvim, Kartlar, Anlatımlar, YZ sohbetleri, Dışa aktar. |
+| **Çalışmalar** | Hedefler, projeler, araştırma günlüğü, portfolyo/eserler, okul kayıtları, zaman çizelgesi, yıllık değerlendirme (bkz. §12). |
 | **İstatistik** | Ham olaylardan hesaplanan istatistikler, Odak Lab, kişisel deneyler. |
 | **Kalıcılık** | Ustalaşılan adımlar için zamanla gelen kalıcılık kontrolleri. |
-| **Ayarlar** | Dil, YZ sağlayıcısı ve anahtarı, hatırlatmalar, hareketi azaltma, yedekleme/geri yükleme, bütünlük kontrolü. |
+| **Ayarlar** | Dil, YZ sağlayıcısı ve anahtarı, YZ üslubu, hatırlatmalar, kalıcılık stratejisi, hareketi azaltma, yedekleme/geri yükleme, sistem sağlığı, bütünlük kontrolü. |
 
 ## 4. Bilgi grafiği (Lab Müfredatı v2.1)
 
@@ -169,12 +171,20 @@ Kartlar · YZ'ye sor · Anlat · Notlar.
   - Müfredat: adım üretici, müfredat kurucu, müfredat danışmanı, yansıma analisti.
   - Çalışma araçları: soru-cevap asistanı, anlatım değerlendirici, kart üretici, zihin
     haritası üretici.
+  - Sonradan eklenenler: araştırma rehberi, YZ ile adım ayrıştırma, soru varyasyonu üretme
+    (büyüklük ve kalite kontrolünden geçen kabul edilir).
 - **Çevrimdışı yedek:** Her rolün deterministik bir karşılığı var: elle yazılmış ders
   paketleri (olimpiyat mekaniği, Kalkülüs 1; iki dilde), bir müfredat ayrıştırıcı ve
   grafikten üretilen yanıtlar.
 - **Hata durumu:** Bir YZ çağrısı başarısız olursa uygulama çevrimdışı davranışa geçer ve
   bunu kaydeder.
 - **Doğrulama:** YZ çıktıları şema ile doğrulanır. Geçersiz çıktı kullanılmaz.
+- **Diğer:** sağlayıcı yetenek bildirimi, aynı istek için önbellek, öğrencinin seçtiği üslup,
+  bağlam bütçesi, rol bazlı yükleme mesajları.
+- **Anlamsal arama:** Gemini embedding'leriyle anlama göre arama. Yalnızca sorgu metni
+  gönderilir; günlük ve notlar cihazdan çıkmaz.
+- **YZ müfredat önerisi:** Önce fark (diff) gösterilir; değişiklikler tek tek onaylanır,
+  sonra sürümlenir. Her değişikliğin kökeni (kim/ne üretti) tutulur.
 
 ## 10. İstatistik, Odak Lab ve deneyler
 
@@ -196,10 +206,11 @@ Kartlar · YZ'ye sor · Anlat · Notlar.
 - **Mobil:** Capacitor 8 (Android). Kullanılan eklentiler: yerel bildirim, dosya sistemi,
   paylaşım, durum çubuğu, uygulama (geri tuşu).
 - **Depolama:** IndexedDB, işlemsel düzenlemelerle. Ses ve video kayıtları ayrı bir depoda.
-  Şema sürümlüdür ve eski veriler otomatik taşınır.
+  Şema sürümlüdür (şu an v4); eski veriler deterministik ve tekrarlanabilir biçimde taşınır.
+  Günlük otomatik yerel anlık görüntü alınır, bozuk kopyada otomatik kurtarma yapılır.
 - **Derleme:** Her push'ta GitHub Actions bir APK derler ve "son-surum" sürümüne koyar.
   APK aynı anahtarla imzalanır, böylece veriler korunarak eskisinin üzerine kurulur.
-- **Testler:** 114 birim testi (Vitest). Ayrıca derlenmiş uygulama üzerinde tarayıcıda
+- **Testler:** 36 dosyada 231 birim/entegrasyon testi (Vitest), gerçek CPython testleri dahil. Ayrıca derlenmiş uygulama üzerinde tarayıcıda
   çalışan uçtan uca duman testi var: tüm akışlar, iki dil, telefon ve tablet genişlikleri.
 - **Kod düzeni:**
 
@@ -211,13 +222,80 @@ Kartlar · YZ'ye sor · Anlat · Notlar.
   | `src/ai/` | YZ katmanı |
   | `src/knowledge/` | Bilgi grafiği, eşlemeler, doğrulayıcı, planlayıcı |
   | `src/study/` | Kartlar, zihin haritaları, konu tekrarı, sınavlar |
+  | `src/adaptive/` | Uyarlanır öğrenme: ustalık profili, hatalar, rota, sırada ne var, tekrar, sandbox, Python |
+  | `src/academic/` | Akademik işletim sistemi: hedefler, projeler, günlük, portfolyo, okul, sürümleme, şema göçü |
   | `src/ui/` | Arayüz |
   | `src/i18n.ts` | Dil altyapısı |
 
-## 12. Bilinen sınırlar
+## 12. Uyarlanır öğrenme katmanı
+
+Ana döngü: hedef → rota → soru → deneme → geri bildirim → hata analizi → onarım → öğren →
+uygula → kanıt → ustalık → transfer → sıradaki seçim.
+
+- **Ustalık profili:** 7 boyut (hatırlama, kavrayış, uygulama, problem çözme, transfer,
+  açıklama, gecikmeli kalıcılık). Doğrulanmış skor ile öğrencinin kendi beyanı ayrı tutulur.
+- **Ustalık derinliği:** 8 seviye ("gördüm"den "araştırmada kullanabiliyorum"a). Beyan /
+  gözlendi / doğrulandı / bayat ayrımı yapılır; sınav ustalığı araştırma ustalığıyla aynı
+  sayılmaz; güven kalibrasyonu ve "neden değişti" kaydı tutulur.
+- **"Biliyorum" artık kısa bir test:** 2–3 ipucusuz soru. Geçilirse konu "kontrolü geçti"
+  sayılır ve önkoşulları karşılar. Eski beyanlar silinmez, doğrulanmamış kalır.
+- **Hata analizi:** 10 kategori. Her hata grafikte bir önkoşula bağlanır (güven değeriyle),
+  onarım önerilir; tekrarlayan hatalar ve dersler arası yanılgılar yakalanır.
+- **Takılma algılama:** Seçenek sunar; çözümü asla varsayılan yapmaz.
+- **Dinamik ayrıştırma:** Zorlanılan adım geçici küçük adımlara bölünür; asıl adımda
+  ustalaşınca bunlar arşivlenir, grafik kirlenmez.
+- **Rota planlayıcı ("Rotam"):** Her adımın gerekçesi gösterilir; rota değiştirilebilir,
+  bırakılabilir, sürdürülebilir.
+- **Sırada ne var:** Yedi tür seçenek: devam, meydan okuma, onarım, tekrar, transfer, alan
+  değiştirme, araştırma.
+- **Keşif:** Gerçek grafik bağlantılarından "neden önemli / nereye götürür", "az önce
+  bağladın" anı, olası keşif soruları.
+- **Sınav modu:** Öncelikler aynı grafik üzerinde geçici bir katmandır.
+- **Kalıcılık stratejileri:** Genişleyen merdiven, SM-2 ya da Leitner seçilebilir.
+- **Soru bankası:** Durumlar, favoriler, birebir değerlendirilebilen varyasyonlar, kalite
+  kontrolü.
+- **Derin çalışma modu**, oturum sonu hikâyesi ve iki yansıtma sorusu.
+
+## 13. Akademik işletim sistemi katmanı (Çalışmalar sayfası)
+
+- **Hedefler:** alan → yetenek → kavram → adım → kanıt ayrıştırması, sürümlü.
+- **Projeler** (sürümlü), **araştırma defteri** ve **günlük** (fikir, soru, gözlem…).
+- **Portfolyo / eserler:** yapılan işler kanıt olarak saklanır.
+- **Okul:** dersler, AP, yarışmalar, notlar — bilgi grafiğinden ayrı tutulur.
+- **Kaynaklar:** kitap ve kurslar müfredat değil kaynaktır; baskı, yıl ve güncellik bilgisi
+  tutulur.
+- **Zaman çizelgesi** ve **yıllık değerlendirme** (Markdown olarak dışa aktarılır).
+- **Kendi kavramın:** öğrenci grafiğe kavram ekleyebilir, yeniden adlandırabilir (ID sabit,
+  eski ad takma ad olur), arşivleyebilir, son güncellemeyi geri alabilir.
+- **Konu başına kalemle çizim** (eskiz) ve isteğe bağlı araştırma hatırlatmaları.
+- **Tam dışa aktarma:** sürümlü JSON (API anahtarları hariç).
+
+## 14. Lab sekmesi ve Python sandbox
+
+- **Tahmin → test → açıkla** döngüsü ve araştırma defteri.
+- **Sandbox modları:** formül, ODE (RK4), veri analizi ve **gerçek Python**.
+- **Python:** CPython 3, WebAssembly üzerinde (Pyodide 0.27.7), uygulamanın içinde ve
+  **internetsiz**. Yalnızca Python açıldığında yüklenir.
+  - **Gömülü bilimsel paketler:** numpy, scipy, pandas, matplotlib, sympy, networkx,
+    scikit-learn, statsmodels (bağımlılıklarla 26 paket, ≈82 MB). İlk `import`ta yüklenir.
+  - **Grafikler:** matplotlib figürleri Lab temasıyla PNG olarak gösterilir (en fazla 4);
+    ayrıca `plot()` ile sandbox grafiğine çizilebilir.
+  - **Hazır örnekler (7):** temel, numpy (sönümlü salınım), scipy (Lotka–Volterra),
+    pandas + statsmodels (regresyon), sympy (Taylor), scikit-learn (sınıflandırma),
+    networkx (en kısa yol).
+  - **Güvenlik:** ayrı bir Web Worker'da çalışır; ağ, depolama ve JavaScript erişimi kapalı.
+    Çıktı sınırlı; kod 15 sn'de, paket yükleme 240 sn'de kesilir.
+  - Kaydedilen bir çalıştırma, yorumla birlikte kanıt olarak saklanır.
+  - Android WebView `.wasm` dosyasını yanlış türde sunarsa başka yoldan derlenir.
+
+## 15. Bilinen sınırlar
 
 - Sunucu ve hesap yok, dolayısıyla cihazlar arası eşitleme yok. Taşıma yedek dosyasıyla yapılır.
 - Tarayıcı sürümünde bildirimler yalnızca uygulama açıkken gelir.
 - YZ değerlendirmesi için kullanıcının kendi Gemini ya da Groq anahtarı gerekir.
 - AP Biyoloji eşlemesi geçicidir; diğer 24 AP dersi doğrulanmıştır.
 - İçerik "çok üniversite düzeyinde olmayan ama detaylı" lise/ileri lise düzeyini hedefler.
+- APK büyük (Python ve bilimsel paketler yüzünden ≈96 MB ek). Python fiziksel bir Android
+  cihazda henüz denenmedi; ilk `import` birkaç saniye sürebilir.
+- Gömülü 8 paket dışındaki Python paketleri yok.
+- Anlamsal arama Gemini anahtarı gerektirir.
