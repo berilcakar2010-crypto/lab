@@ -5,11 +5,12 @@
  * and a confidence; callers record them in the decision log.
  */
 import type { LabDB } from "../domain/types";
-import { ERROR_CATEGORIES, type ErrorCategory, type ErrorRecord } from "../domain/adaptive";
+import { ERROR_CATEGORIES, type CurriculumProposal, type ErrorCategory, type ErrorRecord } from "../domain/adaptive";
 import { getGraph } from "../knowledge/graph";
 import { getLang } from "../i18n";
 import { runAI, parseJSON, type AIHost, type AIResult } from "./engine";
 import { ERROR_HELP, classifyError, type Classification } from "../adaptive/errors";
+import { reviewNotes } from "../adaptive/generator";
 
 const langLine = () => (getLang() === "tr" ? "Write every text field in Turkish." : "Write every text field in English.");
 
@@ -64,5 +65,29 @@ export async function analyzeErrorAI(host: AIHost, err: ErrorRecord, answerText:
     fallback,
     milestoneId: err.milestoneId,
     summary: `error analysis ${err.id}`,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Curriculum reviewer
+// ---------------------------------------------------------------------------
+
+/** A second opinion on a curriculum proposal before the learner approves it. Never changes the proposal. */
+export async function reviewProposalAI(host: AIHost, p: CurriculumProposal): Promise<AIResult<string[]>> {
+  return runAI(host, {
+    role: "CURRICULUM_REVIEWER",
+    system: [
+      "You review a proposed change to a learner's knowledge graph. Point out duplicates, missing prerequisites, milestones that are too broad",
+      "or too narrow, weak mastery evidence, factual doubts and unverifiable sources. Do not rewrite the proposal. Return JSON {\"notes\":[string]} (max 6).",
+      langLine(),
+    ].join("\n"),
+    prompt: JSON.stringify({ request: p.request, reused: p.reused, nodes: p.nodes.map((n) => ({ title: n.title, prerequisites: n.prerequisites, objectives: n.learningObjectives })), milestones: p.milestones.map((m) => ({ title: m.title, capability: m.capability.capability, evidence: m.masteryEvidence, status: m.granularity.status })) }),
+    parse: parseJSON((x) => {
+      const notes = (x as { notes?: unknown }).notes;
+      if (!Array.isArray(notes)) throw new Error("notes");
+      return notes.map((n) => String(n).trim()).filter((n) => n.length > 3).slice(0, 6);
+    }),
+    fallback: () => reviewNotes(p),
+    summary: `curriculum review ${p.id}`,
   });
 }

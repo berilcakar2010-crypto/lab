@@ -202,3 +202,61 @@ Tests: 3 yeni (sinyalsiz = değişiklik yok; zayıf/önemli konu daha erken, otu
 Known limitations: Ağırlıklar elle seçildi; kişisel deneylerle ayarlanabilir.
 Next phase: Faz 11 — YZ müfredat üretici
 ```
+
+## Faz 11 — YZ müfredat üretici
+
+```text
+PHASE STATUS: PASS
+Implemented: "Bana X'i öğret" hattı: hedef → grafikte arama (yol ya da nesneler) → mevcut düğümler yeniden kullanılır
+  (kopya önlenir; YZ'nin önerdiği yeni düğüm iki dilde de mevcut bir başlığa benziyorsa yeniden kullanıma çevrilir)
+  → yoldaki doğrulanmamış önkoşullar → yeni düğüm önerisi (yalnızca YZ ile; çevrimdışıyken uydurulmaz, açıkça
+  söylenir) → her adım için starting_question, attempt, learning_material (en fazla ~900 karakter: "yalnızca gerekeni
+  öğren"), application, mastery_evidence, transfer → granularity doğrulayıcı → grafik doğrulayıcı (varsayımsal
+  güncelleme üzerinde) → köken bilgisi → diff. YZ çıktısı şemayla doğrulanır; geçersiz çıktıda çevrimdışı yol.
+  Mevcut düğümler için adımlar deterministik grafik üreticisinden gelir.
+Modified files: src/ai/adaptiveAI.ts (müfredat gözden geçirici rolü)
+New files: src/adaptive/generator.ts, src/adaptive/generator.test.ts
+Data model changes: curriculumProposals tablosu.
+Tests: çevrimdışı yeniden kullanım + uydurmama, eşleşme yoksa dürüst not, YZ ile yeni düğüm/kopya önleme/granularity/önkoşul.
+Known limitations: Yeni düğümlerin İngilizce/Türkçe çevirisi yok; YZ hangi dilde yazdıysa o dilde görünür.
+Next phase: Faz 12 — diff ve onay
+```
+
+## Faz 12 — YZ müfredat diff + onay + sürüm
+
+```text
+PHASE STATUS: PASS
+Implemented: Diff satırları: + Eklenen düğüm, ~ Değişen düğüm, - Kaldırılan düğüm (silme yok; her zaman geçersiz,
+  "kullanım dışı bırak" önerilir), → Eklenen/kaldırılan önkoşul, + Adım / → Değişen adım; her satır geçerli/geçersiz
+  ve gerekçeli. Onay: tümünü onayla, seçerek onayla (bağımlılıklar otomatik eklenir: adım → düğüm, düğüm → kendi
+  önkoşul kenarları), tümünü reddet. Geçersiz değişiklik onaylanamaz. Uygulama mevcut güvenli güncelleme hattıyla:
+  diffUpdate → yeni hata varsa uygulanmaz → applyPlan (overlay + sürüm geçmişi, sürüm bir artırılır) → onaylanan
+  adımlardan yeni ders (yetenek, granularity ve köken bilgisi adımlara yazılır). Durum APPLIED/PARTIAL/REJECTED.
+  CURRICULUM_PROPOSED / CURRICULUM_DECIDED olayları ve karar kaydı. YZ gözden geçirici (CURRICULUM_REVIEWER)
+  öneriyi değiştirmeden not ekler; çevrimdışıyken deterministik kontrol listesi.
+Modified files: —
+New files: (generator.ts içinde)
+Data model changes: KnowledgeState.history'ye sürüm kaydı, KnowledgeState.provenance.
+Tests: seçerek onay → yeni grafik sürümü + ders + köken + grafik doğrulayıcıda 0 hata; reddetme hiçbir şeyi
+  değiştirmez; karar verilmiş öneri tekrar uygulanamaz; gözden geçirici (YZ + çevrimdışı).
+Known limitations: "Değişen adım" yalnızca yeni ders içinde; mevcut derslerin adımlarını değiştirmez.
+Next phase: Faz 13 — kaynak ve köken
+```
+
+## Faz 13 — Kaynak ve köken (provenance)
+
+```text
+PHASE STATUS: PASS
+Implemented: Köken kaydı (source, source_type, source_url, source_title, added_at, last_verified_at, verified_by,
+  confidence, generated_by_ai, VERIFIED/UNVERIFIED). Kaynak türleri: TEXTBOOK, COURSE, PAPER, OFFICIAL_DOCUMENT,
+  OPEN_RESOURCE, AI_GENERATED, USER_CREATED, OTHER. YZ içeriği kendiliğinden asla doğrulanmış olamaz; yalnızca kişi
+  doğrular. Yerleşik içerik "editoryal, kaynakla tek tek doğrulanmamış" olarak dürüstçe UNVERIFIED. Kitap/kurs =
+  kaynak: kaynak ekleme, bölüm ekleme (grafikten eşleşme önerisi), bölümü düğümlere eşleme; bir nesnenin tüm
+  kaynakları (seninkiler + Lab'in kaynak listesi). Kitap müfredat oluşturmaz (testle doğrulandı).
+Modified files: —
+New files: src/adaptive/provenance.ts
+Data model changes: sources tablosu; Course/Milestone/KnowledgeState provenance alanları.
+Tests: 2 yeni (YZ kendini doğrulayamaz + kişi doğrular; Thomas Calculus bölümü → math.calc.limits).
+Known limitations: URL'ler erişilebilirlik için denetlenmez (çevrimdışı uygulama).
+Next phase: Faz 14 — analitik genişletmeleri
+```
