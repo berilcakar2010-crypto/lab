@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Feedback, HintLevel, InputMethod, Question } from "../../domain/types";
 import { HINT_LEVELS } from "../../domain/types";
-import { answerMode, evaluateAuto, evaluateSelf, type Answer, type Evaluation } from "../../engines/evaluation";
+import { answerMode, evaluateAuto, evaluateCredit, evaluateSelf, type Answer, type Evaluation } from "../../engines/evaluation";
 import { recordAttempt } from "../../engines/progress";
 import { logEvent } from "../../engines/analytics";
 import { act, aiHost, navigate, toast, useDB } from "../state";
@@ -67,7 +67,7 @@ export function QuestionCard({
   const [code, setCode] = useState("");
   const [hintLevel, setHintLevel] = useState<HintLevel>(0);
   const [result, setResult] = useState<(Evaluation & { masteredNow: boolean; by: "auto" | "ai" | "self" }) | null>(null);
-  const [rubricStep, setRubricStep] = useState<null | { met: boolean[]; ai?: AIEvalResult | null; aiBusy?: boolean }>(null);
+  const [rubricStep, setRubricStep] = useState<null | { met: boolean[]; ai?: AIEvalResult | null; aiBusy?: boolean; edited?: boolean }>(null);
   const [confidence, setConfidence] = useState<number | undefined>();
   const [showWorkspace, setShowWorkspace] = useState(conditions.workspaceOpen ?? WORKSPACE_KINDS.has(q.kind));
   const [drawing, setDrawing] = useState<{ stats: DrawingStats; image: () => string } | null>(null);
@@ -135,13 +135,18 @@ export function QuestionCard({
     setRubricStep({ ...rubricStep, aiBusy: true });
     const a = effectiveAnswer();
     const ai = await evaluateOpenWithAI(q, a?.kind === "text" ? a.text : "", drawing?.image(), sessionId);
-    setRubricStep((r) => (r ? { ...r, aiBusy: false, ai, met: ai?.met ?? r.met } : r));
+    setRubricStep((r) => (r ? { ...r, aiBusy: false, ai, met: ai?.met ?? r.met, edited: false } : r));
   };
 
   const confirmRubric = () => {
     if (!rubricStep) return;
     const minScore = m?.masteryCriteria.minScore ?? 0.7;
-    const ev = evaluateSelf(q, rubricStep.met, minScore);
+    // The evaluator's partial credit and holistic judgement stand unless the learner changed a tick.
+    const ai = rubricStep.ai;
+    const ev = ai && !rubricStep.edited
+      ? evaluateCredit(q, ai.credit, minScore, ai)
+      // Points the evaluator found not to apply stay out unless the learner ticked them.
+      : ai ? evaluateCredit(q, rubricStep.met.map((m, i) => (m ? 1 : ai.credit[i] === null ? null : 0)), minScore) : evaluateSelf(q, rubricStep.met, minScore);
     if (rubricStep.ai) {
       record({ ...ev, feedback: { ...ev.feedback, ...rubricStep.ai.feedback, correctness: ev.feedback.correctness } }, "ai");
     } else record(ev, "self");
@@ -265,15 +270,15 @@ export function QuestionCard({
       {rubricStep && (
         <div className="card raised stack rise" style={{ gap: 10 }}>
           <span className="eyebrow">{L("Evaluate against the rubric", "Ölçütlere göre değerlendir")}</span>
-          <p className="small text-2">{L("Tick each point your answer genuinely contains. Be strict — this is for you.", "Cevabının gerçekten içerdiği her maddeyi işaretle. Sıkı ol — bu senin için.")}</p>
+          <p className="small text-2">{L("Tick a point when your answer shows the idea — in your own words or by another valid route counts. Be honest: this is for you.", "Cevabın fikri gösteriyorsa maddeyi işaretle — kendi kelimelerinle ya da başka geçerli bir yolla da sayılır. Dürüst ol: bu senin için.")}</p>
           {q.rubric.map((r, i) => (
             <label key={i} className="row nowrap" style={{ alignItems: "flex-start", cursor: "pointer" }}>
               <input type="checkbox" checked={rubricStep.met[i]} style={{ width: 22, height: 22, flex: "none", marginTop: 2 }}
-                onChange={(e) => setRubricStep({ ...rubricStep, met: rubricStep.met.map((x, j) => (j === i ? e.target.checked : x)) })} />
-              <span>{r}</span>
+                onChange={(e) => setRubricStep({ ...rubricStep, edited: true, met: rubricStep.met.map((x, j) => (j === i ? e.target.checked : x)) })} />
+              <span>{r}{rubricStep.ai && !rubricStep.edited && rubricStep.ai.credit[i] === 0.5 && <span className="tiny muted"> · {L("partly shown", "kısmen gösterildi")}</span>}{rubricStep.ai && !rubricStep.edited && rubricStep.ai.credit[i] === null && <span className="tiny muted"> · {L("not asked by this question", "bu soruda istenmiyor")}</span>}</span>
             </label>
           ))}
-          {rubricStep.ai && <div className="banner info small">{L("AI evaluator: ", "YZ değerlendirmesi: ")}{rubricStep.ai.feedback.message} <span className="muted">{L("(you can change any tick)", "(her işareti değiştirebilirsin)")}</span></div>}
+          {rubricStep.ai && <div className="banner info small">{L("AI evaluator: ", "YZ değerlendirmesi: ")}{rubricStep.ai.understanding !== undefined && <strong>{L(`understanding ${Math.round(rubricStep.ai.understanding * 100)}% · `, `kavrayış %${Math.round(rubricStep.ai.understanding * 100)} · `)}</strong>}{rubricStep.ai.feedback.message} <span className="muted">{L("(you can change any tick)", "(her işareti değiştirebilirsin)")}</span></div>}
           {rubricStep.ai === null && <div className="banner warn small">{L("The AI evaluator is unavailable — please self-assess.", "YZ değerlendiricisi kullanılamıyor — lütfen kendin değerlendir.")}</div>}
           <div className="row">
             <button className="btn" onClick={askAI} disabled={rubricStep.aiBusy}>{rubricStep.aiBusy ? <><span className="spinner" /> {L("Evaluating…", "Değerlendiriliyor…")}</> : L("Ask AI to evaluate", "YZ değerlendirsin")}</button>

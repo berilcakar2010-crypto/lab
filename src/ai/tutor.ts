@@ -11,6 +11,8 @@ import { courseMilestones } from "../engines/curriculum";
 import { attemptsFor } from "../engines/progress";
 import { recentPerformance, recommendNext } from "../engines/progression";
 import { evalNumber } from "../engines/expr";
+import type { Credit } from "../engines/evaluation";
+import { EVALUATION_PRINCIPLES } from "./principles";
 import { L, lazyLabels } from "../i18n";
 import { parseJSON, runAI, type AIHost, type AIResult } from "./engine";
 
@@ -158,9 +160,18 @@ export async function explainConcept(host: AIHost, db: LabDB, q: Question, sessi
 const ERROR_TYPES: ErrorType[] = ["CONCEPTUAL", "PROCEDURAL", "CARELESS", "MISSING_PREREQUISITE", "INCOMPLETE_EXPLANATION"];
 
 export interface OpenEvaluation {
+  /** Per rubric point: shown at least partly (kept for the tick boxes). */
   met: boolean[];
+  /** Per rubric point: 1 shown, 0.5 partly, 0 not shown, null does not apply to this question. */
+  credit: Credit[];
+  /** Holistic understanding of the idea the question asks about, 0..1. */
+  understanding?: number;
+  /** A genuine misconception about the core idea (not a slip or loose wording). */
+  misconception: boolean;
   feedback: Partial<Feedback> & { message: string };
 }
+
+const CREDIT: Record<string, Credit> = { FULL: 1, PARTIAL: 0.5, NONE: 0, NA: null };
 
 /** Evaluate an open response against its rubric. Returns null when AI is unavailable (self-assess instead). */
 export async function evaluateOpenResponse(
@@ -170,31 +181,57 @@ export async function evaluateOpenResponse(
   const prereqs = m?.prerequisites.map((p) => db.milestones[p]?.title).filter(Boolean) ?? [];
   return runAI(host, {
     role: "EVALUATOR",
+    temperature: 0.1,
     summary: `Evaluate open answer (${q.kind})`,
     sessionId,
     milestoneId: q.milestoneId,
     images: image ? [image] : undefined,
-    system: `You are Lab's Evaluator. Judge the student's answer strictly but fairly against each rubric point. Distinguish correctness from reasoning quality, and classify errors as CONCEPTUAL, PROCEDURAL, CARELESS, MISSING_PREREQUISITE or INCOMPLETE_EXPLANATION. Name a successful strategy if there is one. Do not rewrite the solution for them; point to what is missing. ${L("Write the message in English.", "Write the message in Turkish.")}
-Return ONLY {"met":[boolean per rubric point],"reasoningQuality":"STRONG|ADEQUATE|WEAK","errorTypes":[...],"successfulStrategy":string|null,"message":string (max 3 sentences),"missingPrerequisite":string|null}.`,
-    prompt: `${describeQuestion(q)}\nRubric:\n${q.rubric.map((r, i) => `${i + 1}. ${r}`).join("\n")}\nReference solution: ${q.solution}\nPrerequisite milestones: ${prereqs.join("; ") || "none"}\nStudent's answer:\n${answer || "(see drawing)"}${image ? "\nThe student's drawing is attached." : ""}`,
-    parse: parseJSON((x) => {
-      const r = x as { met?: unknown[]; reasoningQuality?: string; errorTypes?: string[]; successfulStrategy?: string | null; message?: string; missingPrerequisite?: string | null };
-      if (!Array.isArray(r.met) || r.met.length !== q.rubric.length) throw new Error("Rubric length mismatch");
-      const rq = ["STRONG", "ADEQUATE", "WEAK"].includes(String(r.reasoningQuality)) ? (r.reasoningQuality as Feedback["reasoningQuality"]) : "UNKNOWN";
-      const missingId = r.missingPrerequisite ? m?.prerequisites.find((p) => db.milestones[p]?.title === r.missingPrerequisite) : undefined;
-      return {
-        met: r.met.map(Boolean),
-        feedback: {
-          message: String(r.message ?? ""),
-          reasoningQuality: rq,
-          errorTypes: (r.errorTypes ?? []).filter((e): e is ErrorType => ERROR_TYPES.includes(e as ErrorType)),
-          successfulStrategy: r.successfulStrategy || undefined,
-          missingPrerequisiteIds: missingId ? [missingId] : undefined,
-        },
-      };
-    }),
+    system: `You are Lab's Evaluator: a fair, expert teacher who wants to know what the student actually understands.
+${EVALUATION_PRINCIPLES}
+For each rubric point give credit FULL (the idea is shown), PARTIAL (partly shown, or right idea with a gap), NONE (absent or wrong), or NA (the point is not something this particular question asks for — it is then ignored).
+Also give "understanding" from 0 to 1: how well the answer, taken as a whole, shows the idea the question is about (0.9+ = could explain it to someone else; 0.7 = solid with small gaps; 0.4 = fragments; 0 = no or wrong idea).
+Set "misconception" true only for a genuine wrong belief about the core idea — not for a slip, imprecise wording or an omission.
+Classify errors as CONCEPTUAL, PROCEDURAL, CARELESS, MISSING_PREREQUISITE or INCOMPLETE_EXPLANATION. Name a successful strategy if there is one. Do not rewrite the solution for them; say what is right first, then the one most important thing to improve. ${L("Write the message in English.", "Write the message in Turkish.")}
+Return ONLY {"credit":["FULL|PARTIAL|NONE|NA" per rubric point],"evidence":[short quote or paraphrase from the answer per point, or ""],"understanding":number,"misconception":boolean,"reasoningQuality":"STRONG|ADEQUATE|WEAK","errorTypes":[...],"successfulStrategy":string|null,"message":string (max 3 sentences),"missingPrerequisite":string|null}.`,
+    prompt: `${describeQuestion(q)}\nRubric (what must be understood):\n${q.rubric.map((r, i) => `${i + 1}. ${r}`).join("\n")}\n${q.solution ? `One possible reference solution (other valid routes are equally correct): ${q.solution}\n` : ""}Prerequisite milestones: ${prereqs.join("; ") || "none"}\nStudent's answer:\n${answer || "(see drawing)"}${image ? "\nThe student's drawing is attached." : ""}`,
+    parse: parseJSON((x) => parseOpenEvaluation(x, q, (t) => (t ? m?.prerequisites.find((p) => db.milestones[p]?.title === t) : undefined))),
     fallback: () => null,
   });
+}
+
+/** Validate the evaluator's JSON (also accepts the older {"met": boolean[]} shape). */
+export function parseOpenEvaluation(x: unknown, q: Pick<Question, "rubric">, prereqId: (title?: string | null) => ID | undefined = () => undefined): OpenEvaluation {
+  const r = x as { credit?: unknown[]; met?: unknown[]; understanding?: unknown; misconception?: unknown; reasoningQuality?: string; errorTypes?: string[]; successfulStrategy?: string | null; message?: string; missingPrerequisite?: string | null };
+  let credit: Credit[];
+  if (Array.isArray(r.credit)) {
+    if (r.credit.length !== q.rubric.length) throw new Error("Rubric length mismatch");
+    credit = r.credit.map((c) => {
+      if (typeof c === "number") return Math.max(0, Math.min(1, c));
+      const k = String(c).toUpperCase().replace(/[^A-Z]/g, "");
+      if (!(k in CREDIT)) throw new Error(`Unknown credit ${String(c)}`);
+      return CREDIT[k];
+    });
+  } else if (Array.isArray(r.met)) {
+    if (r.met.length !== q.rubric.length) throw new Error("Rubric length mismatch");
+    credit = r.met.map((b) => (b ? 1 : 0));
+  } else throw new Error("No credit");
+  const u = Number(r.understanding);
+  const understanding = r.understanding === undefined || r.understanding === null || !Number.isFinite(u) ? undefined : Math.max(0, Math.min(1, u > 1 ? u / 100 : u));
+  const rq = ["STRONG", "ADEQUATE", "WEAK"].includes(String(r.reasoningQuality)) ? (r.reasoningQuality as Feedback["reasoningQuality"]) : "UNKNOWN";
+  const missingId = prereqId(r.missingPrerequisite);
+  return {
+    met: credit.map((c) => c !== null && c > 0),
+    credit,
+    understanding,
+    misconception: r.misconception === true,
+    feedback: {
+      message: String(r.message ?? ""),
+      reasoningQuality: rq,
+      errorTypes: (r.errorTypes ?? []).filter((e): e is ErrorType => ERROR_TYPES.includes(e as ErrorType)),
+      successfulStrategy: r.successfulStrategy || undefined,
+      missingPrerequisiteIds: missingId ? [missingId] : undefined,
+    },
+  };
 }
 
 /** Explain why an auto-graded answer was wrong, without giving the answer. */

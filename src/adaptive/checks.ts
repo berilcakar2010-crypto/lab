@@ -17,7 +17,7 @@ import type { ID, LabDB, Millis, Question } from "../domain/types";
 import type { CheckItem, KnowledgeCheck } from "../domain/academic";
 import type { KnowledgeGraph } from "../knowledge/schema";
 import { milestoneQuestions } from "../engines/curriculum";
-import { evaluateAuto, evaluateSelf, isAutoGradable, type Answer } from "../engines/evaluation";
+import { evaluateAuto, evaluateCredit, isAutoGradable, type Answer, type Credit } from "../engines/evaluation";
 import { grantMastery, recordAttempt } from "../engines/progress";
 import { logEvent } from "../engines/analytics";
 import { newId } from "../data/ids";
@@ -108,14 +108,18 @@ export function answerAutoItem(db: LabDB, draft: CheckDraft, index: number, answ
   return item;
 }
 
-/** Grade an open item: `met` per rubric point, judged by the AI evaluator or by the learner. */
-export function answerOpenItem(draft: CheckDraft, index: number, text: string, met: boolean[], by: "ai" | "self"): CheckItem {
+/**
+ * Grade an open item per rubric point — ticked by the learner, or credited by
+ * the AI evaluator (partial credit, points that don't apply left out, and its
+ * holistic judgement of understanding).
+ */
+export function answerOpenItem(draft: CheckDraft, index: number, text: string, met: (boolean | Credit)[], by: "ai" | "self", judged: { understanding?: number; misconception?: boolean } = {}): CheckItem {
   const item = draft.items[index];
   if (!item) throw new Error("Unknown check item");
-  const q = { rubric: item.rubric } as Question;
-  const ev = evaluateSelf(q, item.rubric.map((_, i) => !!met[i]), PASS_SCORE);
+  const credit = item.rubric.map((_, i) => (typeof met[i] === "boolean" ? (met[i] ? 1 : 0) : (met[i] as Credit | undefined) ?? 0));
+  const ev = evaluateCredit({ rubric: item.rubric }, credit, PASS_SCORE, judged);
   const empty = !text.trim();
-  Object.assign(item, { answer: text, met, correct: empty ? false : ev.correct, score: empty ? 0 : ev.score, by });
+  Object.assign(item, { answer: text, met: credit.map((c) => c !== null && c > 0), correct: empty ? false : ev.correct, score: empty ? 0 : ev.score, by });
   return item;
 }
 

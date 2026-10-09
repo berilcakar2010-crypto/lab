@@ -7,7 +7,7 @@ Dal: `ccr-2af93b6d-f90t4l` · Tarih: 2026-10-09 · Denetim: `LAB_FINAL_AUDIT.md`
 | Kontrol | Sonuç |
 |---|---|
 | Typecheck (`tsc --noEmit`) | **PASS** |
-| Birim + entegrasyon testleri (`vitest`) | **PASS** — 36 dosyada 231 test (öncesi: 183); gerçek CPython testleri dahil |
+| Birim + entegrasyon testleri (`vitest`) | **PASS** — 36 dosyada 234 test (öncesi: 183); gerçek CPython testleri dahil |
 | Üretim derlemesi (`vite build`) | **PASS** — ana paket 2,35 MB (gzip ≈ 750 KB); ikincil ekranlar ve Python ayrı parçalarda |
 | Gerçek tarayıcıda uçtan uca akışlar (`npm run smoke`) | **PASS** — 61 adım (öncesi: 48); A–F senaryolarının hepsi; telefon, yatay ve dikey tablette yatay taşma yok |
 | Müfredat doğrulayıcısı (yerleşik grafik) | 0 hata · 0 uyarı (sağlık testi bunu doğruluyor) |
@@ -293,3 +293,14 @@ Her yeni özellik Kullanıcı → Hedef → Grafik → Rota → Meydan okuma →
 | Sistem sağlığı + bakım önerileri | DONE |
 | Sandbox (formül, ODE, veri, **gerçek Python, çevrimdışı**) | DONE (8 bilimsel paket gömülü) |
 | Dikey tablet öncelikli, kalem dostu (konu başına çizimler), erişilebilir | DONE (harita üzerine çizim PARTIAL) |
+
+## Ek: YZ değerlendirmesi — kalıba uyma değil, kavrayış
+
+Açık uçlu cevaplar ve "Mantığını anlat" değerlendirmesi yeniden tasarlandı (`src/ai/principles.ts`, `src/ai/tutor.ts`, `src/engines/evaluation.ts`):
+
+- Ölçütler *neyin anlaşılması gerektiğini* söyler; kelime, sıra, gösterim ya da yöntem dayatmaz. Kendi kelimeleriyle, gayriresmî, örnekle ya da başka geçerli bir yolla gösterilen fikir tam puan alır. Referans çözüm "olası yollardan biri" olarak verilir.
+- Her ölçüt için **tam / kısmen / yok / bu soruda istenmiyor**. Soruyla ilgisi olmayan ölçüt cevabın aleyhine sayılmaz.
+- Puan = ölçüt puanının yarısı + değerlendiricinin bütünsel **kavrayış** yargısının yarısı. Yazım, dil karışımı, kısalık ve küçük işlem hataları cezalandırılmaz (dikkatsizlik olarak işaretlenir).
+- Çekirdek fikre dair **gerçek bir yanılgı** puanı %60'ta tutar: ezber cümlelerle geçmek mümkün değil.
+- Öğrenci YZ'nin işaretlerini değiştirebilir; değiştirmezse kısmi puan ve kavrayış yargısı geçerli olur. Kısa test sonuçlarında YZ'nin kısa notu gösterilir.
+- Testler: kısmi puan, uygulanmayan ölçüt, yanılgı sınırı, bozuk YZ çıktısının reddi (3 yeni test).

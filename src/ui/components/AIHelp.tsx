@@ -1,15 +1,12 @@
 import { useState } from "react";
 import type { Feedback, Question } from "../../domain/types";
-import { diagnoseMistake, evaluateOpenResponse, explainConcept, socraticReply, type ChatTurn } from "../../ai/tutor";
+import { diagnoseMistake, evaluateOpenResponse, explainConcept, socraticReply, type ChatTurn, type OpenEvaluation as AIEvalResult } from "../../ai/tutor";
 import { logEvent } from "../../engines/analytics";
 import { act, aiHost, store, useDB } from "../state";
 import { MathText } from "./MathText";
 import { L } from "../../i18n";
 
-export interface AIEvalResult {
-  met: boolean[];
-  feedback: Partial<Feedback> & { message: string };
-}
+export type { OpenEvaluation as AIEvalResult } from "../../ai/tutor";
 
 /**
  * AI guidance that preserves productive struggle: guiding questions,

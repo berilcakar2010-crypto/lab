@@ -71,7 +71,7 @@ export function QuickCheck({ target, title, onClose, onDone }: { target: CheckTa
       const res = await evaluateOpenResponse(aiHost, store.state, itemAsQuestion(item, "milestoneId" in target ? target.milestoneId : ""), text, undefined, sessionId);
       setBusy(false);
       if (res.value) {
-        answerOpenItem(draft, i, text, res.value.met, "ai");
+        answerOpenItem(draft, i, text, res.value.credit, "ai", res.value).feedback = res.value.feedback.message || undefined;
         refresh();
         return;
       }
@@ -131,8 +131,9 @@ export function QuickCheck({ target, title, onClose, onDone }: { target: CheckTa
         )}
         {answered && (
           <div className={`banner ${item.correct ? "ok" : "warn"} small`}>
-            {item.correct ? L("Correct.", "Doğru.") : item.kind === "auto" ? L("Not this time.", "Bu sefer değil.") : L(`Covers ${Math.round(item.score * 100)}% of the criteria.`, `Ölçütlerin %${Math.round(item.score * 100)} kadarını karşılıyor.`)}
+            {item.correct ? L("Correct.", "Doğru.") : item.kind === "auto" ? L("Not this time.", "Bu sefer değil.") : L(`Understanding shown: ${Math.round(item.score * 100)}%.`, `Gösterilen kavrayış: %${Math.round(item.score * 100)}.`)}
             {item.by === "ai" ? L(" (judged by AI)", " (YZ değerlendirdi)") : item.by === "self" ? L(" (your own judgement)", " (kendi değerlendirmen)") : ""}
+            {item.feedback && <div style={{ marginTop: 4 }}>{item.feedback}</div>}
           </div>
         )}
         <div className="row" style={{ gap: 6 }}>

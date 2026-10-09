@@ -10,6 +10,7 @@ import { matchRequest } from "../knowledge/search";
 import type { KnowledgeGraph, LearningObject } from "../knowledge/schema";
 import { autoCards, type CardDraft } from "../study/flashcards";
 import { parseJSON, runAI, type AIHost, type AIResult } from "./engine";
+import { EVALUATION_PRINCIPLES } from "./principles";
 
 const langLine = () => L("Write everything for the learner in English.", "Öğrenciye yönelik her şeyi Türkçe yaz.");
 
@@ -203,7 +204,9 @@ export async function evaluateExplanation(host: AIHost, o: LearningObject, g: Kn
     images: withMedia ? [input.mediaDataUrl!] : undefined,
     system: [
       "You evaluate a student's own explanation of a topic (the Feynman technique): can they explain the logic clearly and correctly, in their own words?",
-      "Judge against the mastery criteria given. Be specific and fair: reward correct reasoning even if informal; flag every factual or logical error; do not invent errors.",
+      EVALUATION_PRINCIPLES,
+      "The mastery criteria describe what understanding looks like for the whole topic. A short explanation is not expected to cover every one: judge the criteria the explanation attempts, and mark a criterion met when its idea is shown in substance, even informally or through an example. Say in its comment when it is only partly shown.",
+      "`score` (0..1) is your judgement of understanding, not a count of criteria or key terms: 0.9+ = could teach it, correct and connected; 0.7 = solid with small gaps; 0.5 = right core idea with real gaps; 0.3 = fragments or memorised phrases without the logic; below that = absent or wrong. A genuine misconception about the core idea keeps the score below 0.6. Flag every factual or logical error, but do not invent errors.",
       "If an audio or video recording is attached, listen/watch it, transcribe what the student says into `transcript`, and evaluate that. Ignore filler words and accent.",
       'Reply with ONLY JSON: {"score": 0..1, "criteria": [{"criterion": string, "met": boolean, "comment": string}], "strengths": [string], "gaps": [string], "misconceptions": [string], "followUps": [string], "feedback": string, "transcript"?: string}.',
       "`followUps`: 1–3 questions that make the student think further about the biggest gaps. Never give the answer, never write the explanation for them.",

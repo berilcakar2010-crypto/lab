@@ -6,11 +6,12 @@ import { importCurriculum } from "../engines/curriculumSpec";
 import { courseMilestones, milestoneQuestions } from "../engines/curriculum";
 import { recordAttempt, grantMastery, completeRetentionCheck, dueRetentionChecks } from "../engines/progress";
 import { ensureSession } from "../engines/sessions";
+import { evaluateCredit, evaluateSelf } from "../engines/evaluation";
 import { mechanicsPack } from "./packs/mechanics";
 import { geminiProvider, groqProvider, type AIProvider } from "./providers";
 import type { AIHost } from "./engine";
 import {
-  adviseCourse, diagnoseMistake, difficultySignal, evaluateOpenResponse, explainConcept, generateHints, leaksAnswer,
+  adviseCourse, diagnoseMistake, difficultySignal, evaluateOpenResponse, parseOpenEvaluation, explainConcept, generateHints, leaksAnswer,
   reflectSession, socraticReply,
 } from "./tutor";
 
@@ -105,6 +106,39 @@ describe("Phase 6 — productive struggle", () => {
     expect(res.value!.feedback.errorTypes).toEqual(["CONCEPTUAL"]);
     expect(res.value!.feedback.reasoningQuality).toBe("ADEQUATE");
     expect(res.value!.feedback.successfulStrategy).toBe("Isolated the body first");
+  });
+
+  it("measures understanding, not conformity: partial credit, points that don't apply, holistic judgement", async () => {
+    const { db, ms } = setup();
+    const fbd = ms.find((m) => m.sourceKey === "mech:n1")!;
+    const open = milestoneQuestions(db, fbd.id).find((x) => x.rubric.length === 4)!;
+    const res = await evaluateOpenResponse(host(db, fake({ credit: ["FULL", "PARTIAL", "NA", "FULL"], evidence: ["", "", "", ""], understanding: 0.85, misconception: false, reasoningQuality: "STRONG", errorTypes: [], successfulStrategy: null, message: "Doğru fikir, başka bir yoldan.", missingPrerequisite: null })), db, open, "my own route", undefined);
+    const v = res.value!;
+    expect(v.credit).toEqual([1, 0.5, null, 1]);
+    expect(v.met).toEqual([true, true, false, true]);
+    // The point that does not apply is left out; the holistic judgement counts half.
+    const ev = evaluateCredit(open, v.credit, 0.7, v);
+    expect(ev.score).toBeCloseTo(0.5 * (2.5 / 3) + 0.5 * 0.85, 2);
+    expect(ev.correct).toBe(true);
+    expect(ev.feedback.message).toMatch(/Kısmen|Partly/);
+    // The same ticks under the old all-or-nothing rule would have failed: 2 of 4.
+    expect(evaluateSelf(open, [true, false, false, true], 0.7).correct).toBe(false);
+  });
+
+  it("a genuine misconception keeps an answer below a pass, however many points it ticks", () => {
+    const q = { rubric: ["a", "b", "c"] };
+    expect(evaluateCredit(q, [1, 1, 1], 0.7, { understanding: 0.9, misconception: true }).correct).toBe(false);
+    expect(evaluateCredit(q, [1, 1, 1], 0.7, { understanding: 0.9, misconception: true }).feedback.errorTypes).toContain("CONCEPTUAL");
+    // Without an evaluator's judgement nothing changes for ticked rubrics.
+    expect(evaluateCredit(q, [1, 1, 0], 0.6).score).toBeCloseTo(0.67, 2);
+  });
+
+  it("rejects malformed evaluator output and accepts the older shape", () => {
+    const q = { rubric: ["a", "b"] };
+    expect(() => parseOpenEvaluation({ credit: ["FULL"] }, q)).toThrow();
+    expect(() => parseOpenEvaluation({ credit: ["FULL", "MAYBE"] }, q)).toThrow();
+    expect(parseOpenEvaluation({ met: [true, false], message: "x" }, q).credit).toEqual([1, 0]);
+    expect(parseOpenEvaluation({ credit: ["full", "na"], understanding: 80 }, q)).toMatchObject({ credit: [1, null], understanding: 0.8, misconception: false });
   });
 });
 

@@ -128,20 +128,51 @@ function evaluateExpression(q: Question, text: string): Evaluation {
 
 const roundNice = (x: number) => (Math.abs(x - Math.PI) < 1e-6 ? "π" : Math.abs(x - 1 / Math.PI) < 1e-6 ? "1/π" : Number(x.toFixed(3)).toString());
 
-/** Rubric-based self assessment for open responses. */
-export function evaluateSelf(q: Question, met: boolean[], minScore: number): Evaluation {
-  const total = Math.max(1, q.rubric.length);
-  const score = met.filter(Boolean).length / total;
-  const missing = q.rubric.filter((_, i) => !met[i]);
+/**
+ * Credit for one rubric point: 1 (shown), 0.5 (partly shown), 0 (not shown),
+ * or null when the point does not apply to this particular question (it is
+ * then left out instead of counting against the answer).
+ */
+export type Credit = number | null;
+
+/** Weight of the evaluator's holistic judgement of understanding against the rubric points. */
+export const HOLISTIC_WEIGHT = 0.5;
+/** A genuine misconception about the core idea keeps an answer below a pass. */
+export const MISCONCEPTION_CAP = 0.6;
+
+/**
+ * Score an open answer from per-point credit, and — when an evaluator judged
+ * it — its holistic understanding. Rubric points describe *what* to show, not
+ * the words to use; the holistic judgement keeps a correct answer that takes
+ * another valid route from failing on form.
+ */
+export function evaluateCredit(q: Pick<Question, "rubric">, credit: Credit[], minScore: number, judged: { understanding?: number; misconception?: boolean } = {}): Evaluation {
+  const pts = q.rubric.map((r, i) => ({ r, c: credit[i] === null ? null : Math.max(0, Math.min(1, Number(credit[i] ?? 0) || 0)) }));
+  const applicable = pts.filter((p) => p.c !== null) as { r: string; c: number }[];
+  const rubricScore = applicable.length ? applicable.reduce((s, p) => s + p.c, 0) / applicable.length : judged.understanding ?? 0;
+  let score = judged.understanding === undefined ? rubricScore : (1 - HOLISTIC_WEIGHT) * rubricScore + HOLISTIC_WEIGHT * Math.max(0, Math.min(1, judged.understanding));
+  if (judged.misconception) score = Math.min(score, MISCONCEPTION_CAP);
+  score = Math.round(score * 100) / 100;
+  const missing = applicable.filter((p) => p.c === 0).map((p) => p.r);
+  const partial = applicable.filter((p) => p.c > 0 && p.c < 1).map((p) => p.r);
   const correct = score >= minScore;
+  const parts = [
+    missing.length ? L(`Missing: ${missing.join("; ")}.`, `Eksik: ${missing.join("; ")}.`) : "",
+    partial.length ? L(`Partly shown: ${partial.join("; ")}.`, `Kısmen gösterildi: ${partial.join("; ")}.`) : "",
+  ].filter(Boolean);
   return {
     correct,
     score,
     feedback: {
-      correctness: score === 1 ? "CORRECT" : correct ? "PARTIAL" : score > 0 ? "PARTIAL" : "INCORRECT",
-      reasoningQuality: score === 1 ? "STRONG" : score >= 0.6 ? "ADEQUATE" : "WEAK",
-      errorTypes: missing.length ? ["INCOMPLETE_EXPLANATION"] : [],
-      message: missing.length ? L(`Missing: ${missing.join("; ")}.`, `Eksik: ${missing.join("; ")}.`) : L("Every rubric point met.", "Tüm ölçütler karşılandı."),
+      correctness: score >= 0.999 ? "CORRECT" : score > 0 ? "PARTIAL" : "INCORRECT",
+      reasoningQuality: score >= 0.85 ? "STRONG" : score >= 0.6 ? "ADEQUATE" : "WEAK",
+      errorTypes: judged.misconception ? ["CONCEPTUAL"] : missing.length || partial.length ? ["INCOMPLETE_EXPLANATION"] : [],
+      message: parts.join(" ") || L("Every rubric point met.", "Tüm ölçütler karşılandı."),
     },
   };
+}
+
+/** Rubric-based self assessment for open responses (each point ticked or not). */
+export function evaluateSelf(q: Question, met: boolean[], minScore: number): Evaluation {
+  return evaluateCredit(q, q.rubric.map((_, i) => (met[i] ? 1 : 0)), minScore);
 }

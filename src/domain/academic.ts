@@ -121,6 +121,8 @@ export interface CheckItem {
   rubric: string[];
   answer?: string;
   met?: boolean[];
+  /** The evaluator's short note on an open answer (what is right, what to improve). */
+  feedback?: string;
   correct: boolean | null;
   score: number;
   by: "auto" | "ai" | "self" | "none";
