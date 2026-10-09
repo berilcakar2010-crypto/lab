@@ -61,6 +61,26 @@ export function addExplanation(db: LabDB, e: Omit<Explanation, "id" | "createdAt
   return rec;
 }
 
+/** Feynman dialogue: answer one follow-up question of an earlier explanation, in your own words. */
+export function answerFollowUp(db: LabDB, parentId: ID, question: string, text: string): Explanation | null {
+  const parent = db.explanations[parentId];
+  if (!parent || !text.trim()) return null;
+  return addExplanation(db, { loId: parent.loId, prompt: question, mode: "TEXT", text: text.trim(), followUpOf: parentId });
+}
+
+/** The explanation and its follow-up answers, oldest first. */
+export function explanationThread(db: LabDB, rootId: ID): Explanation[] {
+  const out: Explanation[] = [];
+  const walk = (id: ID) => {
+    const e = db.explanations[id];
+    if (!e) return;
+    out.push(e);
+    for (const c of Object.values(db.explanations).filter((x) => x.followUpOf === id).sort((a, b) => a.createdAt - b.createdAt)) walk(c.id);
+  };
+  walk(rootId);
+  return out;
+}
+
 export function setEvaluation(db: LabDB, id: ID, evaluation: ExplanationEvaluation, transcript?: string): void {
   const e = db.explanations[id];
   if (!e) return;

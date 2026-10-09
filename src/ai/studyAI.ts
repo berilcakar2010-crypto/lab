@@ -6,6 +6,7 @@
  */
 import type { ChatMessage, ExplanationEvaluation } from "../domain/types";
 import { L, getLang, lower } from "../i18n";
+import { matchRequest } from "../knowledge/search";
 import type { KnowledgeGraph, LearningObject } from "../knowledge/schema";
 import { autoCards, type CardDraft } from "../study/flashcards";
 import { parseJSON, runAI, type AIHost, type AIResult } from "./engine";
@@ -102,6 +103,7 @@ interface RawEval {
   strengths?: string[];
   gaps?: string[];
   misconceptions?: string[];
+  followUps?: string[];
   feedback?: string;
   transcript?: string;
 }
@@ -123,9 +125,42 @@ export function validateEval(raw: unknown, o: LearningObject): RawEval {
     strengths: strs(r.strengths),
     gaps: strs(r.gaps),
     misconceptions: strs(r.misconceptions),
+    // Follow-ups must be questions; they make the learner think, they never carry the answer.
+    followUps: strs(r.followUps).filter((q) => q.includes("?")).slice(0, 3),
     feedback: String(r.feedback ?? "").trim(),
     transcript: r.transcript ? String(r.transcript) : undefined,
   };
+}
+
+/** Questions that push further where the explanation is thin — from the graph, never the answer. */
+export function offlineFollowUps(o: LearningObject, text: string): string[] {
+  const have = new Set(tokens(text));
+  const covered = (q: string) => {
+    const t = tokens(q).filter((w) => w.length > 4);
+    return t.length > 0 && t.filter((w) => [...have].some((h) => h.startsWith(w.slice(0, 5)))).length / t.length >= 0.5;
+  };
+  const out = [...o.coreQuestions, ...o.entryQuestions].filter((q) => q.includes("?") && !covered(q)).slice(0, 2);
+  if (o.commonMisconceptions[0]) out.push(L(`A common misconception: "${o.commonMisconceptions[0]}". How would you show it is wrong?`, `Yaygın bir yanılgı: "${o.commonMisconceptions[0]}". Bunun neden yanlış olduğunu nasıl gösterirsin?`));
+  return out.slice(0, 3);
+}
+
+/** Link misconceptions to graph objects: the object's own known misconceptions first, then a graph search. */
+export function linkMisconceptions(g: KnowledgeGraph, o: LearningObject, misconceptions: string[]): { text: string; loId?: string }[] {
+  const near = new Set([o.id, ...o.prerequisites.map((p) => p.id), ...o.relatedConcepts]);
+  return misconceptions.map((text) => {
+    const own = o.commonMisconceptions.some((m) => similarityOf(m, text) >= 0.3);
+    if (own) return { text, loId: o.id };
+    const hit = matchRequest(g, text, 5).objects.find((id) => near.has(id)) ?? matchRequest(g, text, 1).objects[0];
+    return { text, loId: hit };
+  });
+}
+
+function similarityOf(a: string, b: string): number {
+  const x = new Set(tokens(a).filter((w) => w.length > 3)), y = new Set(tokens(b).filter((w) => w.length > 3));
+  if (!x.size || !y.size) return 0;
+  let i = 0;
+  for (const w of x) if ([...y].some((v) => v.slice(0, 5) === w.slice(0, 5))) i++;
+  return i / Math.min(x.size, y.size);
 }
 
 /** Offline estimate: how many of the object's key terms the explanation uses. Clearly labelled as an estimate. */
@@ -141,6 +176,7 @@ export function offlineEvaluation(o: LearningObject, text: string): RawEval {
     strengths: hit.length ? [L(`Uses key ideas: ${hit.slice(0, 6).join(", ")}`, `Ana kavramları kullanıyor: ${hit.slice(0, 6).join(", ")}`)] : [],
     gaps: keyTerms.filter((k) => !hit.includes(k)).slice(0, 6).map((k) => L(`Not mentioned: ${k}`, `Değinilmemiş: ${k}`)),
     misconceptions: [],
+    followUps: offlineFollowUps(o, text),
     feedback: text.trim()
       ? L("Offline estimate based on key-term coverage only — it cannot judge whether your reasoning is correct. Tick the criteria you actually showed, or connect Gemini/Groq for a real evaluation.", "Yalnızca ana kavramların kapsanmasına dayalı çevrimdışı tahmin; akıl yürütmenin doğru olup olmadığını yargılayamaz. Gerçekten gösterdiğin ölçütleri işaretle ya da gerçek bir değerlendirme için Gemini/Groq bağla.")
       : L("No text or transcript to evaluate. Play your recording, tick the criteria you showed, or connect Gemini (which can listen to audio and video).", "Değerlendirilecek metin ya da döküm yok. Kaydını dinle, gösterdiğin ölçütleri işaretle ya da sesi ve videoyu dinleyebilen Gemini'yi bağla."),
@@ -169,7 +205,8 @@ export async function evaluateExplanation(host: AIHost, o: LearningObject, g: Kn
       "You evaluate a student's own explanation of a topic (the Feynman technique): can they explain the logic clearly and correctly, in their own words?",
       "Judge against the mastery criteria given. Be specific and fair: reward correct reasoning even if informal; flag every factual or logical error; do not invent errors.",
       "If an audio or video recording is attached, listen/watch it, transcribe what the student says into `transcript`, and evaluate that. Ignore filler words and accent.",
-      'Reply with ONLY JSON: {"score": 0..1, "criteria": [{"criterion": string, "met": boolean, "comment": string}], "strengths": [string], "gaps": [string], "misconceptions": [string], "feedback": string, "transcript"?: string}.',
+      'Reply with ONLY JSON: {"score": 0..1, "criteria": [{"criterion": string, "met": boolean, "comment": string}], "strengths": [string], "gaps": [string], "misconceptions": [string], "followUps": [string], "feedback": string, "transcript"?: string}.',
+      "`followUps`: 1–3 questions that make the student think further about the biggest gaps. Never give the answer, never write the explanation for them.",
       "`feedback`: 2–4 sentences, encouraging and concrete: the single most important thing to fix next.",
       langLine(),
     ].join("\n"),
@@ -186,6 +223,8 @@ export async function evaluateExplanation(host: AIHost, o: LearningObject, g: Kn
       strengths: v.strengths ?? [],
       gaps: v.gaps ?? [],
       misconceptions: v.misconceptions ?? [],
+      followUps: v.followUps?.length ? v.followUps : offlineFollowUps(o, body),
+      misconceptionLinks: linkMisconceptions(g, o, v.misconceptions ?? []),
       feedback: v.feedback ?? "",
       provider: res.provider,
       by: res.fallbackUsed ? "self" : "ai",

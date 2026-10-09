@@ -727,6 +727,8 @@ export interface Explanation {
   durationSec?: number;
   sizeBytes?: number;
   evaluation?: ExplanationEvaluation;
+  /** Feynman dialogue: this explanation answers a follow-up question of another one. */
+  followUpOf?: ID;
   createdAt: Millis;
 }
 

@@ -300,3 +300,21 @@ Tests: 2 yeni (granularity etkeni; rapor alanları, yetersiz veride INCONCLUSIVE
 Known limitations: Tek öğrencili dönüşümlü tasarım; raporun kendisi bu sınırlılığı listeler.
 Next phase: Faz 16 — Feynman / Anlat modu
 ```
+
+## Faz 16 — Feynman / Anlat modu
+
+```text
+PHASE STATUS: PASS
+Implemented: Mevcut Anlat paneli (yazılı/sesli/video + YZ değerlendirmesi) genişletildi: YZ artık açıklamayı ölçütlere
+  göre değerlendirir, eksikleri söyler ve cevabı vermeden 1–3 takip sorusu sorar (soru işareti olmayan, yani cevap
+  içeren maddeler elenir). Yanlış kavramlar grafikteki nesnelere bağlanır (önce nesnenin bilinen yanılgıları, sonra
+  önkoşul/ilgili kavramlarda arama). Çevrimdışıyken takip soruları grafiğin kendi temel sorularından ve yaygın
+  yanılgılarından gelir. Feynman diyaloğu: bir takip sorusuna kendi cümlelerinle cevap → zincir (followUpOf).
+  Değerlendirilmiş açıklamalar ustalık profilinde "açıklama" kanıtıdır.
+Modified files: src/ai/studyAI.ts, src/study/actions.ts, src/domain/types.ts (Explanation.followUpOf)
+New files: src/adaptive/feynman.test.ts
+Data model changes: ExplanationEvaluation.followUps/misconceptionLinks, Explanation.followUpOf.
+Tests: 3 yeni (cevap içeren takip sorusu elenir + yanılgı grafiğe bağlanır; çevrimdışı takip soruları; diyalog zinciri ve kanıt).
+Known limitations: Takip sorusu cevabının değerlendirmesi aynı değerlendiriciyle yapılır (ayrı ölçüt seti yok).
+Next phase: Faz 17 — Tahmin → Test → Açıklama
+```
