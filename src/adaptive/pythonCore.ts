@@ -32,6 +32,20 @@ def plot(xs, ys=None, label="y"):
         xs = list(range(len(ys)))
     pts = [[float(x), float(y)] for x, y in zip(xs, ys)][:${MAX_POINTS}]
     __lab_series__.append({"label": str(label), "points": pts})
+def __lab_missing__(code, allowed, _find=__import__("pyodide.code", fromlist=["find_imports"]).find_imports, _spec=__import__("importlib.util", fromlist=["find_spec"]).find_spec):
+    """Top-level imports that are neither installed nor among the bundled packages."""
+    out = []
+    for n in _find(code):
+        top = n.split(".")[0]
+        if top in allowed or top in out:
+            continue
+        try:
+            found = _spec(top) is not None
+        except Exception:
+            found = False
+        if not found:
+            out.append(top)
+    return json.dumps(out)
 for _m in ("js", "pyodide_js", "pyodide.http", "pyodide.ffi.wrappers"):
     sys.modules[_m] = None
 del _m
@@ -93,9 +107,27 @@ export function prepare(py: PyodideLike): void {
 
 let themed = false;
 
-/** Load the packages the code imports (from the app's own files). Returns the newly loaded ones. */
-export async function loadImports(py: PyodideLike, code: string, onMessage?: (m: string) => void): Promise<string[]> {
+/**
+ * Import names the app ships packages for: the bundle manifest
+ * (public/pyodide/lab-packages.json) joined with Pyodide's lock file.
+ */
+export function bundledImports(manifest: { packages?: string[] }, lock: { packages?: Record<string, { imports?: string[] }> }): Set<string> {
+  const out = new Set<string>();
+  for (const name of manifest.packages ?? []) for (const i of lock.packages?.[name]?.imports ?? []) out.add(i);
+  return out;
+}
+
+/**
+ * Load the packages the code imports (from the app's own files). Returns the
+ * newly loaded ones. With `allowed`, an import that is neither installed nor
+ * bundled is refused up front, so nothing is ever fetched from elsewhere.
+ */
+export async function loadImports(py: PyodideLike, code: string, onMessage?: (m: string) => void, allowed?: ReadonlySet<string>): Promise<string[]> {
   if (!py.loadPackagesFromImports) return [];
+  if (allowed) {
+    const missing = JSON.parse(String(py.runPython(`__lab_missing__(${JSON.stringify(code)}, ${JSON.stringify([...allowed])})`))) as string[];
+    if (missing.length) throw new Error(`No module named ${missing.map((m) => `'${m}'`).join(", ")} (not bundled with Lab)`);
+  }
   const before = new Set(Object.keys(py.loadedPackages ?? {}));
   const errors: string[] = [];
   await py.loadPackagesFromImports(code, { messageCallback: (m) => onMessage?.(m), errorCallback: (m) => errors.push(m) });
@@ -103,7 +135,7 @@ export async function loadImports(py: PyodideLike, code: string, onMessage?: (m:
   return Object.keys(py.loadedPackages ?? {}).filter((p) => !before.has(p));
 }
 
-export async function execute(py: PyodideLike, code: string, opts: { now?: () => number; onMessage?: (m: string) => void; /** Packages are loaded; the learner's code starts now (the time limit starts here). */ onRunning?: () => void } = {}): Promise<PyResult> {
+export async function execute(py: PyodideLike, code: string, opts: { now?: () => number; onMessage?: (m: string) => void; /** Import names of the bundled packages (see bundledImports). */ allowedImports?: ReadonlySet<string>; /** Packages are loaded; the learner's code starts now (the time limit starts here). */ onRunning?: () => void } = {}): Promise<PyResult> {
   const now = opts.now ?? (() => Date.now());
   const started = now();
   let out = "";
@@ -114,7 +146,7 @@ export async function execute(py: PyodideLike, code: string, opts: { now?: () =>
   py.runPython("__lab_series__.clear()");
   let packages: string[] = [];
   try {
-    packages = await loadImports(py, code, opts.onMessage);
+    packages = await loadImports(py, code, opts.onMessage, opts.allowedImports);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     return { ok: false, stdout: out, series: [], images: [], packages, error: `Package not available offline: ${msg.slice(0, 400)}`, ms: now() - started };

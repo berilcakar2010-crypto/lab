@@ -3,10 +3,12 @@
  * Runs Python (Pyodide) off the page. The page sends { id, code, indexURL };
  * the worker replies { id, ...PyResult } or { id, ready } after loading.
  */
-import { execute, prepare, type PyodideLike } from "./pythonCore";
+import { bundledImports, execute, prepare, type PyodideLike } from "./pythonCore";
 
 let py: PyodideLike | null = null;
 let loading: Promise<PyodideLike> | null = null;
+/** Import names of the packages bundled with the app; anything else is refused. */
+let allowed: Set<string> = new Set();
 
 // Some WebViews (Android's local asset server) serve .wasm without the
 // application/wasm type, which makes streaming compilation fail. Fall back to
@@ -28,6 +30,10 @@ async function load(indexURL: string): Promise<PyodideLike> {
   const mod = (await import(/* @vite-ignore */ `${indexURL}pyodide.mjs`)) as { loadPyodide: (o: { indexURL: string }) => Promise<PyodideLike> };
   const p = await mod.loadPyodide({ indexURL });
   prepare(p);
+  try {
+    const [manifest, lock] = await Promise.all(["lab-packages.json", "pyodide-lock.json"].map((f) => fetch(`${indexURL}${f}`).then((r) => (r.ok ? r.json() : {}))));
+    allowed = bundledImports(manifest, lock);
+  } catch { /* no bundle: only the standard library */ }
   // From here on, the worker can only fetch the app's own Python files (packages
   // load from there on first import) and nothing else: no network, no storage.
   const g = self as unknown as Record<string, unknown>;
@@ -51,7 +57,7 @@ self.onmessage = async (e: MessageEvent<{ id: number; code?: string; indexURL: s
       return;
     }
     const post = (m: object) => (self as unknown as Worker).postMessage({ id, ...m });
-    const r = await execute(py, code, { onMessage: (m) => post({ progress: m }), onRunning: () => post({ running: true }) });
+    const r = await execute(py, code, { onMessage: (m) => post({ progress: m }), onRunning: () => post({ running: true }), allowedImports: allowed });
     post({ ...r, done: true });
   } catch (err) {
     (self as unknown as Worker).postMessage({ id, ok: false, stdout: "", series: [], images: [], packages: [], error: `Python could not start: ${err instanceof Error ? err.message : String(err)}`, ms: 0, done: true });
