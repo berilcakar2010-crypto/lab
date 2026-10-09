@@ -11,6 +11,8 @@ export interface EventContext {
   milestoneId?: ID;
   courseId?: ID;
   questionId?: ID;
+  /** Graph objects the event is about; defaults to the milestone's objects. */
+  loIds?: string[];
   at?: number;
 }
 
@@ -34,6 +36,8 @@ export function logEvent(
     conceptIds: m?.conceptIds.length ? [...m.conceptIds] : undefined,
     milestoneId: ctx.milestoneId,
     questionId: ctx.questionId,
+    userId: db.user?.id,
+    loIds: ctx.loIds?.length ? [...ctx.loIds] : m?.learningObjectIds?.length ? [...m.learningObjectIds] : undefined,
     data: {
       ...data,
       // Snapshot milestone characteristics so stats survive later edits/deletes.

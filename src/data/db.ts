@@ -19,6 +19,7 @@ export function createEmptyDB(now = Date.now()): LabDB {
       retentionDelayDays: 3,
       language: DEFAULT_LANG,
       reminders: { enabled: false, hour: 19, minute: 0, exams: true },
+      studyMode: "NORMAL",
     },
     subjects: {},
     curricula: {},
@@ -44,6 +45,15 @@ export function createEmptyDB(now = Date.now()): LabDB {
     notes: {},
     topicReviews: {},
     exams: {},
+    errors: {},
+    insights: {},
+    paths: {},
+    sources: {},
+    curriculumProposals: {},
+    research: {},
+    sandboxRuns: {},
+    predictions: {},
+    decisions: {},
   };
 }
 
@@ -74,6 +84,7 @@ const TABLE_KEYS = [
   "subjects", "curricula", "courses", "units", "topics", "concepts", "milestones",
   "questions", "attempts", "sessions", "aiInteractions", "mastery", "retention",
   "experiments", "experimentResults", "engagement", "flashcards", "chats", "explanations", "notes", "topicReviews", "exams",
+  "errors", "insights", "paths", "sources", "curriculumProposals", "research", "sandboxRuns", "predictions", "decisions",
 ] as const;
 
 /**
@@ -104,6 +115,7 @@ export function hydrateDB(raw: unknown): LabDB {
     (db as unknown as Record<string, unknown>)[k] = t && typeof t === "object" && !Array.isArray(t) ? t : {};
   }
   db.preferences.userId = db.user.id;
+  if (db.preferences.studyMode !== "NORMAL" && db.preferences.studyMode !== "EXAM") db.preferences.studyMode = "NORMAL";
   // Data saved before v2.1 has no language: it was written by the Turkish-only app.
   if (!isLang(db.preferences.language)) db.preferences.language = r.preferences ? "tr" : DEFAULT_LANG;
   runKnowledgeMigrations(db);

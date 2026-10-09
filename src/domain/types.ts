@@ -9,6 +9,11 @@
 import type { LearningObject } from "../knowledge/schema";
 import type { Lang } from "../i18n";
 
+import type {
+  CurriculumProposal, DecisionRecord, ErrorRecord, ExperimentReport, GranularityResult, Insight, LearningPathPlan, LearningSource,
+  PredictionRecord, Provenance, ResearchProject, SandboxRun, StudyMode, Capability,
+} from "./adaptive";
+
 export type ID = string;
 export type Millis = number;
 
@@ -126,7 +131,13 @@ export type AIRole =
   | "QA_ASSISTANT"
   | "EXPLANATION_EVALUATOR"
   | "FLASHCARD_GENERATOR"
-  | "MINDMAP_GENERATOR";
+  | "MINDMAP_GENERATOR"
+  | "GRANULARITY_VALIDATOR"
+  | "PATH_PLANNER"
+  | "STUCK_DETECTOR"
+  | "ERROR_ANALYST"
+  | "CURRICULUM_REVIEWER"
+  | "RESEARCH_GUIDE";
 
 // ---------------------------------------------------------------------------
 // Entities
@@ -153,6 +164,10 @@ export interface UserPreference {
   language: Lang;
   /** Daily spaced-repetition reminder (local notification). */
   reminders: { enabled: boolean; hour: number; minute: number; /** Notifications before school exams and deadlines. */ exams: boolean };
+  /** NORMAL: understanding, mastery, retention, transfer. EXAM: a temporary layer of exam priorities over the same graph. */
+  studyMode: StudyMode;
+  /** The exam whose priorities apply in EXAM mode. */
+  focusExamId?: ID;
 }
 
 export interface Subject {
@@ -193,6 +208,8 @@ export interface Course {
   activeMilestoneId?: ID;
   /** Where built-in content came from, so it can be re-localised when the language changes. */
   origin?: CourseOrigin;
+  /** Where the course content came from (AI, a book, the learner…). */
+  provenance?: Provenance;
   archived: boolean;
   createdAt: Millis;
 }
@@ -270,6 +287,11 @@ export interface Milestone {
   learningObjectIds?: string[];
   /** Stable key of the milestone inside its source pack, e.g. "mech:kin2". */
   sourceKey?: string;
+  /** The single independently assessable capability this milestone builds. */
+  capability?: Capability;
+  /** Last granularity check (generated milestones must pass before they are added). */
+  granularity?: GranularityResult;
+  provenance?: Provenance;
   createdAt: Millis;
   updatedAt: Millis;
 }
@@ -438,6 +460,8 @@ export interface Experiment {
   createdAt: Millis;
   concludedAt?: Millis;
   note?: string;
+  /** Hypothesis, design, observed data, result, confidence and limitations, written when concluded. */
+  report?: ExperimentReport;
 }
 
 /** Raw link between a session and the experimental arm it ran under. */
@@ -493,6 +517,28 @@ export const EVENT_TYPES = [
   "FLASHCARD_REVIEW",
   "EXPLANATION",
   "TOPIC_REVIEW",
+  // Adaptive layer (Lab 2.0 upgrade)
+  "ERROR_IDENTIFIED",
+  "ERROR_RECLASSIFIED",
+  "REPAIR_STARTED",
+  "REPAIR_COMPLETED",
+  "INSIGHT_DETECTED",
+  "STUCK_DETECTED",
+  "STUCK_OPTION_CHOSEN",
+  "PATH_CREATED",
+  "PATH_MODIFIED",
+  "PATH_ABANDONED",
+  "PATH_RESUMED",
+  "WHAT_NEXT_SHOWN",
+  "WHAT_NEXT_CHOSEN",
+  "MODE_CHANGED",
+  "TRANSFER_ATTEMPT",
+  "PREDICTION_SUBMITTED",
+  "SANDBOX_STARTED",
+  "SANDBOX_RESULT",
+  "RESEARCH_STEP_COMPLETED",
+  "CURRICULUM_PROPOSED",
+  "CURRICULUM_DECIDED",
 ] as const;
 export type EventType = (typeof EVENT_TYPES)[number];
 
@@ -508,6 +554,10 @@ export interface AnalyticsEvent {
   conceptIds?: ID[];
   milestoneId?: ID;
   questionId?: ID;
+  /** The (single) user of this device; recorded so exported events stay attributable. */
+  userId?: ID;
+  /** Knowledge-graph objects (concepts) the event is about. */
+  loIds?: string[];
   data: Record<string, unknown>;
 }
 
@@ -548,6 +598,21 @@ export interface LabDB {
   topicReviews: Table<TopicReview>;
   /** School exams, quizzes and deadlines with the graph topics they cover. */
   exams: Table<Exam>;
+  // Adaptive layer
+  /** Every wrong answer, classified and traced back into the graph. */
+  errors: Table<ErrorRecord>;
+  /** Patterns found across errors (recurring, cross-domain). */
+  insights: Table<Insight>;
+  /** Learning paths planned over the graph. */
+  paths: Table<LearningPathPlan>;
+  /** Books, courses, papers mapped to graph objects. */
+  sources: Table<LearningSource>;
+  curriculumProposals: Table<CurriculumProposal>;
+  research: Table<ResearchProject>;
+  sandboxRuns: Table<SandboxRun>;
+  predictions: Table<PredictionRecord>;
+  /** Engine and AI decisions with reason, confidence and evidence. */
+  decisions: Table<DecisionRecord>;
 }
 
 export type ExamKind = "EXAM" | "QUIZ" | "ASSIGNMENT" | "PRESENTATION";
@@ -562,6 +627,8 @@ export interface Exam {
   date: Millis;
   /** Graph objects the exam covers. */
   loIds: string[];
+  /** Exam priority per covered object: 3 high, 2 medium, 1 low (default 2). */
+  priorities?: Record<string, 1 | 2 | 3>;
   notes: string;
   /** Days before the exam to send a reminder; 0 = the morning of the exam. */
   remindDays: number[];
@@ -635,6 +702,10 @@ export interface ExplanationEvaluation {
   strengths: string[];
   gaps: string[];
   misconceptions: string[];
+  /** Questions that make the learner think further — never the answer. */
+  followUps?: string[];
+  /** Misconceptions linked to graph objects, when one could be found. */
+  misconceptionLinks?: { text: string; loId?: string }[];
   feedback: string;
   provider: string;
   /** "ai" when a model judged it; "self" when the learner ticked the rubric. */
@@ -696,10 +767,12 @@ export interface KnowledgeState {
   /** Objects added or changed by updates after v2.0; base content is never mutated. */
   overlay: { version: string; objects: Record<string, LearningObject> };
   history: GraphUpdateRecord[];
+  /** Provenance of objects added by updates or AI proposals, keyed by object id. */
+  provenance?: Record<string, Provenance>;
   /** Applied one-off data migrations, e.g. "v2-link-milestones". */
   migrations: { id: string; at: Millis; note: string }[];
   /** Graph version the learner last saw (to announce updates). */
   seenVersion?: string;
 }
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
