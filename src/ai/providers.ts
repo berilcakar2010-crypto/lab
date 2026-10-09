@@ -16,9 +16,25 @@ export interface CompletionRequest {
   images?: string[];
 }
 
+/** What a provider can do. Application code asks for a capability, never for a vendor. */
+export interface ProviderCapabilities {
+  /** Free text generation. */
+  generate: boolean;
+  /** Judging an answer against a rubric (needs reliable JSON). */
+  evaluate: boolean;
+  /** A JSON-object response mode. */
+  structuredOutput: boolean;
+  /** Image input (stylus drawings). */
+  vision: boolean;
+  /** Text embeddings. Not used by any provider yet; search is local. */
+  embed: boolean;
+}
+
 export interface AIProvider {
   id: AIProviderId;
   model: string;
+  /** Declared capabilities; a provider that omits them is treated as text + JSON capable. */
+  capabilities?: ProviderCapabilities;
   /** False when the provider cannot be called (e.g. no key, offline). */
   ready(): boolean;
   complete(req: CompletionRequest): Promise<string>;
@@ -26,12 +42,16 @@ export interface AIProvider {
 
 export class AIUnavailableError extends Error {}
 
+export const capabilitiesOf = (p: AIProvider): ProviderCapabilities =>
+  p.capabilities ?? { generate: true, evaluate: true, structuredOutput: true, vision: false, embed: false };
+
 type Fetch = typeof fetch;
 
 export function geminiProvider(apiKey: string | undefined, model: string, fetchImpl: Fetch = fetch): AIProvider {
   return {
     id: "gemini",
     model,
+    capabilities: { generate: true, evaluate: true, structuredOutput: true, vision: true, embed: false },
     ready: () => !!apiKey,
     async complete(req) {
       if (!apiKey) throw new AIUnavailableError("No Gemini API key configured");
@@ -63,6 +83,7 @@ export function groqProvider(apiKey: string | undefined, model: string, fetchImp
   return {
     id: "groq",
     model,
+    capabilities: { generate: true, evaluate: true, structuredOutput: true, vision: false, embed: false },
     ready: () => !!apiKey,
     async complete(req) {
       if (!apiKey) throw new AIUnavailableError("No Groq API key configured");
@@ -94,6 +115,7 @@ export function groqProvider(apiKey: string | undefined, model: string, fetchImp
 export const localProvider: AIProvider = {
   id: "local",
   model: "offline",
+  capabilities: { generate: false, evaluate: false, structuredOutput: false, vision: false, embed: false },
   ready: () => false,
   complete: async () => {
     throw new AIUnavailableError("Offline mode");

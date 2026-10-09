@@ -816,6 +816,10 @@ export interface GraphUpdateRecord {
   retired: { id: string; supersededBy: string[] }[];
   /** Milestones whose links were extended so progress follows split/merged objects. */
   relinkedMilestones: number;
+  /** The overlay before this update, so the update can be rolled back. */
+  previousOverlay?: { version: string; objects: Record<string, LearningObject> };
+  /** Set when the update was rolled back (the record stays as history). */
+  rolledBackAt?: Millis;
 }
 
 export interface KnowledgeState {

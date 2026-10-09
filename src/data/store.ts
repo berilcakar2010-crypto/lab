@@ -6,6 +6,31 @@ export interface StorageAdapter {
   load(): string | null | Promise<string | null>;
   save(serialised: string): void | Promise<void>;
   name: string;
+  /** Dated local snapshots (automatic backups), newest first. Optional per backend. */
+  snapshots?: SnapshotStore;
+}
+
+export interface SnapshotInfo { key: string; at: number; size: number }
+
+export interface SnapshotStore {
+  put(key: string, serialised: string): Promise<void>;
+  list(): Promise<SnapshotInfo[]>;
+  get(key: string): Promise<string | null>;
+  remove(key: string): Promise<void>;
+}
+
+/** How many daily snapshots are kept. */
+export const SNAPSHOT_KEEP = 7;
+
+/** True when the text is a JSON object (a usable database copy). */
+export function parseable(s: string | null | undefined): s is string {
+  if (!s) return false;
+  try {
+    const x = JSON.parse(s);
+    return !!x && typeof x === "object" && !Array.isArray(x);
+  } catch {
+    return false;
+  }
 }
 
 export const STORAGE_KEY = "lab.db.v1";
@@ -16,7 +41,9 @@ export function localStorageAdapter(): StorageAdapter {
     name: "localStorage",
     load() {
       try {
-        return localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem(BACKUP_KEY);
+        const main = localStorage.getItem(STORAGE_KEY);
+        // A damaged main copy falls back to the previous good one.
+        return parseable(main) ? main : localStorage.getItem(BACKUP_KEY);
       } catch {
         return null;
       }
@@ -59,16 +86,51 @@ export function indexedDBAdapter(dbName = "lab"): StorageAdapter {
       tx.onerror = () => reject(tx.error);
       tx.onabort = () => reject(tx.error);
     });
+  const del = async (key: string) =>
+    new Promise<void>(async (resolve, reject) => {
+      const tx = (await db()).transaction("kv", "readwrite");
+      tx.objectStore("kv").delete(key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  const snapshots: SnapshotStore = {
+    async put(key, s) {
+      const index = ((await get("snapshots")) as SnapshotInfo[] | undefined) ?? [];
+      const next = [{ key, at: Date.now(), size: s.length }, ...index.filter((x) => x.key !== key)];
+      const keep = next.slice(0, SNAPSHOT_KEEP);
+      await putMany([[`snap:${key}`, s], ["snapshots", keep]]);
+      for (const old of next.slice(SNAPSHOT_KEEP)) await del(`snap:${old.key}`);
+    },
+    async list() {
+      return (((await get("snapshots")) as SnapshotInfo[] | undefined) ?? []).slice().sort((a, b) => b.at - a.at);
+    },
+    async get(key) {
+      return ((await get(`snap:${key}`)) as string | undefined) ?? null;
+    },
+    async remove(key) {
+      const index = ((await get("snapshots")) as SnapshotInfo[] | undefined) ?? [];
+      await putMany([["snapshots", index.filter((x) => x.key !== key)]]);
+      await del(`snap:${key}`);
+    },
+  };
   let slot = 0;
   return {
     name: "IndexedDB",
+    snapshots,
     async load() {
       const meta = (await get("meta")) as { slot: number } | undefined;
       if (meta) {
         slot = meta.slot;
+        // Newest good copy wins: primary slot, the other slot, then the latest snapshot.
         const primary = (await get(`db${slot}`)) as string | undefined;
-        if (primary) return primary;
-        return ((await get(`db${1 - slot}`)) as string | undefined) ?? null;
+        if (parseable(primary)) return primary;
+        const other = (await get(`db${1 - slot}`)) as string | undefined;
+        if (parseable(other)) return other;
+        for (const s of await snapshots.list()) {
+          const snap = await snapshots.get(s.key);
+          if (parseable(snap)) return snap;
+        }
+        return null;
       }
       // First run with IndexedDB: migrate any localStorage data.
       return localStorageAdapter().load();
@@ -82,6 +144,7 @@ export function indexedDBAdapter(dbName = "lab"): StorageAdapter {
 }
 
 export function memoryAdapter(initial: string | null = null): StorageAdapter & { value: string | null } {
+  const snaps = new Map<string, { s: string; at: number }>();
   const a = {
     name: "memory",
     value: initial,
@@ -89,6 +152,22 @@ export function memoryAdapter(initial: string | null = null): StorageAdapter & {
     save: (s: string) => {
       a.value = s;
     },
+    snapshots: {
+      async put(key: string, s: string) {
+        snaps.set(key, { s, at: Date.now() });
+        const keys = [...snaps].sort((x, y) => y[1].at - x[1].at || (y[0] > x[0] ? 1 : -1)).map(([k]) => k);
+        for (const k of keys.slice(SNAPSHOT_KEEP)) snaps.delete(k);
+      },
+      async list() {
+        return [...snaps].map(([key, v]) => ({ key, at: v.at, size: v.s.length })).sort((x, y) => y.at - x.at);
+      },
+      async get(key: string) {
+        return snaps.get(key)?.s ?? null;
+      },
+      async remove(key: string) {
+        snaps.delete(key);
+      },
+    } satisfies SnapshotStore,
   };
   return a;
 }
@@ -115,7 +194,11 @@ export class Store {
   private listeners = new Set<() => void>();
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
   private saving: Promise<void> = Promise.resolve();
+  private lastSnapshotDay: string | null = null;
   lastSaveError: string | null = null;
+  lastSavedAt: number | null = null;
+  /** Size of the last persisted copy, in characters. */
+  lastSize = 0;
 
   /** Synchronous construction for synchronous adapters (tests, localStorage). */
   constructor(private adapter: StorageAdapter, private autoFlush = true, initialRaw?: string | null) {
@@ -172,6 +255,28 @@ export class Store {
     this.changed();
   }
 
+  get snapshotStore(): SnapshotStore | undefined {
+    return this.adapter.snapshots;
+  }
+
+  /** Take a snapshot now (e.g. before restoring an older one), keyed by time. */
+  async snapshotNow(label = "manual"): Promise<string | null> {
+    if (!this.adapter.snapshots) return null;
+    const key = `${new Date().toISOString().slice(0, 19).replace("T", " ")} ${label}`;
+    await this.adapter.snapshots.put(key, JSON.stringify(this.db));
+    return key;
+  }
+
+  /** Restore a snapshot; the current state is snapshotted first so the restore can be undone. */
+  async restoreSnapshot(key: string): Promise<boolean> {
+    const s = await this.adapter.snapshots?.get(key);
+    if (!parseable(s)) return false;
+    await this.snapshotNow("before-restore");
+    this.replace(JSON.parse(s) as LabDB);
+    await this.flush();
+    return true;
+  }
+
   /** Persist now. Writes are serialised so they land in order. */
   flush(): Promise<void> {
     if (this.saveTimer) {
@@ -179,10 +284,19 @@ export class Store {
       this.saveTimer = null;
     }
     const snapshot = JSON.stringify(this.db);
+    const auto = this.db.preferences.autoBackup;
     this.saving = this.saving.then(async () => {
       try {
         await this.adapter.save(snapshot);
         this.lastSaveError = null;
+        this.lastSavedAt = Date.now();
+        this.lastSize = snapshot.length;
+        // One automatic local snapshot per day (the last write of the day wins).
+        const day = new Date().toISOString().slice(0, 10);
+        if (auto && this.adapter.snapshots && this.lastSnapshotDay !== day) {
+          await this.adapter.snapshots.put(day, snapshot);
+          this.lastSnapshotDay = day;
+        }
       } catch (e) {
         this.lastSaveError = e instanceof Error ? e.message : String(e);
         console.warn("Lab: could not persist data", e);

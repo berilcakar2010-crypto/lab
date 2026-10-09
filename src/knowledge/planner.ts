@@ -262,6 +262,7 @@ export function applyPlan(db: LabDB, plan: UpdatePlan, now = Date.now()): GraphU
       db.knowledge.goals = [...new Set([...db.knowledge.goals, ...r.supersededBy])];
     }
   }
+  const previousOverlay = structuredClone(db.knowledge.overlay);
   db.knowledge.overlay = plan.overlay;
   const record: GraphUpdateRecord = {
     id: newId("upd"),
@@ -273,6 +274,7 @@ export function applyPlan(db: LabDB, plan: UpdatePlan, now = Date.now()): GraphU
     modified: plan.changes.filter((c) => c.kind === "DEGISTIR").map((c) => c.id),
     retired: plan.retired,
     relinkedMilestones: relinked,
+    previousOverlay,
   };
   db.knowledge.history.push(record);
   return record;
