@@ -79,7 +79,7 @@ export function lengthAdvice(db: LabDB, milestoneId: ID): LengthAdvice {
 export const ephemeralChildren = (db: LabDB, parentId: ID): Milestone[] =>
   Object.values(db.milestones).filter((m) => m.ephemeral?.parentId === parentId && !m.ephemeral.archivedAt).sort((a, b) => a.order - b.order);
 
-interface StepPlan {
+export interface StepPlan {
   title: string;
   objective: string;
   questions: Omit<Question, "id" | "milestoneId">[];
@@ -150,13 +150,13 @@ export function planDecomposition(db: LabDB, g: KnowledgeGraph, milestoneId: ID,
  * affected, and chained so they lead back to the original. Returns their ids
  * (existing active steps are returned instead of creating duplicates).
  */
-export function decompose(db: LabDB, g: KnowledgeGraph, milestoneId: ID, opts: { stuckQuestionId?: ID; sessionId?: ID; reason?: string; now?: Millis } = {}): ID[] {
+export function decompose(db: LabDB, g: KnowledgeGraph, milestoneId: ID, opts: { stuckQuestionId?: ID; sessionId?: ID; reason?: string; now?: Millis; /** A validated plan (e.g. from the AI); otherwise Lab plans it locally. */ plan?: StepPlan[]; source?: string } = {}): ID[] {
   const existing = ephemeralChildren(db, milestoneId);
   if (existing.length) return existing.map((m) => m.id);
   const m = db.milestones[milestoneId];
   if (!m) return [];
   const now = opts.now ?? Date.now();
-  const plan = planDecomposition(db, g, milestoneId, opts.stuckQuestionId, now);
+  const plan = opts.plan?.length ? opts.plan.slice(0, 3) : planDecomposition(db, g, milestoneId, opts.stuckQuestionId, now);
   if (!plan.length) return [];
   const reason = opts.reason ?? L("Broken into smaller steps while working on it.", "Üzerinde çalışırken daha küçük adımlara bölündü.");
   const ids: ID[] = [];
@@ -174,7 +174,7 @@ export function decompose(db: LabDB, g: KnowledgeGraph, milestoneId: ID, opts: {
     ids.push(child.id);
   }
   recomputeStatuses(db, m.courseId);
-  logEvent(db, "DECOMPOSED", { milestoneId, sessionId: opts.sessionId, at: now }, { steps: ids.length, reason, stuckQuestionId: opts.stuckQuestionId });
+  logEvent(db, "DECOMPOSED", { milestoneId, sessionId: opts.sessionId, at: now }, { steps: ids.length, reason, stuckQuestionId: opts.stuckQuestionId, source: opts.source ?? "local" });
   return ids;
 }
 

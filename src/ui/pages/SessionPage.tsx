@@ -18,6 +18,9 @@ import { courseProgress } from "./CoursePage";
 import { useActivityTracker } from "../activity";
 import { ImmediateCheck } from "../components/ImmediateCheck";
 import { QuickCheck } from "../components/QuickCheck";
+import { decomposeAI } from "../../ai/generativeAI";
+import { makeProvider } from "../../ai/providers";
+import { AI_PROGRESS } from "../../ai/engine";
 import { decompose, ephemeralChildren, lengthAdvice, milestoneLength, LENGTH_LABEL, LENGTH_SCOPE } from "../../adaptive/decompose";
 import { lastMasteryChange } from "../../adaptive/depth";
 import { newConnections, whyMatters } from "../../adaptive/discovery";
@@ -221,6 +224,17 @@ function SmallerSteps({ milestoneId, sessionId }: { milestoneId: ID; sessionId: 
   const advice = lengthAdvice(db, milestoneId);
   if (m.masteredAt || m.ephemeral) return null;
   if (!kids.length && advice?.kind !== "TOO_BIG") return null;
+  const [aiBusy, setAiBusy] = useState(false);
+  const aiReady = makeProvider(db.preferences).ready();
+  const splitAI = async () => {
+    setAiBusy(true);
+    const r = await decomposeAI(aiHost, getGraph(db.knowledge), milestoneId);
+    setAiBusy(false);
+    const ids = act((d) => decompose(d, getGraph(d.knowledge), milestoneId, { sessionId, plan: r.value, source: r.fallbackUsed ? "local" : "ai" }));
+    if (r.fallbackUsed) toast(L("AI unavailable or its steps did not pass the checks — Lab's own steps were used.", "YZ kullanılamadı ya da adımları kontrolleri geçemedi — Lab'ın kendi adımları kullanıldı."));
+    else if (r.rejected.length) toast(L(`${r.rejected.length} AI step(s) were dropped by the quality checks.`, `${r.rejected.length} YZ adımı kalite kontrollerinde elendi.`));
+    if (ids.length) navigate(`/session/${ids[0]}`);
+  };
   const split = () => {
     const ids = act((d) => decompose(d, getGraph(d.knowledge), milestoneId, { sessionId }));
     if (ids.length) navigate(`/session/${ids[0]}`);
@@ -241,7 +255,10 @@ function SmallerSteps({ milestoneId, sessionId }: { milestoneId: ID; sessionId: 
       ) : (
         <>
           <span className="small text-2">{advice!.reason}</span>
-          <button className="btn small" style={{ alignSelf: "flex-start" }} onClick={split}>{L("Break it into smaller steps", "Daha küçük adımlara böl")}</button>
+          <div className="row" style={{ gap: 6 }}>
+            <button className="btn small" onClick={split}>{L("Break it into smaller steps", "Daha küçük adımlara böl")}</button>
+            {aiReady && <button className="btn small ghost" disabled={aiBusy} onClick={splitAI}>{aiBusy ? <><span className="spinner" /> {AI_PROGRESS("MILESTONE_GENERATOR")}</> : L("Break it down with AI", "YZ ile böl")}</button>}
+          </div>
         </>
       )}
     </section>

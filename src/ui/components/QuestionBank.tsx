@@ -7,7 +7,9 @@ import { useMemo, useState } from "react";
 import { L, fmtDate } from "../../i18n";
 import { getGraph } from "../../knowledge/graph";
 import { QUESTION_STATE_LABEL, QUESTION_TYPE_LABEL, localVariant, questionBank, recycleCandidates, toggleFavorite, variantsOf, type QuestionState } from "../../adaptive/questionBank";
-import { act, navigate, toast, useDB } from "../state";
+import { act, aiHost, navigate, toast, useDB } from "../state";
+import { varyQuestionAI } from "../../ai/generativeAI";
+import { makeProvider } from "../../ai/providers";
 import { Icon } from "./common";
 import { MathText } from "./MathText";
 
@@ -21,6 +23,14 @@ export function QuestionBankTab() {
   const [fav, setFav] = useState(false);
   const [text, setText] = useState("");
   const list = useMemo(() => questionBank(db, { state: state || undefined, favorite: fav, text }), [db.events.length, Object.keys(db.questions).length, state, fav, text, db]);
+  const aiReady = makeProvider(db.preferences).ready();
+  const [busy, setBusy] = useState<string | null>(null);
+  const aiVariant = async (id: string) => {
+    setBusy(id);
+    const v = await varyQuestionAI(aiHost, id, "context");
+    setBusy(null);
+    toast(v ? L("AI variation added — it passed the quality check.", "YZ varyasyonu eklendi — kalite kontrolünü geçti.") : L("No variation passed the quality check this time.", "Bu sefer kalite kontrolünü geçen bir varyasyon olmadı."));
+  };
   const recycle = useMemo(() => recycleCandidates(db).length, [db.events.length]);
   return (
     <div className="stack" style={{ gap: 10 }}>
@@ -47,6 +57,7 @@ export function QuestionBankTab() {
             <div className="row" style={{ gap: 6 }}>
               <span className="tiny muted grow">{db.milestones[q.milestoneId]?.title}{e.loIds[0] && g.objects[e.loIds[0]] ? ` · ${g.objects[e.loIds[0]].title}` : ""}{e.attempts ? L(` · ${e.correct}/${e.attempts} correct · ${fmtDate(e.lastAt!)}`, ` · ${e.attempts} denemede ${e.correct} doğru · ${fmtDate(e.lastAt!)}`) : ""}{vs ? L(` · ${vs} variations`, ` · ${vs} varyasyon`) : ""}</span>
               {(q.simulation || q.graph) && <button className="btn small ghost" onClick={() => { const v = act((d) => localVariant(d, q.id)); toast(v ? L("Variation added — same skill, other numbers.", "Varyasyon eklendi — aynı beceri, başka sayılar.") : L("This question cannot be varied exactly.", "Bu soru tam olarak değiştirilemiyor.")); }}>{L("Make a variation", "Varyasyon üret")}</button>}
+              {aiReady && !(q.simulation || q.graph) && <button className="btn small ghost" disabled={busy === q.id} onClick={() => aiVariant(q.id)}>{busy === q.id ? <span className="spinner" /> : L("AI variation", "YZ varyasyonu")}</button>}
               <button className="btn small" onClick={() => navigate(`/session/${q.milestoneId}`)}>{L("Practise", "Çalış")} <Icon.arrow /></button>
             </div>
           </article>

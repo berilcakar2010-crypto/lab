@@ -38,7 +38,13 @@ export interface AIProvider {
   /** False when the provider cannot be called (e.g. no key, offline). */
   ready(): boolean;
   complete(req: CompletionRequest): Promise<string>;
+  /** Text embeddings (only when `capabilities.embed`). Vectors are unit-normalised by the caller. */
+  embed?(texts: string[], signal?: AbortSignal): Promise<number[][]>;
 }
+
+/** Embedding model and size used for semantic search (small vectors keep the local cache light). */
+export const EMBED_MODEL = "text-embedding-004";
+export const EMBED_DIMS = 256;
 
 export class AIUnavailableError extends Error {}
 
@@ -51,8 +57,27 @@ export function geminiProvider(apiKey: string | undefined, model: string, fetchI
   return {
     id: "gemini",
     model,
-    capabilities: { generate: true, evaluate: true, structuredOutput: true, vision: true, embed: false },
+    capabilities: { generate: true, evaluate: true, structuredOutput: true, vision: true, embed: true },
     ready: () => !!apiKey,
+    async embed(texts, signal) {
+      if (!apiKey) throw new AIUnavailableError("No Gemini API key configured");
+      const out: number[][] = [];
+      for (let i = 0; i < texts.length; i += 100) {
+        const batch = texts.slice(i, i + 100);
+        const res = await fetchImpl(`https://generativelanguage.googleapis.com/v1beta/models/${EMBED_MODEL}:batchEmbedContents`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+          signal,
+          body: JSON.stringify({ requests: batch.map((text) => ({ model: `models/${EMBED_MODEL}`, content: { parts: [{ text: text.slice(0, 2000) }] }, outputDimensionality: EMBED_DIMS })) }),
+        });
+        if (!res.ok) throw new Error(`Gemini ${res.status}: ${(await safeText(res)).slice(0, 200)}`);
+        const data = await res.json();
+        const vecs = (data?.embeddings ?? []).map((e: { values?: number[] }) => e.values ?? []);
+        if (vecs.length !== batch.length || vecs.some((v: number[]) => !v.length)) throw new Error("Gemini returned incomplete embeddings");
+        out.push(...vecs);
+      }
+      return out;
+    },
     async complete(req) {
       if (!apiKey) throw new AIUnavailableError("No Gemini API key configured");
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;

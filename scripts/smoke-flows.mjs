@@ -706,6 +706,32 @@ export default async function flows({ page, step, shot, click, BASE }) {
     await page.getByText(/süre sınırı/).waitFor({ timeout: 40_000 });
   });
 
+  await step("semantic search by meaning through Gemini embeddings (network mocked, only the query and graph text sent)", async () => {
+    let sentPersonal = false;
+    await page.unroute("https://generativelanguage.googleapis.com/**");
+    await page.route("https://generativelanguage.googleapis.com/**", async (route) => {
+      const body = route.request().postDataJSON();
+      const reqs = body.requests ?? [];
+      if (JSON.stringify(body).includes("Aksiyon potansiyeli neden hep aynı")) sentPersonal = true;
+      const vec = (t) => { const s = t.toLowerCase(); return [/(newton|kuvvet|force)/.test(s) ? 1 : 0, /(nöron|neuron)/.test(s) ? 1 : 0, 0.01]; };
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ embeddings: reqs.map((r) => ({ values: vec(r.content.parts[0].text) })) }) });
+    });
+    await page.goto(`${BASE}#/settings`);
+    await page.getByRole("button", { name: "Gemini", exact: true }).click();
+    await page.goto(`${BASE}#/`);
+    await page.keyboard.press("Control+k");
+    const pal = page.getByRole("dialog", { name: "Arama ve hızlı komutlar" });
+    await pal.getByLabel("Ara").fill("sinir hücresi ateşlemesi");
+    await pal.getByRole("button", { name: /Anlama göre ara/ }).click();
+    await pal.getByText("Anlam", { exact: true }).first().waitFor();
+    await shot("51-semantic");
+    if (sentPersonal) throw new Error("personal data was sent for embeddings");
+    await page.keyboard.press("Escape");
+    await page.goto(`${BASE}#/settings`);
+    await page.getByRole("button", { name: "Çevrimdışı", exact: true }).click();
+    await page.unroute("https://generativelanguage.googleapis.com/**");
+  });
+
   await step("question bank lists every question with its state", async () => {
     await page.goto(`${BASE}#/study?tab=questions`);
     await page.getByText(/soru\. Uzun zaman önce/).waitFor();

@@ -15,7 +15,9 @@ import { createResearch } from "../../adaptive/research";
 import { addSource } from "../../adaptive/provenance";
 import { addJournal } from "../../academic/records";
 import { logEvent } from "../../engines/analytics";
-import { act, navigate, store, toast, useDB } from "../state";
+import { act, aiHost, navigate, store, toast, useDB } from "../state";
+import { canEmbed, semanticSearch, type SemanticHit } from "../../ai/semantic";
+import { makeProvider } from "../../ai/providers";
 import { followEntry, UnsureSheet } from "./OpenLab";
 import { Icon } from "./common";
 
@@ -57,6 +59,18 @@ function Palette({ onClose, onUnsure }: { onClose: () => void; onUnsure: () => v
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
   const action = parseQuickAction(q);
+  const [semantic, setSemantic] = useState<SemanticHit[] | null>(null);
+  const [semBusy, setSemBusy] = useState(false);
+  const embedOk = canEmbed(makeProvider(db.preferences));
+  const runSemantic = async () => {
+    setSemBusy(true);
+    try {
+      setSemantic(await semanticSearch(aiHost, g, action?.arg || q, 8));
+    } catch {
+      toast(L("Semantic search is unavailable right now — the normal search still works.", "Anlamsal arama şu an kullanılamıyor — normal arama çalışmaya devam ediyor."), "error");
+    }
+    setSemBusy(false);
+  };
   const results = useMemo(() => globalSearch(db, g, action?.arg || q, 20), [q, db.events.length, g]);
   const go = (href: string) => { onClose(); navigate(href); };
   const best = (text: string) => globalSearch(store.state, g, text, 5).find((r) => r.type === "CONCEPT");
@@ -133,6 +147,17 @@ function Palette({ onClose, onUnsure }: { onClose: () => void; onUnsure: () => v
                 <span className="truncate">{r.title}</span>
                 <span className="tiny muted truncate">{r.context}{r.state ? ` · ${r.state}` : ""}</span>
               </span>
+            </button>
+          ))}
+          {embedOk && q.trim().length >= 3 && (
+            <button className="list-item palette-action" disabled={semBusy} onClick={runSemantic}>
+              {semBusy ? <span className="spinner" /> : <Icon.bulb />}<span className="grow">{L("Search by meaning (AI)", "Anlama göre ara (YZ)")}</span><span className="tiny muted">{L("sends only the query", "yalnızca sorgu gönderilir")}</span>
+            </button>
+          )}
+          {semantic && semantic.map((h) => (
+            <button key={`sem:${h.id}`} className="list-item" onClick={() => go(`/graph?lo=${encodeURIComponent(h.id)}`)}>
+              <span className="chip">{L("Meaning", "Anlam")}</span>
+              <span className="grow stack" style={{ gap: 0, minWidth: 0, textAlign: "left" }}><span className="truncate">{g.objects[h.id]?.title}</span><span className="tiny muted">{g.objects[h.id]?.field} · {Math.round(h.score * 100)}%</span></span>
             </button>
           ))}
           {q.trim().length >= 2 && !results.length && !action && <p className="small muted" style={{ padding: 10 }}>{L("Nothing found. Try “learn …” to build it.", "Bir şey bulunamadı. Oluşturmak için “öğren …” dene.")}</p>}

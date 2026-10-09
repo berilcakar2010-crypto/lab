@@ -140,7 +140,8 @@ export type AIRole =
   | "STUCK_DETECTOR"
   | "ERROR_ANALYST"
   | "CURRICULUM_REVIEWER"
-  | "RESEARCH_GUIDE";
+  | "RESEARCH_GUIDE"
+  | "SEMANTIC_SEARCH";
 
 // ---------------------------------------------------------------------------
 // Entities
