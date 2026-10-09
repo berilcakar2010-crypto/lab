@@ -250,6 +250,7 @@ describe("progress migration", () => {
     expect(migrated.knowledge.migrations[0].id).toBe("v2-link-milestones");
     expect(personalGraph(migrated, assembleGraph()).progress.get("phys.mech.kinematics-1d")!.mastered).toBe(1);
     // Running again does nothing.
-    expect(hydrateDB(JSON.parse(JSON.stringify(migrated))).knowledge.migrations.length).toBe(1);
+    expect(migrated.knowledge.migrations.map((m) => m.id)).toEqual(["v2-link-milestones", "v3-error-records"]);
+    expect(hydrateDB(JSON.parse(JSON.stringify(migrated))).knowledge.migrations.length).toBe(2);
   });
 });

@@ -54,3 +54,29 @@ Known limitations: İkili ustalık (masteredAt) kilit açma için korunuyor; Lab
   Sandbox çalıştırmaları skor üretmez (doğru/yanlış ölçütü yok); yalnızca tahmin/anlatımla birleşince kanıt olur.
 Next phase: Faz 4 — hata taksonomisi ve hata grafiği
 ```
+
+## Faz 4 — Hata taksonomisi ve hata → bilgi grafiği
+
+```text
+PHASE STATUS: PASS
+Implemented: 10 kategorili hata taksonomisi (CONCEPTUAL, FORMULA_SELECTION, CALCULATION, ATTENTION,
+  PREREQUISITE, STRATEGY, ASSUMPTION, INTERPRETATION, TRANSFER, RECALL). Her yanlış cevap otomatik olarak
+  hata kaydına dönüşür (soru, deneme, tür, güven, gerekçe, ipucu düzeyi, öğrencinin güveni, çözüm durumu).
+  Kural tabanlı sınıflandırıcı (işaret hatası, 10^n kayması, yakın cevap, transfer/kalıcılık amacı, hızlı+emin
+  ama yanlış, soru türü). Hata → beceri → adım → kavram → önkoşul → onarım izi; önkoşul yalnızca gerçekten
+  zayıf görünüyorsa suçlanır, her iz güven değeri ve "muhtemelen" diliyle. Onarım başlatma; sonraki kanıtla
+  (aynı soruda doğru cevap ya da onarım hedefinde doğrulanmış ustalık) otomatik kapanma. Öğrencinin türü
+  düzeltmesi. Örüntü tespiti: aynı beceride 3+ hata → tekrarlayan hata; 2+ derste → alanlar arası yanılgı
+  (kavram, kanıt, güven, etkilenen dersler). YZ hata analisti (açık uçlu cevaplar; kategori ve önkoşul
+  doğrulanır, güven en fazla 0.85, çevrimdışıyken kurallar). Karar kaydı (ERROR_ANALYST). Eski yanlış
+  cevaplar için tek seferlik, idempotent taşıma (kaynak: legacy).
+Modified files: src/engines/progress.ts (hata/onarım kancası, TRANSFER_ATTEMPT), src/data/db.ts (taşıma),
+  src/knowledge/knowledge.test.ts (taşıma sayısı beklentisi)
+New files: src/adaptive/errors.ts, src/adaptive/decisions.ts, src/ai/adaptiveAI.ts, src/adaptive/errors.test.ts
+Data model changes: errors, insights, decisions tabloları kullanılmaya başlandı; migration "v3-error-records".
+Tests: 9 yeni (sınıflandırma, Bayes → koşullu olasılık izi, güçlü önkoşulun suçlanmaması, onarım başlat/tamamla,
+  yeniden sınıflandırma, alanlar arası yanılgı, eski veri taşıması ve idempotentlik, YZ analizi kabul/ret/yedek).
+Known limitations: Kural tabanlı sınıflandırma kesin değildir; bu yüzden her kayıt güven ve gerekçe taşır.
+  YZ analisti arayüze Faz 20'de bağlanacak.
+Next phase: Faz 5 — adım granularity motoru
+```

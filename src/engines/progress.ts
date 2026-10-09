@@ -12,6 +12,7 @@ import { newId } from "../data/ids";
 import { L } from "../i18n";
 import { courseMilestones, milestoneQuestions } from "./curriculum";
 import { computeSessionTimes, logEvent, sessionEvents } from "./analytics";
+import { detectPatterns, recordError, updateRepairs } from "../adaptive/errors";
 
 const DAY = 86_400_000;
 
@@ -195,6 +196,12 @@ export function recordAttempt(db: LabDB, input: AttemptInput): { attempt: Attemp
     confidence: attempt.confidence,
   });
   if (attempt.confidence !== undefined) logEvent(db, "CONFIDENCE_REPORT", ctx, { confidence: attempt.confidence });
+  if (attempt.purpose === "TRANSFER") logEvent(db, "TRANSFER_ATTEMPT", ctx, { correct: attempt.correct });
+  // Error analysis: classify and trace wrong answers; let right answers close repairs.
+  if (attempt.correct === false) {
+    recordError(db, attempt);
+    detectPatterns(db, attempt.createdAt);
+  } else if (attempt.correct) updateRepairs(db, attempt.createdAt);
 
   const m = db.milestones[attempt.milestoneId];
   let masteredNow = false;

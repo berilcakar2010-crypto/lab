@@ -2,6 +2,7 @@ import { SCHEMA_VERSION, type KnowledgeState, type LabDB } from "../domain/types
 import { newId } from "./ids";
 import { DEFAULT_LANG, isLang } from "../i18n";
 import { runKnowledgeMigrations } from "../knowledge/migrate";
+import { migrateLegacyErrors } from "../adaptive/errors";
 
 export function createEmptyDB(now = Date.now()): LabDB {
   const userId = newId("user");
@@ -119,5 +120,6 @@ export function hydrateDB(raw: unknown): LabDB {
   // Data saved before v2.1 has no language: it was written by the Turkish-only app.
   if (!isLang(db.preferences.language)) db.preferences.language = r.preferences ? "tr" : DEFAULT_LANG;
   runKnowledgeMigrations(db);
+  migrateLegacyErrors(db);
   return db;
 }
