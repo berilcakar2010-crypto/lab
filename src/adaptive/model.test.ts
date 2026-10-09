@@ -10,7 +10,7 @@ describe("data model extensions (phase 2)", () => {
     const db = createEmptyDB();
     for (const t of NEW_TABLES) expect(db[t]).toEqual({});
     expect(db.preferences.studyMode).toBe("NORMAL");
-    expect(SCHEMA_VERSION).toBe(3);
+    expect(SCHEMA_VERSION).toBe(4);
   });
 
   it("hydrates schema-2 data without the new tables and keeps everything else", () => {
@@ -23,7 +23,7 @@ describe("data model extensions (phase 2)", () => {
     const db = hydrateDB(JSON.parse(JSON.stringify(old)));
     for (const t of NEW_TABLES) expect(db[t]).toEqual({});
     expect(db.preferences.studyMode).toBe("NORMAL");
-    expect(db.schemaVersion).toBe(3);
+    expect(db.schemaVersion).toBe(4);
     expect(db.attempts.a1).toBeTruthy();
     // Hydrating again changes nothing (idempotent).
     expect(hydrateDB(JSON.parse(JSON.stringify(db)))).toEqual(db);

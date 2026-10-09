@@ -6,6 +6,7 @@
  * feature existed. Each studied topic gets a review schedule on an expanding
  * ladder — 1, 3, 7, 14, 30, 60, 120 days — moved by how well it comes back.
  */
+import { strategy } from "../adaptive/retentionStrategy";
 import type { LabDB, Millis, TopicGrade, TopicReview } from "../domain/types";
 import { logEvent } from "../engines/analytics";
 import { L } from "../i18n";
@@ -143,11 +144,11 @@ export function syncTopicSchedule(db: LabDB, now: Millis = Date.now()): number {
  */
 export function reviewTopic(db: LabDB, loId: string, grade: TopicGrade, now: Millis = Date.now(), factor = 1): TopicReview {
   const r: TopicReview = db.topicReviews[loId] ?? { id: loId, firstStudied: now, lastStudied: now, stage: 0, due: now, history: [] };
-  if (grade === 0) r.stage = 0;
-  else if (grade === 2) r.stage = Math.min(r.stage + 1, LADDER_DAYS.length - 1);
-  else if (grade === 3) r.stage = Math.min(r.stage + 2, LADDER_DAYS.length - 1);
-  // "Hard" keeps the stage but comes back sooner than its interval.
-  const base = grade === 1 ? LADDER_DAYS[r.stage] * 0.6 : LADDER_DAYS[r.stage];
+  // The interval comes from the chosen retention strategy (expanding ladder by default).
+  const prev = r.history.filter((h) => h.kind === "review");
+  const { state, days: base } = strategy(db.preferences.retentionStrategies?.topics, "ladder").next(
+    { stage: r.stage, intervalDays: 0, ease: 2.5, reps: prev.length, lapses: prev.filter((h) => h.grade === 0).length }, grade);
+  r.stage = state.stage;
   const days = Math.max(1, Math.round(base * Math.max(0.4, Math.min(1.5, factor))));
   r.due = startOfDay(now) + days * DAY;
   r.lastStudied = now;

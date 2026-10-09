@@ -37,7 +37,7 @@ export function matchRequest(g: KnowledgeGraph, text: string, limit = 6): GraphM
   const scored = g.order
     .map((id) => {
       const o = g.objects[id];
-      const title = score(o.title);
+      const title = Math.max(score(o.title), ...(o.aliases ?? []).map(score));
       const ctx = score(`${o.unit} ${o.field} ${DOMAIN_LABEL[o.domain]} ${DOMAIN_LABEL_EN[o.domain]} ${o.tags.join(" ")}`);
       return { id, s: title * 2 + ctx + (o.boss ? 0.2 : 0) };
     })

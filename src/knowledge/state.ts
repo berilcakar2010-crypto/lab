@@ -11,19 +11,20 @@ import { topoSort } from "../engines/graph";
 import { ancestors, isActive, prereqMap } from "./graph";
 import type { KnowledgeGraph, LearningObject } from "./schema";
 
-export const LO_STATES = ["USTALASILDI", "TEKRAR", "BEYAN", "CALISILIYOR", "HAZIR", "ONKOSUL_EKSIK", "PASIF"] as const;
+export const LO_STATES = ["USTALASILDI", "TEKRAR", "KONTROL", "BEYAN", "CALISILIYOR", "HAZIR", "ONKOSUL_EKSIK", "PASIF"] as const;
 export type LOState = (typeof LO_STATES)[number];
 const LO_STATE_LABEL_TR: Record<LOState, string> = {
   USTALASILDI: "Ustalaşıldı",
   TEKRAR: "Tekrar gerekli",
-  BEYAN: "Biliyorum (kendi beyanım)",
+  KONTROL: "Kısa testi geçti",
+  BEYAN: "Biliyorum (eski beyan, testle doğrulanmadı)",
   CALISILIYOR: "Çalışılıyor",
   HAZIR: "Başlamaya hazır",
   ONKOSUL_EKSIK: "Önkoşul eksik",
   PASIF: "Pasif",
 };
 export const LO_STATE_LABEL = lazyLabels<LOState>({
-  USTALASILDI: "Mastered", TEKRAR: "Needs review", BEYAN: "I know this (self-reported)", CALISILIYOR: "In progress",
+  USTALASILDI: "Mastered", TEKRAR: "Needs review", KONTROL: "Passed a short check", BEYAN: "I know this (earlier claim, not yet checked)", CALISILIYOR: "In progress",
   HAZIR: "Ready to start", ONKOSUL_EKSIK: "Missing prerequisite", PASIF: "Inactive",
 }, LO_STATE_LABEL_TR);
 
@@ -41,6 +42,7 @@ export interface LOProgress {
 export function milestonesByLO(db: LabDB): Map<string, Milestone[]> {
   const out = new Map<string, Milestone[]>();
   for (const m of Object.values(db.milestones)) {
+    if (m.ephemeral) continue;
     for (const lo of m.learningObjectIds ?? []) {
       if (!out.has(lo)) out.set(lo, []);
       out.get(lo)!.push(m);
@@ -49,7 +51,19 @@ export function milestonesByLO(db: LabDB): Map<string, Milestone[]> {
   return out;
 }
 
-export const SATISFIED: ReadonlySet<LOState> = new Set<LOState>(["USTALASILDI", "TEKRAR", "BEYAN"]);
+/** Graph objects whose latest knowledge check was passed (a check replaces the bare "I know this" claim). */
+export function checkedObjects(db: LabDB): Set<string> {
+  const latest = new Map<string, { at: number; passed: boolean }>();
+  for (const c of Object.values(db.checks ?? {})) {
+    const lo = c.target.loId;
+    if (!lo) continue;
+    const prev = latest.get(lo);
+    if (!prev || c.createdAt >= prev.at) latest.set(lo, { at: c.createdAt, passed: c.passed });
+  }
+  return new Set([...latest].filter(([, v]) => v.passed).map(([k]) => k));
+}
+
+export const SATISFIED: ReadonlySet<LOState> = new Set<LOState>(["USTALASILDI", "TEKRAR", "KONTROL", "BEYAN"]);
 
 export interface PersonalGraph {
   g: KnowledgeGraph;
@@ -59,6 +73,7 @@ export interface PersonalGraph {
 
 export function personalGraph(db: LabDB, g: KnowledgeGraph): PersonalGraph {
   const byLO = milestonesByLO(db);
+  const passedChecks = checkedObjects(db);
   const own = new Map<string, Omit<LOProgress, "state" | "missingRequired" | "missingSoft"> & { base: LOState | null }>();
   for (const id of g.order) {
     const o = g.objects[id];
@@ -71,6 +86,7 @@ export function personalGraph(db: LabDB, g: KnowledgeGraph): PersonalGraph {
     else if (ms.some((m) => m.status === "NEEDS_REVIEW")) base = "TEKRAR";
     else if (required.length && reqMastered === required.length) base = "USTALASILDI";
     else if (!required.length && mastered > 0) base = "USTALASILDI";
+    else if (passedChecks.has(id)) base = "KONTROL";
     else if (db.knowledge.selfAttested[id]) base = "BEYAN";
     else if (mastered > 0 || ms.some((m) => m.status === "ATTEMPTED" || m.status === "ACTIVE")) base = "CALISILIYOR";
     own.set(id, { base, milestones: ms, mastered, required: required.length });
@@ -153,7 +169,7 @@ export function recommendObjects(pg: PersonalGraph, goals: string[], limit = 5, 
   for (const id of g.order) {
     const o: LearningObject = g.objects[id];
     const p = progress.get(id)!;
-    if (!isActive(o) || p.state === "USTALASILDI" || p.state === "BEYAN" || p.state === "ONKOSUL_EKSIK" || p.state === "PASIF") continue;
+    if (!isActive(o) || p.state === "USTALASILDI" || p.state === "KONTROL" || p.state === "BEYAN" || p.state === "ONKOSUL_EKSIK" || p.state === "PASIF") continue;
     if (focus && !focus.has(id)) continue;
     const reasons: string[] = [];
     let score = 0;

@@ -38,7 +38,7 @@ describe("migration to schema 3", () => {
   it("adds the new tables and fields and turns old wrong answers into error records", () => {
     const { raw } = oldData();
     const db = hydrateDB(raw);
-    expect(db.schemaVersion).toBe(3);
+    expect(db.schemaVersion).toBe(4);
     for (const t of NEW_TABLES) expect((db as unknown as Record<string, unknown>)[t]).toBeTruthy();
     expect(db.preferences.studyMode).toBe("NORMAL");
     const errs = Object.values(db.errors);

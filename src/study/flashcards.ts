@@ -7,6 +7,7 @@
  * 3 easy. Every review is kept on the card so the schedule can be audited and
  * exported.
  */
+import { strategy } from "../adaptive/retentionStrategy";
 import type { CardGrade, Flashcard, ID, LabDB, Millis } from "../domain/types";
 import { newId } from "../data/ids";
 import { logEvent } from "../engines/analytics";
@@ -90,32 +91,19 @@ export function addCards(db: LabDB, drafts: CardDraft[], loId: string | undefine
   return cards;
 }
 
-/** SM-2 update. Returns the next interval in days. */
-export function schedule(card: Flashcard, grade: CardGrade, now: Millis = Date.now()): Flashcard {
-  let { ease, intervalDays, reps, lapses } = card;
-  if (grade === 0) {
-    lapses += 1;
-    reps = 0;
-    intervalDays = 0;
-    ease = Math.max(1.3, ease - 0.2);
-  } else {
-    reps += 1;
-    const q = grade + 2; // map 1..3 → 3..5 on the SM-2 scale
-    ease = Math.max(1.3, ease + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02)));
-    if (reps === 1) intervalDays = grade === 3 ? 3 : 1;
-    else if (reps === 2) intervalDays = grade === 1 ? 3 : 6;
-    else intervalDays = Math.round(intervalDays * (grade === 1 ? 1.2 : grade === 3 ? ease * 1.3 : ease));
-    intervalDays = Math.max(1, Math.min(intervalDays, 365));
-  }
+/** Schedule the next review with the chosen retention strategy (SM-2 by default). */
+export function schedule(card: Flashcard, grade: CardGrade, now: Millis = Date.now(), strategyId?: string): Flashcard {
+  const s = strategy(strategyId, "sm2");
+  const { state, days } = s.next({ stage: card.stage ?? 0, intervalDays: card.intervalDays, ease: card.ease, reps: card.reps, lapses: card.lapses }, grade);
   // "Again" comes back in ten minutes, inside the same review.
-  const due = grade === 0 ? now + 10 * 60_000 : now + intervalDays * DAY;
-  return { ...card, ease, intervalDays, reps, lapses, due };
+  const due = grade === 0 || days === 0 ? now + 10 * 60_000 : now + days * DAY;
+  return { ...card, ease: state.ease, intervalDays: state.intervalDays, reps: state.reps, lapses: state.lapses, stage: state.stage, due };
 }
 
 export function reviewCard(db: LabDB, id: ID, grade: CardGrade, ms?: number, now = Date.now()): Flashcard | undefined {
   const c = db.flashcards[id];
   if (!c) return undefined;
-  const next = schedule(c, grade, now);
+  const next = schedule(c, grade, now, db.preferences.retentionStrategies?.cards);
   next.history = [...c.history, { at: now, grade, ms }].slice(-50);
   db.flashcards[id] = next;
   logEvent(db, "FLASHCARD_REVIEW", {}, { cardId: id, lo: c.loId ?? null, grade, intervalDays: next.intervalDays });

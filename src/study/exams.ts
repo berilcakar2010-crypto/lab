@@ -74,7 +74,7 @@ export interface TopicReadiness {
 
 export function topicReadiness(db: LabDB, pg: PersonalGraph, loId: string, now: Millis = Date.now()): TopicReadiness {
   const p = pg.progress.get(loId);
-  const base = !p ? 0 : ({ USTALASILDI: 0.8, BEYAN: 0.6, TEKRAR: 0.45, CALISILIYOR: 0.35 } as Record<string, number>)[p.state] ?? 0;
+  const base = !p ? 0 : ({ USTALASILDI: 0.8, KONTROL: 0.7, BEYAN: 0.6, TEKRAR: 0.45, CALISILIYOR: 0.35 } as Record<string, number>)[p.state] ?? 0;
   let score = base;
   const r = db.topicReviews[loId];
   if (r) {

@@ -264,6 +264,8 @@ export function grantMastery(
     selfAttested,
   };
   db.mastery[rec.id] = rec;
+  // Temporary smaller steps (adaptive/decompose) have done their job.
+  for (const c of Object.values(db.milestones)) if (c.ephemeral?.parentId === milestoneId && !c.ephemeral.archivedAt) c.ephemeral.archivedAt = now;
   logEvent(db, "MILESTONE_COMPLETE", { sessionId, milestoneId, at: now }, { assisted, selfAttested, level: rec.level });
   scheduleRetention(db, milestoneId, now);
   recomputeStatuses(db, m.courseId);

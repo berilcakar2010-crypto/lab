@@ -142,6 +142,8 @@ export interface InterdisciplinaryLink {
 export interface LearningObject {
   /** Permanent id; never reused, never renamed. */
   id: string;
+  /** Other names the object is known by (old titles, synonyms); used by search. A rename keeps the id. */
+  aliases?: string[];
   /** Equal to `id`. Kept separately so a superseded object keeps its identity. */
   stableId: string;
   title: string;

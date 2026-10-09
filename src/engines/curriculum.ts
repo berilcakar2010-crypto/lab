@@ -20,7 +20,8 @@ export class CurriculumError extends Error {}
 
 export const courseMilestones = (db: LabDB, courseId: ID): Milestone[] =>
   Object.values(db.milestones)
-    .filter((m) => m.courseId === courseId)
+    // Archived temporary steps (see adaptive/decompose) are history, not part of the plan.
+    .filter((m) => m.courseId === courseId && !m.ephemeral?.archivedAt)
     .sort((a, b) => a.order - b.order);
 
 export const courseUnits = (db: LabDB, courseId: ID): Unit[] =>

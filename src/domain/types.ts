@@ -13,6 +13,9 @@ import type {
   CurriculumProposal, DecisionRecord, ErrorRecord, ExperimentReport, GranularityResult, Insight, LearningPathPlan, LearningSource,
   PredictionRecord, Provenance, ResearchProject, SandboxRun, StudyMode, Capability,
 } from "./adaptive";
+import type {
+  AcademicArtifact, AcademicGoal, AIStyle, AnimationLevel, ChallengeLevel, GradeRecord, JournalEntry, KnowledgeCheck, Project, SchoolSubject,
+} from "./academic";
 
 export type ID = string;
 export type Millis = number;
@@ -168,6 +171,24 @@ export interface UserPreference {
   studyMode: StudyMode;
   /** The exam whose priorities apply in EXAM mode. */
   focusExamId?: ID;
+  /** How hard suggested challenges should be (cognitive difficulty only). */
+  challengeLevel: ChallengeLevel;
+  /** How the AI should talk to the learner; sent with every AI request. */
+  aiStyle: AIStyle;
+  /** "off" also sets reduceMotion. */
+  animation: AnimationLevel;
+  /** Show a suggested "one thing now" on the home screen. */
+  dailySuggestions: boolean;
+  /** Deep work: minimal navigation and no analytics around the problem. */
+  deepWork: boolean;
+  /** Send AI only what the request needs (never the learner's history). Default on. */
+  minimalAIContext: boolean;
+  /** Keep a dated local snapshot of the database each day. */
+  autoBackup: boolean;
+  /** Spaced-repetition strategy per kind of item (see adaptive/retentionStrategy). */
+  retentionStrategies?: { topics?: string; cards?: string };
+  /** Set when the first-run question was answered or skipped. */
+  firstRunAt?: Millis;
 }
 
 export interface Subject {
@@ -292,6 +313,12 @@ export interface Milestone {
   /** Last granularity check (generated milestones must pass before they are added). */
   granularity?: GranularityResult;
   provenance?: Provenance;
+  /**
+   * Temporary step created to break a milestone the learner is stuck on into
+   * smaller pieces. Lives in the personal plan only (never in the graph) and is
+   * archived once the parent milestone is mastered.
+   */
+  ephemeral?: { parentId: ID; reason: string; createdAt: Millis; archivedAt?: Millis };
   createdAt: Millis;
   updatedAt: Millis;
 }
@@ -346,6 +373,12 @@ export interface Question {
   solution: string;
   difficulty: number;
   createdBy: string;
+  /** Learner marked it as a favourite in the question bank. */
+  favorite?: boolean;
+  /** This question is a variation (same skill, other numbers/context) of another one. */
+  variantOf?: ID;
+  /** What the variation changes, e.g. "different numbers". */
+  variation?: string;
 }
 
 export interface Feedback {
@@ -539,6 +572,21 @@ export const EVENT_TYPES = [
   "RESEARCH_STEP_COMPLETED",
   "CURRICULUM_PROPOSED",
   "CURRICULUM_DECIDED",
+  // Academic layer (Final OS)
+  "KNOWLEDGE_CHECK",
+  "DECOMPOSED",
+  "ENTRY_SHOWN",
+  "ENTRY_CHOSEN",
+  "DISCOVERY_SHOWN",
+  "DISCOVERY_OPENED",
+  "JOURNAL_ENTRY",
+  "PROJECT_UPDATED",
+  "ARTIFACT_SAVED",
+  "GOAL_UPDATED",
+  "DEEP_WORK",
+  "SESSION_RESUMED",
+  "REFLECTION",
+  "SEARCH",
 ] as const;
 export type EventType = (typeof EVENT_TYPES)[number];
 
@@ -613,6 +661,15 @@ export interface LabDB {
   predictions: Table<PredictionRecord>;
   /** Engine and AI decisions with reason, confidence and evidence. */
   decisions: Table<DecisionRecord>;
+  // Academic layer
+  journal: Table<JournalEntry>;
+  projects: Table<Project>;
+  artifacts: Table<AcademicArtifact>;
+  academicGoals: Table<AcademicGoal>;
+  /** Short knowledge checks that replace bare "I know this" claims. */
+  checks: Table<KnowledgeCheck>;
+  schoolSubjects: Table<SchoolSubject>;
+  grades: Table<GradeRecord>;
 }
 
 export type ExamKind = "EXAM" | "QUIZ" | "ASSIGNMENT" | "PRESENTATION";
@@ -675,6 +732,8 @@ export interface Flashcard {
   ease: number;
   reps: number;
   lapses: number;
+  /** Box/rung for ladder-style strategies. */
+  stage?: number;
   suspended?: boolean;
   history: { at: Millis; grade: CardGrade; ms?: number }[];
 }
@@ -777,4 +836,4 @@ export interface KnowledgeState {
   seenVersion?: string;
 }
 
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;

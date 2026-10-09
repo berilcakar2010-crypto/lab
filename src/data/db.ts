@@ -3,6 +3,7 @@ import { newId } from "./ids";
 import { DEFAULT_LANG, isLang } from "../i18n";
 import { runKnowledgeMigrations } from "../knowledge/migrate";
 import { migrateLegacyErrors } from "../adaptive/errors";
+import { runAcademicMigrations } from "../academic/migrate";
 
 export function createEmptyDB(now = Date.now()): LabDB {
   const userId = newId("user");
@@ -21,6 +22,13 @@ export function createEmptyDB(now = Date.now()): LabDB {
       language: DEFAULT_LANG,
       reminders: { enabled: false, hour: 19, minute: 0, exams: true },
       studyMode: "NORMAL",
+      challengeLevel: "STRETCH",
+      aiStyle: { socratic: true, concise: false, rigorous: false, explanatory: false, challenging: false },
+      animation: "full",
+      dailySuggestions: true,
+      deepWork: false,
+      minimalAIContext: true,
+      autoBackup: true,
     },
     subjects: {},
     curricula: {},
@@ -55,6 +63,13 @@ export function createEmptyDB(now = Date.now()): LabDB {
     sandboxRuns: {},
     predictions: {},
     decisions: {},
+    journal: {},
+    projects: {},
+    artifacts: {},
+    academicGoals: {},
+    checks: {},
+    schoolSubjects: {},
+    grades: {},
   };
 }
 
@@ -86,7 +101,12 @@ const TABLE_KEYS = [
   "questions", "attempts", "sessions", "aiInteractions", "mastery", "retention",
   "experiments", "experimentResults", "engagement", "flashcards", "chats", "explanations", "notes", "topicReviews", "exams",
   "errors", "insights", "paths", "sources", "curriculumProposals", "research", "sandboxRuns", "predictions", "decisions",
+  "journal", "projects", "artifacts", "academicGoals", "checks", "schoolSubjects", "grades",
 ] as const;
+
+/** Every table of records, in a stable order (used by export, import and health checks). */
+export const ENTITY_TABLES = TABLE_KEYS;
+export type EntityTable = (typeof TABLE_KEYS)[number];
 
 /**
  * Parse and migrate a persisted database. Missing tables/fields are filled from
@@ -107,6 +127,7 @@ export function hydrateDB(raw: unknown): LabDB {
       models: { ...base.preferences.models, ...(r.preferences?.models ?? {}) },
       apiKeys: { ...(r.preferences?.apiKeys ?? {}) },
       reminders: { ...base.preferences.reminders, ...(r.preferences?.reminders ?? {}) },
+      aiStyle: { ...base.preferences.aiStyle, ...(r.preferences?.aiStyle ?? {}) },
     },
     events: Array.isArray(r.events) ? r.events : [],
     knowledge: hydrateKnowledge(r.knowledge),
@@ -121,5 +142,6 @@ export function hydrateDB(raw: unknown): LabDB {
   if (!isLang(db.preferences.language)) db.preferences.language = r.preferences ? "tr" : DEFAULT_LANG;
   runKnowledgeMigrations(db);
   migrateLegacyErrors(db);
+  runAcademicMigrations(db, !!r.preferences);
   return db;
 }

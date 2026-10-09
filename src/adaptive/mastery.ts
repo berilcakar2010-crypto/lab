@@ -68,7 +68,7 @@ export interface EvidenceItem {
   /** Evidence weight after assistance/quality discounts. */
   weight: number;
   at: Millis;
-  source: "attempt" | "explanation" | "card" | "topicReview" | "prediction";
+  source: "attempt" | "explanation" | "card" | "topicReview" | "prediction" | "check" | "sandbox";
   ref: string;
 }
 
@@ -119,6 +119,20 @@ function collect(db: LabDB): Map<string, EvidenceItem[]> {
   for (const p of Object.values(db.predictions)) {
     push(p.loIds, { dim: "understanding", score: p.correct ? 1 : 0, weight: 0.6, at: p.createdAt, source: "prediction", ref: p.id });
     if (p.explanationScore !== undefined) push(p.loIds, { dim: "explanation", score: p.explanationScore, weight: 0.5, at: p.createdAt, source: "prediction", ref: p.id });
+  }
+  // Open answers in knowledge checks (auto-graded items are ordinary attempts, counted above).
+  for (const c of Object.values(db.checks ?? {})) {
+    const ms = c.target.milestoneId ? db.milestones[c.target.milestoneId] : undefined;
+    for (const it of c.items) {
+      if (it.kind !== "open" || it.by === "none") continue;
+      const keys = it.loId ? [it.loId] : c.target.loId ? [c.target.loId] : ms ? milestoneKey(ms) : [];
+      push(keys, { dim: "understanding", score: it.score, weight: it.by === "ai" ? 0.9 : 0.5, at: c.createdAt, source: "check", ref: c.id });
+    }
+  }
+  // Sandbox runs the learner saved as evidence, with their own interpretation: applying the idea in a model.
+  for (const r of Object.values(db.sandboxRuns ?? {})) {
+    if (!r.evidence || !r.loIds.length) continue;
+    push(r.loIds, { dim: "application", score: r.evidence.note.trim().length >= 40 ? 0.8 : 0.6, weight: 0.5, at: r.evidence.savedAt, source: "sandbox", ref: r.id });
   }
   for (const list of out.values()) list.sort((a, b) => a.at - b.at);
   return out;
@@ -194,7 +208,8 @@ const cache = new WeakMap<LabDB, { sig: string; now: number; evidence: Map<strin
 
 const signature = (db: LabDB) =>
   [db.events.length, db.events[db.events.length - 1]?.id ?? "", Object.keys(db.attempts).length, Object.keys(db.explanations).length,
-    Object.values(db.explanations).filter((e) => e.evaluation).length, Object.keys(db.predictions).length, Object.keys(db.knowledge.selfAttested).length].join("|");
+    Object.values(db.explanations).filter((e) => e.evaluation).length, Object.keys(db.predictions).length, Object.keys(db.knowledge.selfAttested).length, Object.keys(db.checks ?? {}).length,
+    Object.values(db.sandboxRuns ?? {}).filter((r) => r.evidence).length].join("|");
 
 function entry(db: LabDB, now: Millis) {
   let c = cache.get(db);

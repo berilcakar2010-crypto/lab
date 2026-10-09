@@ -14,7 +14,7 @@ export const DOMAIN_COLOR: Record<Domain, string> = {
 };
 
 const STATE_RING: Partial<Record<LOState, string>> = {
-  USTALASILDI: "var(--mastered)", BEYAN: "var(--mastered)", TEKRAR: "var(--review)", CALISILIYOR: "var(--accent)",
+  USTALASILDI: "var(--mastered)", KONTROL: "var(--mastered)", BEYAN: "var(--mastered)", TEKRAR: "var(--review)", CALISILIYOR: "var(--accent)",
 };
 
 interface Node { id: string; x: number; y: number; label: string; color: string; ring?: string; dim?: boolean; focus?: boolean; r: number }

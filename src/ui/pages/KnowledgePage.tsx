@@ -30,7 +30,7 @@ import { AskAI } from "../components/AskAI";
 import { ExplainPanel } from "../components/ExplainPanel";
 
 const STATE_CLASS: Record<LOState, string> = {
-  USTALASILDI: "s-MASTERED", TEKRAR: "s-NEEDS_REVIEW", BEYAN: "s-OPTIONAL", CALISILIYOR: "s-ATTEMPTED",
+  USTALASILDI: "s-MASTERED", TEKRAR: "s-NEEDS_REVIEW", KONTROL: "s-MASTERED", BEYAN: "s-OPTIONAL", CALISILIYOR: "s-ATTEMPTED",
   HAZIR: "s-AVAILABLE", ONKOSUL_EKSIK: "s-LOCKED", PASIF: "s-SKIPPED",
 };
 
@@ -65,7 +65,7 @@ export function KnowledgePage() {
   const counts = useMemo(() => {
     let known = 0, studying = 0;
     for (const p of pg.progress.values()) {
-      if (p.state === "USTALASILDI" || p.state === "BEYAN" || p.state === "TEKRAR") known++;
+      if (p.state === "USTALASILDI" || p.state === "KONTROL" || p.state === "BEYAN" || p.state === "TEKRAR") known++;
       else if (p.state === "CALISILIYOR") studying++;
     }
     return { known, studying };
