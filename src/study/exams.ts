@@ -164,7 +164,9 @@ export function examPlan(db: LabDB, g: KnowledgeGraph, exam: Exam, now: Millis =
     const d = days[i];
     if (d && !d.items.some((x) => x.loId === loId)) d.items.push({ loId, action, examId: exam.id });
   };
-  const order = (ids: string[]) => [...ids].sort((a, b) => g.order.indexOf(a) - g.order.indexOf(b));
+  // Exam priorities (high first) lead; graph order breaks ties so prerequisites come early.
+  const pr = (id: string) => exam.priorities?.[id] ?? 2;
+  const order = (ids: string[]) => [...ids].sort((a, b) => pr(b) - pr(a) || g.order.indexOf(a) - g.order.indexOf(b));
   const by = (s: TopicStatus) => order(ready.topics.filter((t) => t.status === s).map((t) => t.loId));
 
   if (left === 0) {

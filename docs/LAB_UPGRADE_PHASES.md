@@ -165,3 +165,21 @@ Tests: 3 yeni (A–G seçenekleri, sıralama ama seçmeme, gerekçeler, transfer
 Known limitations: Mevcut ders içi "Sırada ne var?" önerileri (recommendNext) korunuyor ve A/B/D için kaynak olarak kullanılıyor.
 Next phase: Faz 9 — Normal / Sınav modu
 ```
+
+## Faz 9 — Normal Mod / Sınav Modu
+
+```text
+PHASE STATUS: PASS
+Implemented: Çalışma modu tercihi (NORMAL: anlama, ustalık, kalıcılık, transfer; EXAM: son tarih, kapsam, sınav
+  önceliği, soru pratiği, zaman). Sınav modu yalnızca geçici kısıt katmanıdır: müfredat, sorular ve grafik
+  değişmez (testle doğrulandı). Sınav konusu başına öncelik (yüksek/orta/düşük) → mevcut sınav günlük planı,
+  rota planlayıcı (önkoşullara miras), What Next (sınav konuları yükseltilir) ve soru pratiği listesine yansır.
+  Kapsam yüzdesi (doğrulanmış ≥ 0.6), oturmamış yüksek öncelikli konular, öneri dili ("işine yarayabilir").
+  Sınav geçince mod kendiliğinden NORMAL'e döner. MODE_CHANGED olayı; sınav rotası için karar kaydı.
+Modified files: src/study/exams.ts (plan sıralamasında öncelik)
+New files: src/adaptive/modes.ts, src/adaptive/modes.test.ts
+Data model changes: preferences.studyMode/focusExamId ve Exam.priorities kullanılıyor.
+Tests: 2 yeni (mod değişimi + müfredat dokunulmazlığı + otomatik dönüş; öncelikler plan/rota/pratik/kapsam).
+Known limitations: Süreli deneme sınavı (zamanlayıcı) arayüz tarafında sunulacak; motor süre önerisi yapmıyor.
+Next phase: Faz 10 — uyarlanır aralıklı tekrar
+```
