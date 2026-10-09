@@ -611,3 +611,5 @@ button.plain { background: none; border: 0; padding: 0; color: inherit; font: in
 .no-motion .ambient { display: none; }
 .hide-narrow { display: inline; }
 @media (max-width: 480px) { .hide-narrow { display: none; } }
+.py-out { margin: 0; padding: 10px 12px; max-height: 260px; overflow: auto; white-space: pre-wrap; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.py-out.error { border-color: var(--danger); color: var(--danger); }

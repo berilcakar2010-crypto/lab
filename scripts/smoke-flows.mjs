@@ -691,6 +691,21 @@ export default async function flows({ page, step, shot, click, BASE }) {
     await shot("49-health");
   });
 
+  await step("Python sandbox runs real Python offline, isolated, and plots", async () => {
+    await page.goto(`${BASE}#/graph?lo=phys.mech.kinematics-1d&tab=lab`);
+    await page.getByRole("button", { name: "Python", exact: true }).first().click();
+    await page.getByLabel("Python kodu").waitFor();
+    await page.getByRole("button", { name: "Çalıştır" }).first().click();
+    await page.getByText(/period ≈ 2\.006 s/).waitFor({ timeout: 90_000 });
+    await shot("50-python");
+    await page.getByLabel("Python kodu").fill("import js");
+    await page.getByRole("button", { name: "Çalıştır" }).first().click();
+    await page.locator(".py-out.error").waitFor({ timeout: 30_000 });
+    await page.getByLabel("Python kodu").fill("while True: pass");
+    await page.getByRole("button", { name: "Çalıştır" }).first().click();
+    await page.getByText(/süre sınırı/).waitFor({ timeout: 40_000 });
+  });
+
   await step("question bank lists every question with its state", async () => {
     await page.goto(`${BASE}#/study?tab=questions`);
     await page.getByText(/soru\. Uzun zaman önce/).waitFor();

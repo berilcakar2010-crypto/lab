@@ -10,6 +10,7 @@ import { fmtDate, L } from "../../i18n";
 import type { KnowledgeGraph } from "../../knowledge/schema";
 import { getGraph } from "../../knowledge/graph";
 import { freeVariables, parse } from "../../engines/expr";
+import { PY_EXAMPLE, pythonRun, runPython } from "../../adaptive/python";
 import { MODELS, modelsFor, runData, runOde, runSweep, saveAsEvidence, saveRun, startSandbox, type SandboxModel } from "../../adaptive/sandbox";
 import { DIRECTION_LABEL, comparison, explainPrediction, pteTask, submitPrediction } from "../../adaptive/pte";
 import { STEP_LABEL, createResearch, nextStep, researchAsExplanation, researchGuideAI, researchMarkdown, setStep, stepPrompts } from "../../adaptive/research";
@@ -121,7 +122,10 @@ export function PtePanel({ model }: { model: SandboxModel }) {
 
 export function SandboxPanel({ loId }: { loId?: string }) {
   const models = loId ? modelsFor(loId) : MODELS();
-  const [mode, setMode] = useState<"model" | "formula" | "data">(models.length ? "model" : "formula");
+  const [mode, setMode] = useState<"model" | "formula" | "data" | "python">(models.length ? "model" : "formula");
+  const [code, setCode] = useState(PY_EXAMPLE);
+  const [pyBusy, setPyBusy] = useState(false);
+  const [pyOut, setPyOut] = useState<{ ok: boolean; text: string } | null>(null);
   const [modelId, setModelId] = useState(models[0]?.id ?? "");
   const model = models.find((m) => m.id === modelId);
   const [values, setValues] = useState<Record<string, number>>(model ? defaults(model) : {});
@@ -141,7 +145,18 @@ export function SandboxPanel({ loId }: { loId?: string }) {
     const m = models.find((x) => x.id === id)!;
     setModelId(id); setValues(defaults(m)); setParam(m.pteParam); setRun(null); setSaved(null);
   };
+  const goPython = async () => {
+    act((d) => startSandbox(d, "PYTHON", loId ? [loId] : []));
+    setPyBusy(true);
+    setPyOut(null);
+    const r = await runPython(code);
+    setPyBusy(false);
+    setPyOut({ ok: r.ok, text: r.ok ? `${r.stdout}${r.result ? `→ ${r.result}` : ""}` || L("(no output)", "(çıktı yok)") : `${r.stdout}${r.error ?? ""}` });
+    setRun(r.ok ? (pythonRun(code, r) as ReturnType<typeof runSweep>) : null);
+    setSaved(null);
+  };
   const go = () => {
+    if (mode === "python") return void goPython();
     act((d) => startSandbox(d, mode === "data" ? "DATA" : model?.kind === "ode" && mode === "model" ? "ODE" : "SWEEP", loId ? [loId] : model?.loIds ?? []));
     try {
       let r: ReturnType<typeof runSweep>;
@@ -157,7 +172,7 @@ export function SandboxPanel({ loId }: { loId?: string }) {
   };
   const save = () => {
     if (!run) return;
-    const title = mode === "data" ? L("Data analysis", "Veri analizi") : mode === "formula" ? expr : model!.title;
+    const title = mode === "python" ? `Python: ${code.split("\n").find((l) => l.trim() && !l.trim().startsWith("#"))?.trim().slice(0, 60) ?? "script"}` : mode === "data" ? L("Data analysis", "Veri analizi") : mode === "formula" ? expr : model!.title;
     const r = act((d) => saveRun(d, { ...run, title }, loId ? [loId] : model?.loIds ?? []));
     setSaved(r.id);
     toast(L("Run saved.", "Çalıştırma kaydedildi."));
@@ -172,12 +187,20 @@ export function SandboxPanel({ loId }: { loId?: string }) {
 
   return (
     <div className="card stack sandbox" style={{ gap: 8 }}>
-      <div className="row between"><span className="eyebrow">{L("Sandbox", "Sandbox")}</span><span className="tiny muted">{L("safe calculations · no code execution", "güvenli hesaplama · kod çalıştırma yok")}</span></div>
+      <div className="row between"><span className="eyebrow">{L("Sandbox", "Sandbox")}</span><span className="tiny muted">{mode === "python" ? L("real Python 3 · offline · isolated", "gerçek Python 3 · çevrimdışı · yalıtılmış") : L("safe calculations", "güvenli hesaplama")}</span></div>
       <div className="row" style={{ gap: 6 }}>
         {models.length > 0 && <button className={`btn small ${mode === "model" ? "primary" : ""}`} onClick={() => setMode("model")}>{L("Models", "Modeller")}</button>}
         <button className={`btn small ${mode === "formula" ? "primary" : ""}`} onClick={() => setMode("formula")}>{L("Formula", "Formül")}</button>
         <button className={`btn small ${mode === "data" ? "primary" : ""}`} onClick={() => setMode("data")}>{L("Data", "Veri")}</button>
+        <button className={`btn small ${mode === "python" ? "primary" : ""}`} onClick={() => { setMode("python"); setRun(null); }}>Python</button>
       </div>
+      {mode === "python" && (
+        <>
+          <textarea className="textarea mono" style={{ minHeight: 180, fontSize: "0.82rem" }} spellCheck={false} autoCapitalize="off" value={code} onChange={(e) => setCode(e.target.value)} aria-label={L("Python code", "Python kodu")} />
+          <span className="tiny muted">{L("Standard library only (math, statistics, random, fractions…). plot(xs, ys, label) draws on the chart. No access to the internet or your data; stops after 15 s.", "Yalnızca standart kütüphane (math, statistics, random, fractions…). plot(xs, ys, etiket) grafiğe çizer. İnternete ya da verilerine erişemez; 15 sn sonra durur.")}</span>
+          {pyOut && <pre className={`small mono py-out ${pyOut.ok ? "" : "error"}`}>{pyOut.text}</pre>}
+        </>
+      )}
       {mode === "model" && model && (
         <>
           <select className="input" value={modelId} onChange={(e) => choose(e.target.value)} aria-label={L("Model", "Model")}>
@@ -211,11 +234,11 @@ export function SandboxPanel({ loId }: { loId?: string }) {
         </>
       )}
       {mode === "data" && <textarea className="textarea mono" style={{ minHeight: 110 }} value={data} onChange={(e) => setData(e.target.value)} aria-label={L("Data (CSV)", "Veri (CSV)")} />}
-      <button className="btn primary" onClick={go}>{L("Run", "Çalıştır")}</button>
+      <button className="btn primary" onClick={go} disabled={pyBusy}>{pyBusy ? <><span className="spinner" /> {L("Running Python… (the first run loads the runtime)", "Python çalışıyor… (ilk çalıştırma ortamı yükler)")}</> : L("Run", "Çalıştır")}</button>
       {run && (
         <div className="stack" style={{ gap: 6 }}>
-          <SeriesPlot series={run.series} />
-          <span className="small text-2">{run.summary}</span>
+          {run.series.length > 0 && <SeriesPlot series={run.series} />}
+          {mode !== "python" && <span className="small text-2">{run.summary}</span>}
           {!saved ? <button className="btn small" style={{ alignSelf: "flex-start" }} onClick={save}>{L("Save run", "Çalıştırmayı kaydet")}</button> : (loId || model) && (
             <div className="stack" style={{ gap: 6 }}>
               <textarea className="textarea" style={{ minHeight: 60 }} value={note} onChange={(e) => setNote(e.target.value)} placeholder={L("What does this show? Your interpretation becomes evidence once evaluated.", "Bu ne gösteriyor? Yorumun değerlendirildiğinde kanıt olur.")} aria-label={L("Interpretation", "Yorum")} />
@@ -224,7 +247,7 @@ export function SandboxPanel({ loId }: { loId?: string }) {
           )}
         </div>
       )}
-      <span className="tiny muted">{L("Python is not available: it would need a large runtime and the internet. Lab runs formulas, differential equations (RK4) and data analysis itself.", "Python yok: büyük bir çalışma zamanı ve internet gerektirir. Lab formülleri, diferansiyel denklemleri (RK4) ve veri analizini kendisi çalıştırır.")}</span>
+
     </div>
   );
 }

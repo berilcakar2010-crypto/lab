@@ -339,7 +339,7 @@ export interface ResearchProject {
   updatedAt: Millis;
 }
 
-export type SandboxKind = "SWEEP" | "ODE" | "DATA";
+export type SandboxKind = "SWEEP" | "ODE" | "DATA" | "PYTHON";
 
 export interface SandboxRun {
   id: ID;
